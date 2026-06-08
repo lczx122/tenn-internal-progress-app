@@ -1,16 +1,20 @@
 import type { ReactNode } from 'react'
 import { useAuth } from '../contexts/AuthContext'
+import { BottomNav } from './BottomNav'
 
 // App shell: sticky top bar with the signed-in user + sign out, and a
-// centered, phone-width content column.
+// centered, phone-width content column. Top-level screens pass `bottomNav`
+// to show the tab bar; detail/form screens pass `back` instead.
 export function Layout({
   children,
   title,
   back,
+  bottomNav,
 }: {
   children: ReactNode
   title: string
   back?: ReactNode
+  bottomNav?: boolean
 }) {
   const { displayName, signOut } = useAuth()
   return (
@@ -31,7 +35,10 @@ export function Layout({
           </button>
         </div>
       </header>
-      <main className="mx-auto max-w-lg px-4 py-4">{children}</main>
+      <main className={`mx-auto max-w-lg px-4 py-4 ${bottomNav ? 'pb-24' : ''}`}>
+        {children}
+      </main>
+      {bottomNav && <BottomNav />}
     </div>
   )
 }

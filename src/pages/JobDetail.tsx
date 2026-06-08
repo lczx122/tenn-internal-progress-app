@@ -125,7 +125,7 @@ export default function JobDetail() {
   async function toggleArchive() {
     if (!job) return
     await supabase.from('jobs').update({ is_archived: !job.is_archived, updated_by: displayName }).eq('id', job.id)
-    navigate('/')
+    navigate('/units')
   }
 
   if (loading) {
@@ -446,7 +446,7 @@ function AddWorkForm({
 
 function BackLink() {
   return (
-    <Link to="/" className="text-xl leading-none text-slate-300">
+    <Link to="/units" className="text-xl leading-none text-slate-300">
       ←
     </Link>
   )

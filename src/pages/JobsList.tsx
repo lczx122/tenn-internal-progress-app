@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import type { Job, JobWork } from '../lib/types'
 import { Layout } from '../components/Layout'
@@ -13,8 +13,11 @@ export default function JobsList() {
   const [works, setWorks] = useState<JobWork[]>([])
   const [loading, setLoading] = useState(true)
   const [query, setQuery] = useState('')
-  const [catFilter, setCatFilter] = useState('')
-  const [stageFilter, setStageFilter] = useState('')
+  // Filters can be seeded from the URL (e.g. the dashboard links to
+  // /units?stage=installing or /units?cat=Aluminium).
+  const [searchParams] = useSearchParams()
+  const [catFilter, setCatFilter] = useState(searchParams.get('cat') ?? '')
+  const [stageFilter, setStageFilter] = useState(searchParams.get('stage') ?? '')
   const [showArchived, setShowArchived] = useState(false)
   const navigate = useNavigate()
 
@@ -82,7 +85,7 @@ export default function JobsList() {
   }, [jobs, query, showArchived, worksByJob, catFilter, stageFilter])
 
   return (
-    <Layout title="Units">
+    <Layout title="Units" bottomNav>
       <div className="mb-3 flex gap-2">
         <input
           value={query}

@@ -71,7 +71,7 @@ export default function NewJob() {
     <Layout
       title="New Unit"
       back={
-        <Link to="/" className="text-xl leading-none text-slate-300">
+        <Link to="/units" className="text-xl leading-none text-slate-300">
           ←
         </Link>
       }

@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 import { useAuth } from './contexts/AuthContext'
 import { isConfigured } from './lib/supabase'
 import Login from './pages/Login'
+import Dashboard from './pages/Dashboard'
 import JobsList from './pages/JobsList'
 import JobDetail from './pages/JobDetail'
 import NewJob from './pages/NewJob'
@@ -30,7 +31,8 @@ export default function App() {
 
   return (
     <Routes>
-      <Route path="/" element={<JobsList />} />
+      <Route path="/" element={<Dashboard />} />
+      <Route path="/units" element={<JobsList />} />
       <Route path="/new" element={<NewJob />} />
       <Route path="/job/:id" element={<JobDetail />} />
       <Route path="*" element={<Navigate to="/" replace />} />
