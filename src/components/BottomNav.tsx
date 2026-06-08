@@ -6,6 +6,7 @@ const tabs = [
   { to: '/', label: 'Dashboard', icon: '📊', end: true },
   { to: '/units', label: 'Units', icon: '🏠', end: false },
   { to: '/quote', label: 'Quote', icon: '🧾', end: false },
+  { to: '/quotes', label: 'Register', icon: '📒', end: false },
 ]
 
 export function BottomNav() {

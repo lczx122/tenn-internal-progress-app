@@ -19,4 +19,11 @@ export const supabase = createClient(url ?? '', anonKey ?? '', {
   },
 })
 
+// Expose the configured, signed-in client to the embedded quotation tool
+// (public/quotation.html runs in a same-origin iframe). It reuses this exact
+// client — sharing the auth session — to save quotes and reserve numbers.
+if (typeof window !== 'undefined') {
+  ;(window as { tennSupabase?: typeof supabase }).tennSupabase = supabase
+}
+
 export const isConfigured = Boolean(url && anonKey)

@@ -136,6 +136,9 @@
   .b-ghost:hover{background:#f0f3fb}
   .b-clear{background:#fff;color:var(--accent);border:1px solid #f0c8cf!important}
   .b-clear:hover{background:var(--accent-soft)}
+  .b-save{background:var(--ok);color:#fff}
+  .b-save:hover{background:#0c6a44}
+  .b-save:disabled{opacity:.55;cursor:not-allowed}
 
   /* ---------- print / quote document ---------- */
   /* on-screen preview modal */
@@ -209,7 +212,10 @@
           <label class="fld">H / Phone <input id="c_phone" placeholder="Contact no."></label>
           <label class="fld">Email <input id="c_email" type="email" placeholder="email@example.com"></label>
           <label class="fld">Prepared By <input id="c_pic" placeholder="Staff name — saved on this device"></label>
-          <label class="fld">Quotation No. <input id="c_qno" placeholder="Auto-generated (date + time)"></label>
+          <label class="fld">Quotation No.
+            <input id="c_qno" readonly placeholder="Assigned on save">
+            <span id="qno_status" style="font-size:11px;font-weight:600;color:var(--muted);text-transform:none;letter-spacing:0"></span>
+          </label>
           <label class="fld">Date <input id="c_date" type="date"></label>
         </div>
         <label class="fld" style="margin-top:14px">Remarks <textarea id="c_remarks" placeholder="Colour selection, special notes, etc."></textarea></label>
@@ -234,11 +240,12 @@
         <div class="sum-line" style="margin-top:8px"><span>Total Balance</span><span id="t_bal" class="grand">RM 0.00</span></div>
       </div>
       <div class="btns">
+        <button class="act b-save" id="saveBtn" onclick="saveQuote()">💾 Save to Register</button>
         <button class="act b-primary" onclick="openPreview()">Generate Quotation</button>
         <button class="act b-ghost copy-btn" onclick="copyRegister()">Copy Register Line</button>
         <button class="act b-clear" onclick="newQuote()">New Quote</button>
       </div>
-      <p class="hint" style="margin-top:10px">"Copy Register Line" copies this quote (no., date, staff, customer, phone, items, total) ready to paste as one row into your shared Quotation Register sheet.</p>
+      <p class="hint" style="margin-top:10px">"Save to Register" assigns the next <b>QT-YYMM-XXX</b> number and stores the quote so the whole team sees it. "Copy Register Line" is a tab-separated fallback for pasting into a sheet.</p>
     </div>
   </div>
 </div>
@@ -247,6 +254,7 @@
 <div class="modal" id="modal">
   <div class="modal-inner">
     <div class="modal-bar">
+      <button class="act b-save" style="padding:11px 22px" id="saveBtnModal" onclick="saveQuote()">💾 Save to Register</button>
       <button class="act b-ghost copy-btn" style="padding:11px 22px" onclick="copyRegister()">Copy Register Line</button>
       <button class="act b-primary" style="padding:11px 22px" onclick="window.print()">🖨 Print / Save PDF</button>
       <button class="act b-ghost" style="padding:11px 22px" onclick="closePreview()">Close</button>
@@ -737,7 +745,7 @@ function buildDoc(){
       </div>
       <div class="qbox">
         <div class="qt">QUOTATION</div>
-        <div class="qmeta"><b>No:</b> ${g('c_qno')||'—'}<br><b>Date:</b> ${dateStr}<br><b>PIC:</b> ${g('c_pic')||'—'}</div>
+        <div class="qmeta"><b>No:</b> ${currentNumber()}${committedNo?'':' (pending)'}<br><b>Date:</b> ${dateStr}<br><b>PIC:</b> ${g('c_pic')||'—'}</div>
       </div>
     </div>
 
@@ -776,38 +784,118 @@ function buildDoc(){
   `;
 }
 
-/* ---------- staff name persistence + quotation numbering ----------
-   Number format: YYMMDD-HHMMSS  e.g. 260605-143052
-   The number is a timestamp down to the second, captured the moment a
-   quote is generated, so it can never repeat.                            */
+/* ---------- staff persistence + quotation numbering ----------
+   Numbers use the shared format QT-YYMM-XXX (e.g. QT-2606-001). The running
+   sequence is assigned by the database the moment a quote is SAVED, so numbers
+   stay sequential and unique across the whole team. Before saving, the field
+   shows the next available number as a (pending) preview.
+   Opened on its own (no app / no Supabase), the tool falls back to a per-device
+   monthly counter so the QT-YYMM-XXX format stays consistent offline.        */
 const SK_STAFF='tenn_staff';
-let committedNo=null, autoNo=null;
+const SK_LOCALSEQ='tenn_quote_seq';
+let committedNo=null;   // the final number, once the quote is saved
+let pendingNo=null;     // provisional next number, shown before saving
+let savedId=null;       // database row id, once saved
 
 function loadJSON(k){try{return JSON.parse(localStorage.getItem(k))||{}}catch(e){return{}}}
 function saveJSON(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
-
 function saveStaff(){saveJSON(SK_STAFF,{name:document.getElementById('c_pic').value});}
 
 function pad2(n){return String(n).padStart(2,'0');}
-function timestampNo(){
-  const d=new Date();
-  const date=String(d.getFullYear()).slice(2)+pad2(d.getMonth()+1)+pad2(d.getDate());
-  const time=pad2(d.getHours())+pad2(d.getMinutes())+pad2(d.getSeconds());
-  return date+'-'+time;
-}
-function setAuto(){autoNo=timestampNo();document.getElementById('c_qno').value=autoNo;}
+function pad3(n){return String(n).padStart(3,'0');}
+function yymm(){const d=new Date();return String(d.getFullYear()).slice(2)+pad2(d.getMonth()+1);}
 
-/* ---------- preview (commits the number on first generate) ---------- */
-function openPreview(){
-  if(committedNo===null){
-    const field=document.getElementById('c_qno').value.trim();
-    // re-stamp to the exact generate second, unless the user typed a custom number
-    const no=(field===''||field===autoNo)?timestampNo():field;
-    document.getElementById('c_qno').value=no;
-    committedNo=no;
+/* The parent app exposes its signed-in Supabase client (same origin). */
+function getSupa(){
+  try{ if(window.parent&&window.parent!==window&&window.parent.tennSupabase) return window.parent.tennSupabase; }catch(e){}
+  return window.tennSupabase||null;
+}
+
+function currentNumber(){return committedNo||pendingNo||'—';}
+function setQnoStatus(t){const el=document.getElementById('qno_status');if(el)el.textContent=t;}
+
+/* Show the next available number as a preview (not yet reserved). */
+async function refreshPendingNumber(){
+  if(committedNo) return;
+  const ym=yymm(); const supa=getSupa(); let seq=1;
+  if(supa){
+    try{
+      const {data}=await supa.from('quotations').select('seq').eq('yymm',ym)
+        .order('seq',{ascending:false}).limit(1);
+      seq=(data&&data.length?data[0].seq:0)+1;
+    }catch(e){ /* keep seq=1 */ }
+  }else{
+    const m=loadJSON(SK_LOCALSEQ); seq=(m[ym]||0)+1;
   }
-  const html=buildDoc();
-  document.getElementById('docBody').innerHTML=html;
+  pendingNo='QT-'+ym+'-'+pad3(seq);
+  document.getElementById('c_qno').value=pendingNo;
+  setQnoStatus(getSupa()
+    ? 'Pending — click “Save to Register” to finalise'
+    : 'Pending (offline) — saves on this device only');
+}
+
+function setSaving(b){
+  ['saveBtn','saveBtnModal'].forEach(id=>{const el=document.getElementById(id);if(el)el.disabled=b;});
+  if(b) setQnoStatus('Saving…');
+}
+function flashSaved(msg){
+  ['saveBtn','saveBtnModal'].forEach(id=>{
+    const b=document.getElementById(id); if(!b||b.dataset.busy) return;
+    const t=b.dataset.label||b.textContent; b.dataset.label=t; b.dataset.busy='1';
+    b.textContent=msg||'Saved ✓';
+    setTimeout(()=>{b.textContent=t; delete b.dataset.busy;}, 2000);
+  });
+}
+
+/* Reserve the next number and store the quote in the shared register. */
+async function saveQuote(){
+  if(committedNo){ flashSaved('Saved ✓ — '+committedNo); return; }
+  const lines=collectLines();
+  if(!lines.length){ alert('Add at least one item before saving.'); return; }
+  const g=id=>(document.getElementById(id).value||'').trim();
+  if(!g('c_name')){ alert('Enter the customer name before saving.'); document.getElementById('c_name').focus(); return; }
+  const sub=lines.reduce((s,l)=>s+l.amount,0);
+  const dep=parseFloat(document.getElementById('t_dep').value)||0;
+  const disc=parseFloat(document.getElementById('t_disc').value)||0;
+  const bal=sub-dep-disc;
+  const cats=[...new Set(lines.map(l=>l.cat))].join(', ');
+  const payload={
+    customer:{name:g('c_name'),ic:g('c_ic'),unit:g('c_unit'),phone:g('c_phone'),email:g('c_email')},
+    date:g('c_date'), remarks:g('c_remarks'),
+    lines, totals:{sub,deposit:dep,discount:disc,balance:bal}
+  };
+  const supa=getSupa();
+  setSaving(true);
+  try{
+    if(supa){
+      const {data,error}=await supa.rpc('create_quotation',{
+        p_payload:payload, p_customer:g('c_name'), p_phone:g('c_phone'),
+        p_unit:g('c_unit'), p_prepared_by:g('c_pic'), p_categories:cats, p_total:bal
+      });
+      if(error) throw error;
+      committedNo=data.number; savedId=data.id;
+      setQnoStatus('✓ Saved to shared register');
+    }else{
+      const ym=yymm(); const m=loadJSON(SK_LOCALSEQ); const seq=(m[ym]||0)+1;
+      m[ym]=seq; saveJSON(SK_LOCALSEQ,m);
+      committedNo='QT-'+ym+'-'+pad3(seq);
+      setQnoStatus('Saved locally (offline)');
+    }
+    document.getElementById('c_qno').value=committedNo;
+    // refresh the open preview so the printed doc shows the final number
+    if(document.getElementById('modal').classList.contains('show'))
+      document.getElementById('docBody').innerHTML=buildDoc();
+    flashSaved('Saved ✓ — '+committedNo);
+  }catch(e){
+    setQnoStatus('Not saved');
+    alert('Could not save to register: '+((e&&e.message)||e));
+  }finally{ setSaving(false); }
+}
+
+/* ---------- preview ---------- */
+function openPreview(){
+  if(!collectLines().length){ alert('Add at least one item first.'); return; }
+  document.getElementById('docBody').innerHTML=buildDoc();
   document.getElementById('modal').classList.add('show');
   document.body.style.overflow='hidden';
 }
@@ -826,7 +914,7 @@ function copyRegister(){
   const bal=sub-dep-disc;
   const dateStr=g('c_date')?new Date(g('c_date')).toLocaleDateString('en-GB'):new Date().toLocaleDateString('en-GB');
   const cats=[...new Set(lines.map(l=>l.cat))].join(', ');
-  const row=[g('c_qno')||'(no number)',dateStr,g('c_pic'),g('c_name'),g('c_phone'),cats,fmt(bal)].join('\t');
+  const row=[currentNumber(),dateStr,g('c_pic'),g('c_name'),g('c_phone'),cats,fmt(bal)].join('\t');
   if(navigator.clipboard&&navigator.clipboard.writeText){
     navigator.clipboard.writeText(row).then(flashCopied).catch(()=>fallbackCopy(row));
   }else{fallbackCopy(row);}
@@ -853,9 +941,10 @@ function newQuote(){
   document.getElementById('t_dep').value=0;
   document.getElementById('t_disc').value=0;
   document.getElementById('c_date').value=new Date().toISOString().slice(0,10);
-  committedNo=null;
-  setAuto();
+  committedNo=null; pendingNo=null; savedId=null;
+  setQnoStatus('');
   renderCatalog();
+  refreshPendingNumber();
 }
 
 /* ---------- init ---------- */
@@ -864,9 +953,9 @@ function newQuote(){
   const staff=loadJSON(SK_STAFF);
   if(staff.name) document.getElementById('c_pic').value=staff.name;
   document.getElementById('c_qno').value='';
-  setAuto();
   document.getElementById('c_pic').addEventListener('input',saveStaff);
   renderCatalog();
+  refreshPendingNumber();
 })();
 </script>
 </body>

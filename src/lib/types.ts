@@ -41,3 +41,19 @@ export interface Profile {
   id: string
   full_name: string
 }
+
+export interface Quotation {
+  id: string
+  number: string
+  yymm: string
+  seq: number
+  customer_name: string
+  customer_phone: string
+  unit: string
+  prepared_by: string
+  categories: string
+  total: number
+  payload: unknown
+  created_by: string | null
+  created_at: string
+}
