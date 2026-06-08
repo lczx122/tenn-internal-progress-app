@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-import type { Job, JobEvent, JobWork } from '../lib/types'
+import type { Appointment, Job, JobEvent, JobWork } from '../lib/types'
 import { Layout } from '../components/Layout'
 import { STAGES, getStage, overallPercent } from '../lib/stages'
 import { CATEGORIES } from '../lib/categories'
+import { getApptType, startOfDay, addDays, dayLabel, timeLabel } from '../lib/appointments'
 import { relativeTime, formatDateTime } from '../lib/format'
 
 const STALE_DAYS = 7
@@ -14,17 +15,20 @@ export default function Dashboard() {
   const [jobs, setJobs] = useState<Job[]>([])
   const [works, setWorks] = useState<JobWork[]>([])
   const [events, setEvents] = useState<JobEvent[]>([])
+  const [appts, setAppts] = useState<Appointment[]>([])
   const [loading, setLoading] = useState(true)
 
   async function load() {
-    const [{ data: j }, { data: w }, { data: e }] = await Promise.all([
+    const [{ data: j }, { data: w }, { data: e }, { data: ap }] = await Promise.all([
       supabase.from('jobs').select('*').order('updated_at', { ascending: false }),
       supabase.from('job_works').select('*'),
       supabase.from('job_events').select('*').order('created_at', { ascending: false }).limit(20),
+      supabase.from('appointments').select('*').eq('status', 'scheduled').order('starts_at'),
     ])
     setJobs((j as Job[]) ?? [])
     setWorks((w as JobWork[]) ?? [])
     setEvents((e as JobEvent[]) ?? [])
+    setAppts((ap as Appointment[]) ?? [])
     setLoading(false)
   }
 
@@ -35,6 +39,7 @@ export default function Dashboard() {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'jobs' }, () => load())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'job_works' }, () => load())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'job_events' }, () => load())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'appointments' }, () => load())
       .subscribe()
     return () => {
       supabase.removeChannel(channel)
@@ -106,6 +111,16 @@ export default function Dashboard() {
     }).filter((x) => x.count > 0)
   }, [activeWorks])
 
+  // ---- Schedule: overdue + the next few upcoming appointments ----
+  const schedule = useMemo(() => {
+    const now = Date.now()
+    const horizon = addDays(startOfDay(new Date()), 8).getTime() // through the next week
+    return appts
+      .filter((a) => new Date(a.starts_at).getTime() < horizon)
+      .map((a) => ({ ...a, overdue: new Date(a.starts_at).getTime() < now }))
+      .slice(0, 6)
+  }, [appts])
+
   // ---- Key-holder summary: who is holding how many active units ----
   const keyHolders = useMemo(() => {
     const counts = new Map<string, number>()
@@ -138,6 +153,43 @@ export default function Dashboard() {
             <StatTile label="Needs attention" value={attention.length} accent={attention.length ? 'text-rose-600' : 'text-slate-900'} />
             <StatTile label="Open work items" value={openItems} />
           </div>
+
+          {/* Schedule: overdue + upcoming */}
+          <section>
+            <div className="mb-2 flex items-center justify-between px-1">
+              <h2 className="text-sm font-semibold text-slate-700">Schedule</h2>
+              <Link to="/schedule" className="text-xs font-medium text-slate-500">View all ›</Link>
+            </div>
+            {schedule.length === 0 ? (
+              <Empty>Nothing scheduled in the next week.</Empty>
+            ) : (
+              <ul className="space-y-2">
+                {schedule.map((a) => (
+                  <li key={a.id}>
+                    <Link
+                      to={`/appointment/${a.id}`}
+                      className="flex items-center justify-between gap-2 rounded-xl bg-white p-3 shadow-sm active:bg-slate-50"
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate font-medium text-slate-800">
+                          {getApptType(a.type).icon} {a.title || a.customer_name || getApptType(a.type).label}
+                        </p>
+                        <p className="truncate text-xs text-slate-500">
+                          {dayLabel(new Date(a.starts_at))} · {timeLabel(a.starts_at)}
+                          {a.who ? ` · ${a.who}` : ''}
+                        </p>
+                      </div>
+                      {a.overdue && (
+                        <span className="shrink-0 rounded-full bg-rose-100 px-2 py-0.5 text-[11px] font-medium text-rose-700">
+                          Overdue
+                        </span>
+                      )}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
 
           {/* Pipeline funnel */}
           <Section title="Pipeline">

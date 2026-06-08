@@ -44,6 +44,24 @@ export interface Profile {
 
 export type DocType = 'QT' | 'SO'
 
+export interface Appointment {
+  id: string
+  title: string
+  type: string
+  job_id: string | null
+  customer_name: string
+  location: string
+  who: string
+  starts_at: string
+  ends_at: string | null
+  status: 'scheduled' | 'done' | 'cancelled'
+  notes: string
+  created_by: string | null
+  created_by_name: string
+  created_at: string
+  updated_at: string
+}
+
 export interface Quotation {
   id: string
   number: string

@@ -1,10 +1,11 @@
 import { NavLink } from 'react-router-dom'
 
-// Fixed bottom tab bar for the two top-level screens. Phone-width, matches the
+// Fixed bottom tab bar for the top-level screens. Phone-width, matches the
 // app shell. Pages that show it should leave bottom padding (Layout does).
 const tabs = [
   { to: '/', label: 'Dashboard', icon: '📊', end: true },
   { to: '/units', label: 'Units', icon: '🏠', end: false },
+  { to: '/schedule', label: 'Schedule', icon: '📅', end: false },
   { to: '/quote', label: 'Quote', icon: '🧾', end: false },
   { to: '/quotes', label: 'Register', icon: '📒', end: false },
 ]
@@ -19,7 +20,7 @@ export function BottomNav() {
             to={t.to}
             end={t.end}
             className={({ isActive }) =>
-              'flex flex-1 flex-col items-center gap-0.5 py-2.5 text-xs font-medium ' +
+              'flex flex-1 flex-col items-center gap-0.5 py-2 text-[11px] font-medium ' +
               (isActive ? 'text-slate-900' : 'text-slate-400 active:text-slate-600')
             }
           >

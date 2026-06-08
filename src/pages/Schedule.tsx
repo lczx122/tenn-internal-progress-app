@@ -1,0 +1,334 @@
+import { useEffect, useMemo, useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import { supabase } from '../lib/supabase'
+import type { Appointment } from '../lib/types'
+import { Layout } from '../components/Layout'
+import {
+  APPT_TYPES,
+  getApptType,
+  startOfDay,
+  addDays,
+  sameDay,
+  dayLabel,
+  timeLabel,
+} from '../lib/appointments'
+
+type Mode = 'agenda' | 'calendar'
+
+export default function Schedule() {
+  const [appts, setAppts] = useState<Appointment[]>([])
+  const [loading, setLoading] = useState(true)
+  const [mode, setMode] = useState<Mode>('agenda')
+  const [query, setQuery] = useState('')
+  const [typeFilter, setTypeFilter] = useState('')
+  const [showPast, setShowPast] = useState(false)
+  const [month, setMonth] = useState(() => startOfDay(new Date()))
+  const [selectedDay, setSelectedDay] = useState(() => startOfDay(new Date()))
+  const navigate = useNavigate()
+
+  async function load() {
+    const { data } = await supabase
+      .from('appointments')
+      .select('*')
+      .order('starts_at', { ascending: true })
+    setAppts((data as Appointment[]) ?? [])
+    setLoading(false)
+  }
+
+  useEffect(() => {
+    load()
+    const channel = supabase
+      .channel('schedule')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'appointments' }, () => load())
+      .subscribe()
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [])
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    return appts.filter(
+      (a) =>
+        (!typeFilter || a.type === typeFilter) &&
+        (!q ||
+          a.title.toLowerCase().includes(q) ||
+          a.customer_name.toLowerCase().includes(q) ||
+          a.who.toLowerCase().includes(q) ||
+          a.location.toLowerCase().includes(q)),
+    )
+  }, [appts, query, typeFilter])
+
+  return (
+    <Layout title="Schedule" bottomNav>
+      <div className="mb-3 flex gap-2">
+        <input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search customer, who, location…"
+          className="flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-slate-900"
+        />
+        <button
+          onClick={() => navigate('/schedule/new')}
+          className="shrink-0 rounded-lg bg-slate-900 px-3 py-2 text-sm font-medium text-white active:bg-slate-700"
+        >
+          + New
+        </button>
+      </div>
+
+      <div className="mb-3 flex gap-2">
+        <div className="flex flex-1 rounded-lg border border-slate-300 bg-white p-0.5">
+          {(['agenda', 'calendar'] as Mode[]).map((m) => (
+            <button
+              key={m}
+              onClick={() => setMode(m)}
+              className={
+                'flex-1 rounded-md px-2 py-1.5 text-sm font-medium capitalize ' +
+                (mode === m ? 'bg-slate-900 text-white' : 'text-slate-600')
+              }
+            >
+              {m}
+            </button>
+          ))}
+        </div>
+        <select
+          value={typeFilter}
+          onChange={(e) => setTypeFilter(e.target.value)}
+          className={`rounded-lg border bg-white px-2 py-2 text-sm outline-none focus:border-slate-900 ${typeFilter ? 'border-slate-900 font-medium' : 'border-slate-300 text-slate-600'}`}
+        >
+          <option value="">All types</option>
+          {APPT_TYPES.map((t) => (
+            <option key={t.key} value={t.key}>
+              {t.label}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {loading ? (
+        <p className="py-10 text-center text-slate-400">Loading…</p>
+      ) : mode === 'agenda' ? (
+        <Agenda items={filtered} showPast={showPast} onTogglePast={() => setShowPast((v) => !v)} />
+      ) : (
+        <CalendarView
+          items={filtered}
+          month={month}
+          setMonth={setMonth}
+          selectedDay={selectedDay}
+          setSelectedDay={setSelectedDay}
+        />
+      )}
+    </Layout>
+  )
+}
+
+// ---------- agenda (grouped by day) ----------
+function Agenda({
+  items,
+  showPast,
+  onTogglePast,
+}: {
+  items: Appointment[]
+  showPast: boolean
+  onTogglePast: () => void
+}) {
+  const today = startOfDay(new Date())
+  const now = Date.now()
+
+  const visible = items.filter((a) => {
+    if (showPast) return true
+    const day = startOfDay(new Date(a.starts_at))
+    // upcoming days, plus anything overdue (past but still scheduled)
+    return day >= today || (a.status === 'scheduled' && new Date(a.starts_at).getTime() < now)
+  })
+
+  const groups = useMemo(() => groupByDay(visible), [visible])
+
+  return (
+    <>
+      <div className="mb-2 flex justify-end">
+        <button onClick={onTogglePast} className="text-xs font-medium text-slate-500 underline">
+          {showPast ? 'Hide past' : 'Show past & done'}
+        </button>
+      </div>
+      {groups.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-slate-300 py-12 text-center text-slate-400">
+          No appointments. Tap “+ New” to schedule one.
+        </div>
+      ) : (
+        <div className="space-y-5">
+          {groups.map((g) => (
+            <div key={g.key}>
+              <h2 className="mb-2 px-1 text-sm font-semibold text-slate-700">{dayLabel(g.date)}</h2>
+              <ul className="space-y-2">
+                {g.items.map((a) => (
+                  <ApptRow key={a.id} a={a} overdue={a.status === 'scheduled' && new Date(a.starts_at).getTime() < now} />
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+      )}
+    </>
+  )
+}
+
+// ---------- month calendar ----------
+function CalendarView({
+  items,
+  month,
+  setMonth,
+  selectedDay,
+  setSelectedDay,
+}: {
+  items: Appointment[]
+  month: Date
+  setMonth: (d: Date) => void
+  selectedDay: Date
+  setSelectedDay: (d: Date) => void
+}) {
+  const today = startOfDay(new Date())
+  const first = new Date(month.getFullYear(), month.getMonth(), 1)
+  const gridStart = addDays(first, -first.getDay()) // back up to Sunday
+  const cells = Array.from({ length: 42 }, (_, i) => addDays(gridStart, i))
+
+  const countByDay = useMemo(() => {
+    const m = new Map<string, number>()
+    for (const a of items) {
+      const k = startOfDay(new Date(a.starts_at)).toDateString()
+      m.set(k, (m.get(k) ?? 0) + 1)
+    }
+    return m
+  }, [items])
+
+  const dayItems = items
+    .filter((a) => sameDay(new Date(a.starts_at), selectedDay))
+    .sort((a, b) => +new Date(a.starts_at) - +new Date(b.starts_at))
+
+  return (
+    <>
+      <div className="mb-2 flex items-center justify-between">
+        <button
+          onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1))}
+          className="rounded-lg px-3 py-1.5 text-lg text-slate-500 active:bg-slate-100"
+        >
+          ‹
+        </button>
+        <span className="font-semibold text-slate-800">
+          {month.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}
+        </span>
+        <button
+          onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1))}
+          className="rounded-lg px-3 py-1.5 text-lg text-slate-500 active:bg-slate-100"
+        >
+          ›
+        </button>
+      </div>
+
+      <div className="rounded-xl bg-white p-2 shadow-sm">
+        <div className="grid grid-cols-7 text-center text-[11px] font-medium text-slate-400">
+          {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, i) => (
+            <div key={i} className="py-1">{d}</div>
+          ))}
+        </div>
+        <div className="grid grid-cols-7 gap-1">
+          {cells.map((d) => {
+            const inMonth = d.getMonth() === month.getMonth()
+            const isToday = sameDay(d, today)
+            const isSel = sameDay(d, selectedDay)
+            const count = countByDay.get(d.toDateString()) ?? 0
+            return (
+              <button
+                key={d.toISOString()}
+                onClick={() => setSelectedDay(startOfDay(d))}
+                className={
+                  'flex aspect-square flex-col items-center justify-center rounded-lg text-sm ' +
+                  (isSel ? 'bg-slate-900 text-white' : isToday ? 'bg-slate-100' : '') +
+                  (inMonth ? ' text-slate-800' : ' text-slate-300')
+                }
+              >
+                <span className={isSel ? 'font-semibold' : ''}>{d.getDate()}</span>
+                {count > 0 && (
+                  <span
+                    className={
+                      'mt-0.5 h-1.5 w-1.5 rounded-full ' + (isSel ? 'bg-white' : 'bg-amber-500')
+                    }
+                  />
+                )}
+              </button>
+            )
+          })}
+        </div>
+      </div>
+
+      <h2 className="mb-2 mt-4 px-1 text-sm font-semibold text-slate-700">{dayLabel(selectedDay)}</h2>
+      {dayItems.length === 0 ? (
+        <p className="rounded-xl border border-dashed border-slate-300 py-8 text-center text-sm text-slate-400">
+          Nothing scheduled.
+        </p>
+      ) : (
+        <ul className="space-y-2">
+          {dayItems.map((a) => (
+            <ApptRow key={a.id} a={a} overdue={a.status === 'scheduled' && new Date(a.starts_at).getTime() < Date.now()} />
+          ))}
+        </ul>
+      )}
+    </>
+  )
+}
+
+// ---------- one appointment row ----------
+export function ApptRow({ a, overdue }: { a: Appointment; overdue?: boolean }) {
+  const t = getApptType(a.type)
+  const muted = a.status !== 'scheduled'
+  return (
+    <li>
+      <Link
+        to={`/appointment/${a.id}`}
+        className={'block rounded-xl bg-white p-3 shadow-sm active:bg-slate-50 ' + (muted ? 'opacity-60' : '')}
+      >
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <span className={`rounded-full border px-2 py-0.5 text-[11px] font-medium ${t.accent}`}>
+                {t.icon} {t.label}
+              </span>
+              <span className="text-sm font-medium text-slate-700">{timeLabel(a.starts_at)}</span>
+            </div>
+            <p className={'mt-1 truncate font-semibold text-slate-900 ' + (a.status === 'done' ? 'line-through' : '')}>
+              {a.title || a.customer_name || t.label}
+            </p>
+            {(a.customer_name || a.location) && (
+              <p className="truncate text-xs text-slate-500">
+                {[a.customer_name, a.location].filter(Boolean).join(' · ')}
+              </p>
+            )}
+          </div>
+          <div className="flex shrink-0 flex-col items-end gap-1">
+            {overdue && (
+              <span className="rounded-full bg-rose-100 px-2 py-0.5 text-[11px] font-medium text-rose-700">Overdue</span>
+            )}
+            {a.status === 'done' && (
+              <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-medium text-emerald-700">Done</span>
+            )}
+            {a.status === 'cancelled' && (
+              <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[11px] font-medium text-slate-600">Cancelled</span>
+            )}
+            {a.who && <span className="text-xs text-slate-400">{a.who}</span>}
+          </div>
+        </div>
+      </Link>
+    </li>
+  )
+}
+
+function groupByDay(items: Appointment[]): { key: string; date: Date; items: Appointment[] }[] {
+  const map = new Map<string, { key: string; date: Date; items: Appointment[] }>()
+  for (const a of items) {
+    const d = startOfDay(new Date(a.starts_at))
+    const key = d.toDateString()
+    if (!map.has(key)) map.set(key, { key, date: d, items: [] })
+    map.get(key)!.items.push(a)
+  }
+  return [...map.values()].sort((x, y) => +x.date - +y.date)
+}

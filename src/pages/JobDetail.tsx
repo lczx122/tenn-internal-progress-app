@@ -2,9 +2,10 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
-import type { Job, JobEvent, JobWork } from '../lib/types'
+import type { Appointment, Job, JobEvent, JobWork } from '../lib/types'
 import { STAGES, getStage } from '../lib/stages'
 import { CATEGORIES, getCategory } from '../lib/categories'
+import { getApptType } from '../lib/appointments'
 import { Layout } from '../components/Layout'
 import { StageBar } from '../components/StageBar'
 import { formatDate, formatDateTime } from '../lib/format'
@@ -17,6 +18,7 @@ export default function JobDetail() {
   const [job, setJob] = useState<Job | null>(null)
   const [works, setWorks] = useState<JobWork[]>([])
   const [events, setEvents] = useState<JobEvent[]>([])
+  const [appts, setAppts] = useState<Appointment[]>([])
   const [loading, setLoading] = useState(true)
   const [note, setNote] = useState('')
   const [busy, setBusy] = useState(false)
@@ -24,14 +26,16 @@ export default function JobDetail() {
 
   const loadAll = useCallback(async () => {
     if (!id) return
-    const [{ data: j }, { data: wk }, { data: ev }] = await Promise.all([
+    const [{ data: j }, { data: wk }, { data: ev }, { data: ap }] = await Promise.all([
       supabase.from('jobs').select('*').eq('id', id).single(),
       supabase.from('job_works').select('*').eq('job_id', id).order('created_at'),
       supabase.from('job_events').select('*').eq('job_id', id).order('created_at', { ascending: false }),
+      supabase.from('appointments').select('*').eq('job_id', id).order('starts_at'),
     ])
     setJob((j as Job) ?? null)
     setWorks((wk as JobWork[]) ?? [])
     setEvents((ev as JobEvent[]) ?? [])
+    setAppts((ap as Appointment[]) ?? [])
     setLoading(false)
   }, [id])
 
@@ -42,6 +46,7 @@ export default function JobDetail() {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'jobs', filter: `id=eq.${id}` }, () => loadAll())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'job_works', filter: `job_id=eq.${id}` }, () => loadAll())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'job_events', filter: `job_id=eq.${id}` }, () => loadAll())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'appointments', filter: `job_id=eq.${id}` }, () => loadAll())
       .subscribe()
     return () => {
       supabase.removeChannel(channel)
@@ -175,6 +180,46 @@ export default function JobDetail() {
           </span>
           <span className="text-xs font-medium text-amber-700">Change ›</span>
         </button>
+      </section>
+
+      {/* Appointments */}
+      <section className="mt-4 rounded-xl bg-white p-4 shadow-sm">
+        <div className="mb-2 flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-slate-700">Appointments</h2>
+          <Link
+            to={`/schedule/new?job_id=${job.id}`}
+            className="rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-medium text-white active:bg-slate-700"
+          >
+            + Schedule
+          </Link>
+        </div>
+        {appts.filter((a) => a.status !== 'cancelled').length === 0 ? (
+          <p className="text-sm text-slate-400">No appointments yet.</p>
+        ) : (
+          <ul className="space-y-2">
+            {appts
+              .filter((a) => a.status !== 'cancelled')
+              .map((a) => (
+                <li key={a.id}>
+                  <Link
+                    to={`/appointment/${a.id}`}
+                    className="flex items-center justify-between gap-2 rounded-lg bg-slate-50 px-3 py-2 active:bg-slate-100"
+                  >
+                    <span className="min-w-0">
+                      <span className="text-sm font-medium text-slate-800">
+                        {getApptType(a.type).icon} {getApptType(a.type).label}
+                      </span>
+                      <span className="block text-xs text-slate-500">
+                        {new Date(a.starts_at).toLocaleString(undefined, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                        {a.who ? ` · ${a.who}` : ''}
+                      </span>
+                    </span>
+                    {a.status === 'done' && <span className="shrink-0 text-xs font-medium text-emerald-600">Done</span>}
+                  </Link>
+                </li>
+              ))}
+          </ul>
+        )}
       </section>
 
       {/* Work categories */}

@@ -8,6 +8,8 @@ import JobDetail from './pages/JobDetail'
 import NewJob from './pages/NewJob'
 import Quotation from './pages/Quotation'
 import QuotesRegister from './pages/QuotesRegister'
+import Schedule from './pages/Schedule'
+import AppointmentForm from './pages/AppointmentForm'
 import SetupNotice from './pages/SetupNotice'
 
 export default function App() {
@@ -38,6 +40,9 @@ export default function App() {
       <Route path="/new" element={<NewJob />} />
       <Route path="/quote" element={<Quotation />} />
       <Route path="/quotes" element={<QuotesRegister />} />
+      <Route path="/schedule" element={<Schedule />} />
+      <Route path="/schedule/new" element={<AppointmentForm />} />
+      <Route path="/appointment/:id" element={<AppointmentForm />} />
       <Route path="/job/:id" element={<JobDetail />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
