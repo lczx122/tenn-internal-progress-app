@@ -143,11 +143,24 @@ create policy "auth all photos" on public.job_photos
 
 -- ---------------------------------------------------------------------------
 -- 6. REALTIME
---    Broadcast changes so every phone updates live.
+--    Broadcast changes so every phone updates live. Wrapped in a guard so the
+--    script is safe to re-run (adding a table that's already published errors).
 -- ---------------------------------------------------------------------------
-alter publication supabase_realtime add table public.jobs;
-alter publication supabase_realtime add table public.job_events;
-alter publication supabase_realtime add table public.job_photos;
+do $$
+begin
+  if not exists (select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'jobs') then
+    alter publication supabase_realtime add table public.jobs;
+  end if;
+  if not exists (select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'job_events') then
+    alter publication supabase_realtime add table public.job_events;
+  end if;
+  if not exists (select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'job_photos') then
+    alter publication supabase_realtime add table public.job_photos;
+  end if;
+end $$;
 
 -- ---------------------------------------------------------------------------
 -- 7. STORAGE (photos)
