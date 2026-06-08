@@ -15,13 +15,11 @@ export interface Stage {
 }
 
 export const STAGES: Stage[] = [
-  { key: 'not_started', label: 'Not started',          percent: 0,   color: 'bg-slate-400' },
-  { key: 'demolition',  label: 'Demolition',           percent: 15,  color: 'bg-orange-500' },
-  { key: 'mep',         label: 'Plumbing & Electrical', percent: 35, color: 'bg-amber-500' },
-  { key: 'tiling',      label: 'Tiling & Waterproofing', percent: 55, color: 'bg-yellow-500' },
-  { key: 'carpentry',   label: 'Carpentry & Fixtures', percent: 70,  color: 'bg-lime-500' },
-  { key: 'painting',    label: 'Painting',             percent: 85,  color: 'bg-green-500' },
-  { key: 'handover',    label: 'Cleaning & Handover',  percent: 100, color: 'bg-emerald-600' },
+  { key: 'booked',      label: 'Booked',                percent: 0,   color: 'bg-slate-400' },
+  { key: 'in_progress', label: 'In Progress (开料)',     percent: 30,  color: 'bg-amber-500' },
+  { key: 'installing',  label: 'Installing (安装)',      percent: 60,  color: 'bg-yellow-500' },
+  { key: 'collecting',  label: 'Collecting Money',      percent: 85,  color: 'bg-lime-500' },
+  { key: 'completed',   label: 'Completed',             percent: 100, color: 'bg-emerald-600' },
 ]
 
 const byKey = new Map(STAGES.map((s) => [s.key, s]))

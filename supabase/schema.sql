@@ -50,7 +50,7 @@ create table if not exists public.jobs (
   address        text not null default '',
   phone          text not null default '',
   -- Current stage key, matches src/lib/stages.ts
-  stage          text not null default 'not_started',
+  stage          text not null default 'booked',
   key_holder     text not null default 'Office',
   start_date     date,
   target_date    date,
