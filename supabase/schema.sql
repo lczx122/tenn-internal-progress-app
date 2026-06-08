@@ -95,6 +95,25 @@ create table if not exists public.job_photos (
 
 create index if not exists job_photos_job_idx on public.job_photos (job_id, created_at desc);
 
+-- ---------------------------------------------------------------------------
+-- 4b. JOB_WORKS
+--    One row per work category on a unit (Mindhome, Aluminium, EE, Smart Home,
+--    Smart Lock, Products). Each category tracks its OWN stage independently.
+-- ---------------------------------------------------------------------------
+create table if not exists public.job_works (
+  id          uuid primary key default gen_random_uuid(),
+  job_id      uuid not null references public.jobs (id) on delete cascade,
+  category    text not null,
+  title       text not null default '',
+  stage       text not null default 'booked',
+  remarks     text not null default '',
+  updated_by  text not null default '',
+  created_at  timestamptz not null default now(),
+  updated_at  timestamptz not null default now()
+);
+
+create index if not exists job_works_job_idx on public.job_works (job_id);
+
 -- Keep jobs.updated_at fresh on every change.
 create or replace function public.touch_job()
 returns trigger language plpgsql as $$
@@ -108,6 +127,10 @@ drop trigger if exists jobs_touch on public.jobs;
 create trigger jobs_touch before update on public.jobs
   for each row execute function public.touch_job();
 
+drop trigger if exists job_works_touch on public.job_works;
+create trigger job_works_touch before update on public.job_works
+  for each row execute function public.touch_job();
+
 -- ---------------------------------------------------------------------------
 -- 5. ROW LEVEL SECURITY
 --    All 6+ staff are trusted internal users: any signed-in user can read and
@@ -117,11 +140,13 @@ alter table public.profiles   enable row level security;
 alter table public.jobs       enable row level security;
 alter table public.job_events enable row level security;
 alter table public.job_photos enable row level security;
+alter table public.job_works  enable row level security;
 
 drop policy if exists "auth read profiles"  on public.profiles;
 drop policy if exists "auth all jobs"        on public.jobs;
 drop policy if exists "auth all events"      on public.job_events;
 drop policy if exists "auth all photos"      on public.job_photos;
+drop policy if exists "auth all works"       on public.job_works;
 drop policy if exists "auth update own profile" on public.profiles;
 
 create policy "auth read profiles" on public.profiles
@@ -138,6 +163,10 @@ create policy "auth all events" on public.job_events
   with check (auth.role() = 'authenticated');
 
 create policy "auth all photos" on public.job_photos
+  for all using (auth.role() = 'authenticated')
+  with check (auth.role() = 'authenticated');
+
+create policy "auth all works" on public.job_works
   for all using (auth.role() = 'authenticated')
   with check (auth.role() = 'authenticated');
 
@@ -159,6 +188,10 @@ begin
   if not exists (select 1 from pg_publication_tables
     where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'job_photos') then
     alter publication supabase_realtime add table public.job_photos;
+  end if;
+  if not exists (select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'job_works') then
+    alter publication supabase_realtime add table public.job_works;
   end if;
 end $$;
 

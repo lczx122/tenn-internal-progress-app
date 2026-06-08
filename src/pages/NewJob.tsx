@@ -69,7 +69,7 @@ export default function NewJob() {
 
   return (
     <Layout
-      title="New Job"
+      title="New Unit"
       back={
         <Link to="/" className="text-xl leading-none text-slate-300">
           ←
@@ -79,21 +79,21 @@ export default function NewJob() {
       <form onSubmit={onSubmit} className="space-y-4">
         <div className="rounded-xl bg-white p-4 shadow-sm space-y-4">
           <div>
-            <label className={labelCls}>Customer name *</label>
+            <label className={labelCls}>Unit code *</label>
             <input
               className={field}
               value={form.customer_name}
               onChange={(e) => set('customer_name', e.target.value)}
-              placeholder="e.g. Mr Tan"
+              placeholder="e.g. A-10-06"
             />
           </div>
           <div>
-            <label className={labelCls}>Site address</label>
+            <label className={labelCls}>Room type / description</label>
             <input
               className={field}
               value={form.address}
               onChange={(e) => set('address', e.target.value)}
-              placeholder="Block, unit, street"
+              placeholder="e.g. 2 Room Standard"
             />
           </div>
           <div>

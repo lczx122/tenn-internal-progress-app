@@ -18,3 +18,22 @@ export function StageBar({ stageKey }: { stageKey: string }) {
     </div>
   )
 }
+
+// A plain percentage bar with a custom label (used for a unit's overall
+// progress, averaged across its categories).
+export function PercentBar({ percent, label }: { percent: number; label: string }) {
+  return (
+    <div>
+      <div className="flex items-center justify-between text-xs mb-1">
+        <span className="font-medium text-slate-700">{label}</span>
+        <span className="text-slate-500">{percent}%</span>
+      </div>
+      <div className="h-2 w-full rounded-full bg-slate-200 overflow-hidden">
+        <div
+          className="h-full rounded-full bg-slate-800 transition-all duration-500"
+          style={{ width: `${percent}%` }}
+        />
+      </div>
+    </div>
+  )
+}

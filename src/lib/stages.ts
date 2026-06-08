@@ -27,3 +27,10 @@ const byKey = new Map(STAGES.map((s) => [s.key, s]))
 export function getStage(key: string): Stage {
   return byKey.get(key) ?? STAGES[0]
 }
+
+// Average progress across a unit's work categories (0-100).
+export function overallPercent(stageKeys: string[]): number {
+  if (stageKeys.length === 0) return 0
+  const sum = stageKeys.reduce((a, k) => a + getStage(k).percent, 0)
+  return Math.round(sum / stageKeys.length)
+}

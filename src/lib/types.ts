@@ -13,6 +13,18 @@ export interface Job {
   updated_by: string
 }
 
+export interface JobWork {
+  id: string
+  job_id: string
+  category: string
+  title: string
+  stage: string
+  remarks: string
+  updated_by: string
+  created_at: string
+  updated_at: string
+}
+
 export type JobEventType = 'note' | 'stage' | 'key' | 'created'
 
 export interface JobEvent {
