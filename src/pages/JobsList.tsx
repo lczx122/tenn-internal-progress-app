@@ -4,8 +4,8 @@ import { supabase } from '../lib/supabase'
 import type { Job, JobWork } from '../lib/types'
 import { Layout } from '../components/Layout'
 import { PercentBar } from '../components/StageBar'
-import { getStage, overallPercent } from '../lib/stages'
-import { getCategory } from '../lib/categories'
+import { getStage, overallPercent, STAGES } from '../lib/stages'
+import { getCategory, CATEGORIES } from '../lib/categories'
 import { relativeTime } from '../lib/format'
 
 export default function JobsList() {
@@ -13,6 +13,8 @@ export default function JobsList() {
   const [works, setWorks] = useState<JobWork[]>([])
   const [loading, setLoading] = useState(true)
   const [query, setQuery] = useState('')
+  const [catFilter, setCatFilter] = useState('')
+  const [stageFilter, setStageFilter] = useState('')
   const [showArchived, setShowArchived] = useState(false)
   const navigate = useNavigate()
 
@@ -64,7 +66,20 @@ export default function JobsList() {
             w.category.toLowerCase().includes(q)
           )
       )
-  }, [jobs, query, showArchived, worksByJob])
+      .filter((j) => {
+        // Category / stage filters work together:
+        //  - category only   → units that have that category
+        //  - stage only      → units with ANY category at that stage
+        //  - both            → units with that category at that stage
+        if (!catFilter && !stageFilter) return true
+        const w = worksByJob.get(j.id) ?? []
+        return w.some(
+          (x) =>
+            (!catFilter || x.category === catFilter) &&
+            (!stageFilter || x.stage === stageFilter)
+        )
+      })
+  }, [jobs, query, showArchived, worksByJob, catFilter, stageFilter])
 
   return (
     <Layout title="Units">
@@ -83,12 +98,52 @@ export default function JobsList() {
         </button>
       </div>
 
-      <button
-        onClick={() => setShowArchived((v) => !v)}
-        className="mb-3 text-xs font-medium text-slate-500 underline"
-      >
-        {showArchived ? '← Back to active units' : 'View archived units'}
-      </button>
+      <div className="mb-3 flex gap-2">
+        <select
+          value={catFilter}
+          onChange={(e) => setCatFilter(e.target.value)}
+          className={`flex-1 rounded-lg border bg-white px-2 py-2 text-sm outline-none focus:border-slate-900 ${catFilter ? 'border-slate-900 font-medium' : 'border-slate-300 text-slate-600'}`}
+        >
+          <option value="">All categories</option>
+          {CATEGORIES.map((c) => (
+            <option key={c.key} value={c.key}>
+              {c.label}
+            </option>
+          ))}
+        </select>
+        <select
+          value={stageFilter}
+          onChange={(e) => setStageFilter(e.target.value)}
+          className={`flex-1 rounded-lg border bg-white px-2 py-2 text-sm outline-none focus:border-slate-900 ${stageFilter ? 'border-slate-900 font-medium' : 'border-slate-300 text-slate-600'}`}
+        >
+          <option value="">Any stage</option>
+          {STAGES.map((s) => (
+            <option key={s.key} value={s.key}>
+              {s.label}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div className="mb-3 flex items-center justify-between">
+        <button
+          onClick={() => setShowArchived((v) => !v)}
+          className="text-xs font-medium text-slate-500 underline"
+        >
+          {showArchived ? '← Back to active units' : 'View archived units'}
+        </button>
+        {(catFilter || stageFilter) && (
+          <button
+            onClick={() => {
+              setCatFilter('')
+              setStageFilter('')
+            }}
+            className="text-xs font-medium text-slate-500"
+          >
+            Clear filters ✕
+          </button>
+        )}
+      </div>
 
       {loading ? (
         <p className="py-10 text-center text-slate-400">Loading…</p>
