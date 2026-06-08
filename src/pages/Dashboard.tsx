@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-import type { Job, JobWork } from '../lib/types'
+import type { Job, JobEvent, JobWork } from '../lib/types'
 import { Layout } from '../components/Layout'
 import { STAGES, getStage, overallPercent } from '../lib/stages'
 import { CATEGORIES } from '../lib/categories'
-import { relativeTime } from '../lib/format'
+import { relativeTime, formatDateTime } from '../lib/format'
 
 const STALE_DAYS = 7
 const DAY_MS = 86_400_000
@@ -13,15 +13,18 @@ const DAY_MS = 86_400_000
 export default function Dashboard() {
   const [jobs, setJobs] = useState<Job[]>([])
   const [works, setWorks] = useState<JobWork[]>([])
+  const [events, setEvents] = useState<JobEvent[]>([])
   const [loading, setLoading] = useState(true)
 
   async function load() {
-    const [{ data: j }, { data: w }] = await Promise.all([
+    const [{ data: j }, { data: w }, { data: e }] = await Promise.all([
       supabase.from('jobs').select('*').order('updated_at', { ascending: false }),
       supabase.from('job_works').select('*'),
+      supabase.from('job_events').select('*').order('created_at', { ascending: false }).limit(20),
     ])
     setJobs((j as Job[]) ?? [])
     setWorks((w as JobWork[]) ?? [])
+    setEvents((e as JobEvent[]) ?? [])
     setLoading(false)
   }
 
@@ -31,6 +34,7 @@ export default function Dashboard() {
       .channel('dashboard')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'jobs' }, () => load())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'job_works' }, () => load())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'job_events' }, () => load())
       .subscribe()
     return () => {
       supabase.removeChannel(channel)
@@ -101,6 +105,25 @@ export default function Dashboard() {
       return { cat: c, count: items.length, pct }
     }).filter((x) => x.count > 0)
   }, [activeWorks])
+
+  // ---- Key-holder summary: who is holding how many active units ----
+  const keyHolders = useMemo(() => {
+    const counts = new Map<string, number>()
+    for (const u of active) {
+      const k = u.job.key_holder || 'Office'
+      counts.set(k, (counts.get(k) ?? 0) + 1)
+    }
+    return [...counts.entries()]
+      .map(([holder, count]) => ({ holder, count }))
+      .sort((a, b) => b.count - a.count)
+  }, [active])
+
+  // Look up a unit's name for the global activity feed.
+  const jobName = useMemo(() => {
+    const m = new Map<string, string>()
+    for (const j of jobs) m.set(j.id, j.customer_name)
+    return m
+  }, [jobs])
 
   return (
     <Layout title="Dashboard" bottomNav>
@@ -216,10 +239,71 @@ export default function Dashboard() {
               </div>
             )}
           </Section>
+
+          {/* Key holders */}
+          <Section title="Who has the keys">
+            {keyHolders.length === 0 ? (
+              <Empty>No active units.</Empty>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {keyHolders.map(({ holder, count }) => (
+                  <Link
+                    key={holder}
+                    to={`/units?q=${encodeURIComponent(holder)}`}
+                    className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-3 py-1.5 text-sm text-amber-900 active:bg-amber-100"
+                  >
+                    🔑 <span className="font-medium">{holder}</span>
+                    <span className="rounded-full bg-amber-200/70 px-1.5 text-xs font-semibold">{count}</span>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </Section>
+
+          {/* Recent activity across all units */}
+          <Section title="Recent activity">
+            {events.length === 0 ? (
+              <Empty>No activity yet.</Empty>
+            ) : (
+              <ul className="space-y-3 rounded-xl bg-white p-4 shadow-sm">
+                {events.map((ev) => (
+                  <li key={ev.id} className="flex gap-3">
+                    <div className="mt-0.5 text-base leading-none">{iconFor(ev.type)}</div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm text-slate-800">
+                        {ev.job_id && jobName.has(ev.job_id) && (
+                          <Link to={`/job/${ev.job_id}`} className="font-semibold text-slate-900 underline">
+                            {jobName.get(ev.job_id)}
+                          </Link>
+                        )}{' '}
+                        <span className="break-words">{ev.body}</span>
+                      </p>
+                      <p className="mt-0.5 text-xs text-slate-400">
+                        {ev.author_name || 'Someone'} · {formatDateTime(ev.created_at)}
+                      </p>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Section>
         </div>
       )}
     </Layout>
   )
+}
+
+function iconFor(type: JobEvent['type']): string {
+  switch (type) {
+    case 'stage':
+      return '📈'
+    case 'key':
+      return '🔑'
+    case 'created':
+      return '🏁'
+    default:
+      return '📝'
+  }
 }
 
 // Map an average percent back to the nearest stage colour for the bar.

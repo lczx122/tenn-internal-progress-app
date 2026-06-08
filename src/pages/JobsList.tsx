@@ -12,10 +12,10 @@ export default function JobsList() {
   const [jobs, setJobs] = useState<Job[]>([])
   const [works, setWorks] = useState<JobWork[]>([])
   const [loading, setLoading] = useState(true)
-  const [query, setQuery] = useState('')
   // Filters can be seeded from the URL (e.g. the dashboard links to
-  // /units?stage=installing or /units?cat=Aluminium).
+  // /units?stage=installing, /units?cat=Aluminium, or /units?q=Ahmad).
   const [searchParams] = useSearchParams()
+  const [query, setQuery] = useState(searchParams.get('q') ?? '')
   const [catFilter, setCatFilter] = useState(searchParams.get('cat') ?? '')
   const [stageFilter, setStageFilter] = useState(searchParams.get('stage') ?? '')
   const [showArchived, setShowArchived] = useState(false)
