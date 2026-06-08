@@ -6,6 +6,7 @@ import Dashboard from './pages/Dashboard'
 import JobsList from './pages/JobsList'
 import JobDetail from './pages/JobDetail'
 import NewJob from './pages/NewJob'
+import Quotation from './pages/Quotation'
 import SetupNotice from './pages/SetupNotice'
 
 export default function App() {
@@ -34,6 +35,7 @@ export default function App() {
       <Route path="/" element={<Dashboard />} />
       <Route path="/units" element={<JobsList />} />
       <Route path="/new" element={<NewJob />} />
+      <Route path="/quote" element={<Quotation />} />
       <Route path="/job/:id" element={<JobDetail />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

@@ -1,0 +1,873 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tenn Fasteners — Quotation Generator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy:#152453;
+    --navy-2:#1e3270;
+    --ink:#1a1c22;
+    --muted:#6b7280;
+    --line:#e3e6ee;
+    --bg:#f3f5fa;
+    --card:#ffffff;
+    --accent:#c8102e;
+    --accent-soft:#fdecef;
+    --ok:#0f7b4f;
+    --shadow:0 1px 2px rgba(21,36,83,.06),0 8px 24px rgba(21,36,83,.07);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    font-family:'IBM Plex Sans',system-ui,sans-serif;
+    background:var(--bg);color:var(--ink);
+    -webkit-font-smoothing:antialiased;line-height:1.45;
+  }
+  h1,h2,h3,.brand{font-family:'Archivo',sans-serif}
+
+  /* ---------- top bar ---------- */
+  header.topbar{
+    background:linear-gradient(100deg,var(--navy),var(--navy-2));
+    color:#fff;padding:18px 26px;display:flex;align-items:center;gap:18px;
+    box-shadow:0 2px 14px rgba(21,36,83,.25);position:sticky;top:0;z-index:30;
+  }
+  .logo{
+    width:46px;height:46px;border-radius:10px;background:#0d1733;
+    display:grid;place-items:center;font-family:'Archivo';font-weight:800;
+    font-size:20px;letter-spacing:.5px;flex:none;
+    box-shadow:inset 0 0 0 2px rgba(255,255,255,.12);
+  }
+  .logo b{background:linear-gradient(#fff,#cdd6f5);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .topbar .titles h1{font-size:19px;font-weight:800;letter-spacing:.3px}
+  .topbar .titles p{font-size:12.5px;opacity:.72;letter-spacing:.2px}
+  .topbar .spacer{flex:1}
+  .stars{color:#f3b84b;font-size:13px;letter-spacing:2px}
+
+  /* ---------- layout ---------- */
+  .wrap{max-width:1240px;margin:0 auto;padding:26px;display:grid;grid-template-columns:1fr 380px;gap:24px;align-items:start}
+  @media(max-width:980px){.wrap{grid-template-columns:1fr}}
+
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow)}
+  .card .hd{padding:15px 18px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px}
+  .card .hd h2{font-size:13px;text-transform:uppercase;letter-spacing:1.3px;color:var(--navy)}
+  .card .bd{padding:18px}
+
+  /* ---------- customer form ---------- */
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px 16px}
+  @media(max-width:560px){.grid2{grid-template-columns:1fr}}
+  label.fld{display:flex;flex-direction:column;gap:5px;font-size:11.5px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.6px}
+  input,select,textarea{
+    font-family:inherit;font-size:14px;color:var(--ink);background:#fff;
+    border:1px solid var(--line);border-radius:9px;padding:9px 11px;width:100%;outline:none;transition:.15s;
+  }
+  input:focus,select:focus,textarea:focus{border-color:var(--navy-2);box-shadow:0 0 0 3px rgba(30,50,112,.1)}
+  textarea{resize:vertical;min-height:64px}
+
+  /* ---------- category accordion ---------- */
+  .cat{border:1px solid var(--line);border-radius:12px;margin-bottom:12px;overflow:hidden;background:#fff}
+  .cat-hd{display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer;user-select:none;background:#fbfcfe}
+  .cat-hd:hover{background:#f5f7fc}
+  .cat-hd .chev{transition:.2s;color:var(--muted);font-size:13px}
+  .cat.open .chev{transform:rotate(90deg)}
+  .cat-hd .cname{font-family:'Archivo';font-weight:700;font-size:14.5px;flex:1}
+  .cat-hd .count{font-size:11px;font-weight:700;color:#fff;background:var(--navy);border-radius:20px;padding:2px 9px;min-width:22px;text-align:center}
+  .cat-hd .count.zero{background:#cfd5e4;color:#fff}
+  .cat-bd{display:none;padding:6px 16px 16px}
+  .cat.open .cat-bd{display:block}
+  .cat-note{font-size:12px;color:var(--muted);background:var(--accent-soft);border:1px solid #f6d6dc;color:#8a2230;padding:7px 11px;border-radius:8px;margin:8px 0 12px}
+
+  /* cabinet module */
+  .cab-warn{background:#fff5e0;border:1px solid #f3c873;color:#8a5a00;font-size:12px;padding:9px 12px;border-radius:8px;margin:10px 0 6px;line-height:1.5}
+  .cab-warn code{background:#f4e3bd;padding:1px 5px;border-radius:4px;font-size:11.5px}
+  .cab-note{font-size:12px;color:var(--muted);margin:6px 0 14px}
+  .cab-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px 16px}
+  .cab-grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px 16px;margin-top:12px}
+  @media(max-width:560px){.cab-grid,.cab-grid3{grid-template-columns:1fr}}
+  .cab-preview{background:#f7fbff;border:1px solid var(--line);border-radius:9px;padding:11px 13px;margin:14px 0;font-size:12.5px;color:var(--muted);min-height:20px}
+  .cab-preview .cab-tiers{line-height:1.7}
+  .cab-preview .cab-calc{margin-top:7px;color:var(--navy);font-size:14.5px;font-family:'Archivo'}
+  .cab-line{display:flex;align-items:center;gap:12px;border:1px solid var(--line);border-radius:9px;padding:10px 12px;margin-bottom:8px;background:#fff}
+  .cab-line-info{flex:1;font-size:13.5px;line-height:1.45}
+  .cab-line-info .muted{color:var(--muted);font-weight:400}
+  .cab-dim{font-size:11.5px;color:var(--muted)}
+  .cab-amt{font-family:'Archivo';font-weight:700;color:var(--navy);white-space:nowrap}
+  .cab-x{border:none;background:var(--accent-soft);color:var(--accent);width:28px;height:28px;border-radius:6px;cursor:pointer;font-size:13px;flex:none}
+  .cab-x:hover{background:#f8d7dd}
+  .cab-empty{color:var(--muted);font-size:13px;text-align:center;padding:12px}
+
+  .variant-tabs{display:flex;gap:8px;margin:6px 0 12px;flex-wrap:wrap}
+  .vtab{font-size:12.5px;font-weight:600;border:1px solid var(--line);background:#fff;border-radius:8px;padding:7px 14px;cursor:pointer;color:var(--muted);transition:.15s}
+  .vtab.active{background:var(--navy);color:#fff;border-color:var(--navy)}
+
+  table.items{width:100%;border-collapse:collapse}
+  table.items th{font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);text-align:left;padding:6px 8px;border-bottom:1px solid var(--line)}
+  table.items th.r,table.items td.r{text-align:right}
+  table.items td{padding:8px;border-bottom:1px solid #f1f3f9;font-size:13.5px;vertical-align:middle}
+  table.items tr:last-child td{border-bottom:none}
+  .it-label{font-weight:500}
+  .it-sub{display:block;font-size:11px;color:var(--muted);font-weight:400}
+  .it-price{color:var(--muted);white-space:nowrap}
+  .qty{width:62px;text-align:center;padding:6px}
+  .it-amt{font-weight:700;white-space:nowrap;color:var(--navy)}
+  tr.active-row{background:#f7fbff}
+
+  /* ---------- summary panel ---------- */
+  .summary{position:sticky;top:96px}
+  .sum-line{display:flex;justify-content:space-between;align-items:center;padding:6px 0;font-size:14px}
+  .sum-line.dim{color:var(--muted)}
+  .sum-items{max-height:230px;overflow:auto;border:1px solid var(--line);border-radius:10px;padding:8px 10px;margin-bottom:14px;background:#fbfcfe}
+  .sum-items .row{display:flex;justify-content:space-between;gap:10px;font-size:12.5px;padding:5px 0;border-bottom:1px dashed #e8ebf3}
+  .sum-items .row:last-child{border-bottom:none}
+  .sum-items .row .q{color:var(--muted);font-weight:600}
+  .empty{color:var(--muted);font-size:13px;text-align:center;padding:18px 6px}
+  .totals{border-top:2px solid var(--navy);margin-top:8px;padding-top:10px}
+  .grand{font-family:'Archivo';font-weight:800;font-size:21px;color:var(--navy)}
+  .adj{display:grid;grid-template-columns:1fr 120px;gap:8px;align-items:center;margin:4px 0;font-size:13px}
+  .adj input{padding:7px 9px;text-align:right}
+  .btns{display:grid;gap:9px;margin-top:16px}
+  button.act{font-family:'Archivo';font-weight:700;font-size:14px;border:none;border-radius:10px;padding:13px;cursor:pointer;transition:.15s}
+  .b-primary{background:var(--navy);color:#fff}
+  .b-primary:hover{background:var(--navy-2)}
+  .b-ghost{background:#fff;color:var(--navy);border:1px solid var(--navy)!important}
+  .b-ghost:hover{background:#f0f3fb}
+  .b-clear{background:#fff;color:var(--accent);border:1px solid #f0c8cf!important}
+  .b-clear:hover{background:var(--accent-soft)}
+
+  /* ---------- print / quote document ---------- */
+  /* on-screen preview modal */
+  .modal{position:fixed;inset:0;background:rgba(15,20,40,.55);display:none;z-index:50;overflow:auto;padding:24px}
+  .modal.show{display:block}
+  .modal-inner{max-width:820px;margin:0 auto}
+  .modal-bar{display:flex;gap:10px;justify-content:flex-end;margin-bottom:14px}
+  .doc{background:#fff;border-radius:8px;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+  @media print{
+    @page{margin:14mm}
+    body{background:#fff}
+    .topbar,.wrap{display:none!important}
+    #modal{position:static!important;display:block!important;background:#fff;padding:0;overflow:visible}
+    .modal-bar{display:none!important}
+    .modal-inner{max-width:none;margin:0}
+    .doc{box-shadow:none;border-radius:0}
+    .doc-pad{padding:0}
+    .sigline{margin-top:118px!important}
+  }
+
+  .doc-pad{padding:34px 38px;color:#1a1c22;font-size:12.5px}
+  .doc-head{display:flex;justify-content:space-between;border-bottom:3px solid var(--navy);padding-bottom:14px;margin-bottom:18px}
+  .doc-head .co{font-family:'Archivo';font-weight:800;font-size:20px;color:var(--navy);letter-spacing:.3px}
+  .doc-head .co small{display:block;font-family:'IBM Plex Sans';font-weight:400;font-size:11px;color:#555;letter-spacing:0;margin-top:4px;line-height:1.5}
+  .doc-head .qbox{text-align:right}
+  .doc-head .qbox .qt{font-family:'Archivo';font-weight:800;font-size:15px;color:var(--accent);letter-spacing:1px}
+  .doc-head .qbox .qmeta{font-size:11.5px;color:#555;margin-top:6px;line-height:1.7}
+  .cust-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px 28px;background:#f7f8fc;border:1px solid var(--line);border-radius:8px;padding:12px 16px;margin-bottom:18px;font-size:12px}
+  .cust-grid div b{display:inline-block;min-width:78px;color:#555;font-weight:600}
+  table.doc-tbl{width:100%;border-collapse:collapse;margin-bottom:6px}
+  table.doc-tbl th{background:var(--navy);color:#fff;font-family:'Archivo';font-size:10.5px;text-transform:uppercase;letter-spacing:.6px;padding:8px 10px;text-align:left}
+  table.doc-tbl th.r,table.doc-tbl td.r{text-align:right}
+  table.doc-tbl th.c,table.doc-tbl td.c{text-align:center}
+  table.doc-tbl td{padding:7px 10px;border-bottom:1px solid #eceef5;font-size:12px}
+  table.doc-tbl .cat-row td{background:#eef1f8;font-family:'Archivo';font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--navy)}
+  .doc-totals{margin-left:auto;width:300px;margin-top:10px}
+  .doc-totals .tl{display:flex;justify-content:space-between;padding:5px 4px;font-size:12.5px;border-bottom:1px solid #eee}
+  .doc-totals .tl.big{border-bottom:none;border-top:2px solid var(--navy);margin-top:4px;font-family:'Archivo';font-weight:800;font-size:16px;color:var(--navy)}
+  .doc-tc{margin-top:22px;font-size:10.5px;color:#555;line-height:1.6}
+  .doc-tc h4{font-family:'Archivo';font-size:11px;color:var(--navy);text-transform:uppercase;letter-spacing:.6px;margin-bottom:5px}
+  .sign{display:flex;justify-content:space-between;margin-top:34px;gap:48px}
+  .sigcol{flex:1;display:flex;flex-direction:column}
+  .sigcol .sl{font-size:11px;color:#555;font-weight:600}
+  .sigcol .sigline{margin-top:64px;border-top:1px solid #333}
+  .sigcol .snm{margin-top:7px;font-size:11px;color:#555}
+  .hint{font-size:12px;color:var(--muted);margin-top:14px;text-align:center}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="logo"><b>T</b></div>
+  <div class="titles">
+    <h1>TENN FASTENERS · QUOTATION GENERATOR</h1>
+    <p>Internal staff tool — build &amp; print customer quotations</p>
+  </div>
+  <div class="spacer"></div>
+  <div class="stars">★★★★★</div>
+</header>
+
+<div class="wrap">
+  <!-- LEFT: builder -->
+  <div>
+    <div class="card" style="margin-bottom:24px">
+      <div class="hd"><h2>Customer &amp; Quotation Details</h2></div>
+      <div class="bd">
+        <div class="grid2">
+          <label class="fld">Customer Name <input id="c_name" placeholder="Full name"></label>
+          <label class="fld">IC / Company No. <input id="c_ic" placeholder="IC number"></label>
+          <label class="fld">Unit / Address <input id="c_unit" placeholder="Unit no."></label>
+          <label class="fld">H / Phone <input id="c_phone" placeholder="Contact no."></label>
+          <label class="fld">Email <input id="c_email" type="email" placeholder="email@example.com"></label>
+          <label class="fld">Prepared By <input id="c_pic" placeholder="Staff name — saved on this device"></label>
+          <label class="fld">Quotation No. <input id="c_qno" placeholder="Auto-generated (date + time)"></label>
+          <label class="fld">Date <input id="c_date" type="date"></label>
+        </div>
+        <label class="fld" style="margin-top:14px">Remarks <textarea id="c_remarks" placeholder="Colour selection, special notes, etc."></textarea></label>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="hd"><h2>Select Products</h2></div>
+      <div class="bd" id="catalog"><!-- categories injected here --></div>
+    </div>
+  </div>
+
+  <!-- RIGHT: summary -->
+  <div class="card summary">
+    <div class="hd"><h2>Quotation Summary</h2></div>
+    <div class="bd">
+      <div class="sum-items" id="sumItems"><div class="empty">No items selected yet.</div></div>
+      <div class="totals">
+        <div class="sum-line"><span>Total Package (RM)</span><span id="t_sub" class="it-amt">0.00</span></div>
+        <div class="adj"><span class="dim" style="font-size:13px">Less Deposit (RM)</span><input id="t_dep" type="number" min="0" step="0.01" value="0"></div>
+        <div class="adj"><span class="dim" style="font-size:13px">Less Discount (RM)</span><input id="t_disc" type="number" min="0" step="0.01" value="0"></div>
+        <div class="sum-line" style="margin-top:8px"><span>Total Balance</span><span id="t_bal" class="grand">RM 0.00</span></div>
+      </div>
+      <div class="btns">
+        <button class="act b-primary" onclick="openPreview()">Generate Quotation</button>
+        <button class="act b-ghost copy-btn" onclick="copyRegister()">Copy Register Line</button>
+        <button class="act b-clear" onclick="newQuote()">New Quote</button>
+      </div>
+      <p class="hint" style="margin-top:10px">"Copy Register Line" copies this quote (no., date, staff, customer, phone, items, total) ready to paste as one row into your shared Quotation Register sheet.</p>
+    </div>
+  </div>
+</div>
+
+<!-- PREVIEW MODAL / PRINT -->
+<div class="modal" id="modal">
+  <div class="modal-inner">
+    <div class="modal-bar">
+      <button class="act b-ghost copy-btn" style="padding:11px 22px" onclick="copyRegister()">Copy Register Line</button>
+      <button class="act b-primary" style="padding:11px 22px" onclick="window.print()">🖨 Print / Save PDF</button>
+      <button class="act b-ghost" style="padding:11px 22px" onclick="closePreview()">Close</button>
+    </div>
+    <div class="doc print-area-on"><div class="doc-pad" id="docBody"></div></div>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   PRODUCT CATALOG  —  edit prices / items here only
+   Each category may have "variants" (e.g. 2 Room / 3 Room).
+   item.v = index of the variant the item belongs to (0 if none).
+   ============================================================ */
+const CATALOG = [
+  {
+    id:'smartlock', name:'Smart Lock',
+    variants:[],
+    items:[
+      {v:0,label:'Extravagant Super Smart Lock',sub:'RM98/mo × 24 months · incl. installation',price:2352},
+      {v:0,label:'6-in-1 Smart Lock',sub:'Fingerprint · Password · RFID · OTP · Emergency key · App',price:1299},
+    ]
+  },
+  {
+    id:'plugtop', name:'Add-on Plug Top',
+    variants:[],
+    items:[
+      {v:0,label:'Standard Plug Top',sub:'Incl. wire with casing & plug top',price:200},
+      {v:0,label:'Aircond & Heater Plug Top',sub:'Incl. wire with casing & plug top',price:450},
+    ]
+  },
+  {
+    id:'painting', name:'Painting',
+    note:'Colour Package: Vinyl Glo / Eco Wall (5 options)',
+    variants:['Type A — 2 Room (688 sqft)','Type B — 3 Room (1088 sqft)'],
+    items:[
+      {v:0,label:'Interior Painting',sub:'Promotion price',price:1499},
+      {v:0,label:'Ceiling',price:499},
+      {v:0,label:'Door & Frame',sub:'per set',price:100},
+      {v:0,label:'Frame',sub:'per set',price:50},
+      {v:1,label:'Interior Painting',sub:'Promotion price',price:1999},
+      {v:1,label:'Ceiling',price:699},
+      {v:1,label:'Door & Frame',sub:'per set',price:100},
+      {v:1,label:'Frame',sub:'per set',price:50},
+    ]
+  },
+  {
+    id:'alugrill', name:'Aluminium Hollow Grill',
+    note:'Double Line Design · Colour: White',
+    variants:['Type A — 2 Room','Type B — 3 Room'],
+    items:[
+      // 2 Room
+      {v:0,label:'Balcony — 2 Leaf Sliding Door',sub:'95" × 88½"',price:1880},
+      {v:0,label:'Main Door',sub:'34½" × 79¼"',price:1080},
+      {v:0,label:'Yard Grill — Ground Floor',sub:'80" × 107"H',price:1650},
+      {v:0,label:'Yard Grill — 1st Floor',sub:'80" × 100"H',price:1650},
+      {v:0,label:'Yard Grill — 2nd Floor',sub:'80" × 159"H',price:2000},
+      {v:0,label:'Yard Grill — 3rd Floor & Above',sub:'80" × 77"H',price:1000},
+      {v:0,label:'Window Grill — Master Room',sub:"6' × 4'",price:650},
+      {v:0,label:'Window Grill — Room 2',sub:"4' × 4'",price:450},
+      // 3 Room
+      {v:1,label:'Balcony — 3 Leaf Sliding Door',sub:'106" × 88½"',price:2250},
+      {v:1,label:'Main Door',sub:'66" × 119"',price:1650},
+      {v:1,label:'Yard Grill — Ground Floor',sub:'92" × 104"H',price:2000},
+      {v:1,label:'Yard Grill — 1st Floor',sub:'92" × 100"H',price:2000},
+      {v:1,label:'Yard Grill — 2nd Floor',sub:'92" × 159"H',price:2380},
+      {v:1,label:'Yard Grill — 3rd Floor & Above',sub:'92" × 77"H',price:1350},
+      {v:1,label:'Window Grill — Master Room',sub:"6' × 4'",price:650},
+      {v:1,label:'Window Grill — Room 2',sub:"4' × 4'",price:450},
+      {v:1,label:'Window Grill — Room 3',sub:"4' × 4'",price:450},
+      {v:1,label:'Window Grill — Master Room Toilet',sub:"2' × 4'",price:250},
+    ]
+  },
+  {
+    id:'yard', name:'Yard — Aluminium / Polycarbonate / Acrylic',
+    note:'Colour: Aluminium White · Acrylic White or Transparent · Flame Black',
+    variants:['Type A — 2 Room','Type B — 3 Room'],
+    items:[
+      // 2 Room
+      {v:0,label:'Ground Floor — Aluminium',sub:'80" × 107"H',price:2350},
+      {v:0,label:'Ground Floor — Polycarbonate',sub:'80" × 107"H',price:1750},
+      {v:0,label:'Ground Floor — Moru Acrylic',sub:'80" × 107"H',price:2200},
+      {v:0,label:'1st Floor — Aluminium',sub:'80" × 100"H',price:2150},
+      {v:0,label:'1st Floor — Polycarbonate',sub:'80" × 100"H',price:1650},
+      {v:0,label:'1st Floor — Moru Acrylic',sub:'80" × 100"H',price:2000},
+      {v:0,label:'2nd Floor — Aluminium',sub:'80" × 159"H',price:3350},
+      {v:0,label:'2nd Floor — Polycarbonate',sub:'80" × 159"H',price:2250},
+      {v:0,label:'2nd Floor — Moru Acrylic',sub:'80" × 159"H',price:2650},
+      {v:0,label:'3rd Floor & Above — Aluminium',sub:'80" × 77"H',price:1850},
+      {v:0,label:'3rd Floor & Above — Polycarbonate',sub:'80" × 77"H',price:1400},
+      {v:0,label:'3rd Floor & Above — Moru Acrylic',sub:'80" × 77"H',price:1750},
+      // 3 Room
+      {v:1,label:'Ground Floor — Aluminium',sub:'92" × 104"H',price:2580},
+      {v:1,label:'Ground Floor — Polycarbonate',sub:'92" × 104"H',price:1900},
+      {v:1,label:'Ground Floor — Moru Acrylic',sub:'92" × 104"H',price:2350},
+      {v:1,label:'1st Floor — Aluminium',sub:'92" × 100"H',price:2500},
+      {v:1,label:'1st Floor — Polycarbonate',sub:'92" × 100"H',price:1750},
+      {v:1,label:'1st Floor — Moru Acrylic',sub:'92" × 100"H',price:2080},
+      {v:1,label:'2nd Floor — Aluminium',sub:'92" × 159"H',price:3200},
+      {v:1,label:'2nd Floor — Polycarbonate',sub:'92" × 159"H',price:2400},
+      {v:1,label:'2nd Floor — Moru Acrylic',sub:'92" × 159"H',price:2850},
+      {v:1,label:'3rd Floor & Above — Aluminium',sub:'92" × 77"H',price:2080},
+      {v:1,label:'3rd Floor & Above — Polycarbonate',sub:'92" × 77"H',price:1500},
+      {v:1,label:'3rd Floor & Above — Moru Acrylic',sub:'92" × 77"H',price:1850},
+    ]
+  },
+  {
+    id:'ironwork', name:'Iron Work',
+    note:'Double Line Design · Powder Coat: White (rough surface) / White',
+    variants:['Type A — 2 Room','Type B — 3 Room'],
+    items:[
+      // 2 Room
+      {v:0,label:'Balcony — 2 Leaf Sliding Door',sub:'95" × 88½"',price:1400},
+      {v:0,label:'Main Door',sub:'34½" × 79¼"',price:850},
+      {v:0,label:'Yard Grill — Ground Floor',sub:'80" × 107"H',price:1200},
+      {v:0,label:'Yard Grill — 1st Floor',sub:'80" × 100"H',price:1200},
+      {v:0,label:'Yard Grill — 2nd Floor',sub:'80" × 159"H',price:1850},
+      {v:0,label:'Yard Grill — 3rd Floor & Above',sub:'80" × 77"H',price:850},
+      {v:0,label:'Window Grill — Master Room',sub:"6' × 4'",price:500},
+      {v:0,label:'Window Grill — Room 2',sub:"4' × 4'",price:330},
+      // 3 Room
+      {v:1,label:'Balcony — 3 Leaf Sliding Door',sub:'106" × 88½"',price:2000},
+      {v:1,label:'Main Door',sub:'66" × 119"',price:1650},
+      {v:1,label:'Yard Grill — Ground Floor',sub:'92" × 104"H',price:1450},
+      {v:1,label:'Yard Grill — 1st Floor',sub:'92" × 100"H',price:1450},
+      {v:1,label:'Yard Grill — 2nd Floor',sub:'92" × 159"H',price:2180},
+      {v:1,label:'Yard Grill — 3rd Floor & Above',sub:'92" × 77"H',price:960},
+      {v:1,label:'Window Grill — Master Room',sub:"6' × 4'",price:500},
+      {v:1,label:'Window Grill — Room 2',sub:"4' × 4'",price:330},
+      {v:1,label:'Window Grill — Room 3',sub:"4' × 4'",price:330},
+      {v:1,label:'Window Grill — Master Room Toilet',sub:"2' × 4'",price:175},
+    ]
+  },
+  {
+    id:'invisible', name:'Invisible Grill (Balcony)',
+    variants:['Type A — 2 Room','Type B — 3 Room'],
+    items:[
+      // 2 Room
+      {v:0,label:'Ground Floor — Half Balcony',sub:'117" × 89"H',price:1450},
+      {v:0,label:'Ground Floor — Full Balcony',sub:'117" × 136"H',price:2350},
+      {v:0,label:'1st Floor — Half Balcony',sub:'117" × 83½"H',price:1450},
+      {v:0,label:'1st Floor — Full Balcony',sub:'117" × 136"H',price:2350},
+      {v:0,label:'2nd Floor — Half Balcony',sub:'117" × 144"H',price:2280},
+      {v:0,label:'2nd Floor — Full Balcony',sub:'117" × 192"H',price:3050},
+      {v:0,label:'3rd Floor & Above — Half Balcony',sub:'117" × 61"H',price:950},
+      {v:0,label:'3rd Floor & Above — Full Balcony',sub:'117" × 109"H',price:1750},
+      // 3 Room
+      {v:1,label:'Ground Floor — Half Balcony',sub:'137" × 89"H',price:1650},
+      {v:1,label:'Ground Floor — Full Balcony',sub:'137" × 137"H',price:2500},
+      {v:1,label:'1st Floor — Half Balcony',sub:'137" × 89"H',price:1650},
+      {v:1,label:'1st Floor — Full Balcony',sub:'137" × 137"H',price:2500},
+      {v:1,label:'2nd Floor — Half Balcony',sub:'137" × 144"H',price:2750},
+      {v:1,label:'2nd Floor — Full Balcony',sub:'137" × 192"H',price:3600},
+      {v:1,label:'3rd Floor & Above — Half Balcony',sub:'137" × 59"H',price:1150},
+      {v:1,label:'3rd Floor & Above — Full Balcony',sub:'137" × 107"H',price:2000},
+    ]
+  },
+];
+
+const TERMS = [
+  'Earnest Deposit (RM300.00) must be paid before signing the Agreement.',
+  'Specifications, model, materials and colours must be confirmed with the Vendor within 7 working days.',
+  'The Earnest Deposit and Balance Deposit together make up 50% of the total purchase price.',
+  'Balance Purchase Price must be paid within the stipulated period. Late payment may incur 2.5% interest after a 14-day extended period.',
+];
+
+/* ============================================================
+   CABINET MODULE — measurement-based, tiered LENGTH pricing
+   All cabinets record Length / Height / Depth in MILLIMETRES (mm).
+   ONLY LENGTH sets the price.
+   • defaultMm = the length pre-filled in the form. At this length
+     the cabinet is charged its BASE price (first tier).
+   • As the length increases past each step, the price steps up.
+
+   Each option is defined with cab(defaultMm, basePrice, stepMm, priceInc, steps):
+     - defaultMm  : pre-filled length & the base-price band ceiling
+     - basePrice  : price at the default length
+     - stepMm     : how many mm each higher tier spans
+     - priceInc   : how much RM is added per step
+     - steps      : number of step-up tiers (default 3)
+
+   ⚠️ THE NUMBERS BELOW ARE EXAMPLES — replace with your real rates.
+   Set CABINET_PRICES_SET to true once done to hide the warning.
+   ============================================================ */
+const CABINET_PRICES_SET = false;
+
+function cab(defaultMm, basePrice, stepMm, priceInc, steps=3){
+  const tiers=[{maxMm:defaultMm, price:basePrice}];
+  for(let i=1;i<steps;i++) tiers.push({maxMm:defaultMm+stepMm*i, price:basePrice+priceInc*i});
+  tiers.push({maxMm:Infinity, price:basePrice+priceInc*steps});
+  return {defaultMm, tiers};
+}
+
+const CABINET = [
+  { id:'kitchen', name:'Kitchen Cabinet', options:[
+      { id:'top',  name:'Top Kitchen Cabinet',  ...cab(1200, 1200, 600, 500) },
+      { id:'base', name:'Base Kitchen Cabinet', ...cab(1200, 1500, 600, 700) },
+  ]},
+  { id:'wardrobe', name:'Wardrobe', options:[
+      { id:'tatami',  name:'With Tatami',       ...cab(1800, 2500, 600, 900) },
+      { id:'table',   name:'With Table',        ...cab(1800, 2200, 600, 800) },
+      { id:'opencab', name:'With Open Cabinet', ...cab(1800, 2000, 600, 750) },
+      { id:'only',    name:'Wardrobe Only',     ...cab(1800, 1800, 600, 700) },
+  ]},
+  { id:'tv', name:'TV Cabinet', options:[
+      { id:'backdrop',   name:'With Backdrop', ...cab(2400, 1600, 600, 600) },
+      { id:'nobackdrop', name:'No Backdrop',   ...cab(2400, 1000, 600, 450) },
+  ]},
+  { id:'dining', name:'Dining Cabinet', options:[
+      { id:'base', name:'Dining Cabinet Base', ...cab(1200, 1200, 600, 550) },
+  ]},
+  { id:'alu', name:'Aluminium Cabinet', options:[
+      { id:'top',   name:'Top Kitchen Cabinet',  ...cab(1200, 1400, 600, 550) },
+      { id:'base',  name:'Base Kitchen Cabinet', ...cab(1200, 1700, 600, 700) },
+      { id:'shoes', name:'Shoes Cabinet',        ...cab(900,  900, 600, 450) },
+  ]},
+];
+
+function cabinetPrice(tiers, lengthMm){
+  for(const t of tiers){ if(lengthMm <= t.maxMm) return t.price; }
+  return tiers.length ? tiers[tiers.length-1].price : 0;
+}
+function tierTableHtml(tiers){
+  let prev=0;
+  return tiers.map((t,i)=>{
+    const range = t.maxMm===Infinity ? `over ${prev} mm` : (prev===0?`up to ${t.maxMm} mm`:`${prev}–${t.maxMm} mm`);
+    prev = t.maxMm===Infinity?prev:t.maxMm;
+    return `${range} → RM ${fmt(t.price)}${i===0?' <em>(base)</em>':''}`;
+  }).join('  ·  ');
+}
+
+/* ---------- state ---------- */
+const state = {}; // key `${catId}:${itemIndex}` -> qty
+const activeVariant = {}; // catId -> variant index
+const cabinetLines = []; // [{gid,gname,oid,oname,L,H,D,price}]
+
+const fmt = n => n.toLocaleString('en-MY',{minimumFractionDigits:2,maximumFractionDigits:2});
+
+/* ---------- render catalog ---------- */
+function renderCatalog(){
+  const root = document.getElementById('catalog');
+  root.innerHTML = '';
+  root.insertAdjacentHTML('beforeend', cabinetCardHtml());
+  cabGroupChange();           // populate option select for first group
+  renderCabLines();
+  CATALOG.forEach((cat,ci)=>{
+    if(activeVariant[cat.id]===undefined) activeVariant[cat.id]=0;
+    const wrap = document.createElement('div');
+    wrap.className='cat';
+    wrap.dataset.cat=cat.id;
+
+    wrap.innerHTML = `
+      <div class="cat-hd" onclick="this.parentElement.classList.toggle('open')">
+        <span class="chev">▶</span>
+        <span class="cname">${cat.name}</span>
+        <span class="count zero" id="cnt-${cat.id}">0</span>
+      </div>
+      <div class="cat-bd">
+        ${cat.note?`<div class="cat-note">${cat.note}</div>`:''}
+        ${cat.variants.length?`<div class="variant-tabs" id="vt-${cat.id}">${
+          cat.variants.map((v,i)=>`<button class="vtab${i===0?' active':''}" onclick="setVariant('${cat.id}',${i})">${v}</button>`).join('')
+        }</div>`:''}
+        <div id="tbl-${cat.id}"></div>
+      </div>`;
+    root.appendChild(wrap);
+    renderItems(cat);
+  });
+  recalc();
+}
+
+function renderItems(cat){
+  const v = activeVariant[cat.id];
+  const rows = cat.items.map((it,idx)=>({it,idx})).filter(o=>o.it.v===v);
+  const html = `
+    <table class="items">
+      <thead><tr><th>Item</th><th class="r">Unit Price (RM)</th><th class="r" style="width:70px">Qty</th><th class="r">Amount (RM)</th></tr></thead>
+      <tbody>
+        ${rows.map(({it,idx})=>{
+          const key=`${cat.id}:${idx}`;
+          const qty=state[key]||0;
+          const amt=qty*it.price;
+          return `<tr class="${qty>0?'active-row':''}" id="row-${cat.id}-${idx}">
+            <td><span class="it-label">${it.label}</span>${it.sub?`<span class="it-sub">${it.sub}</span>`:''}</td>
+            <td class="r it-price">${fmt(it.price)}</td>
+            <td class="r"><input class="qty" type="number" min="0" step="1" value="${qty}" oninput="setQty('${cat.id}',${idx},this.value)"></td>
+            <td class="r it-amt" id="amt-${cat.id}-${idx}">${fmt(amt)}</td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>`;
+  document.getElementById('tbl-'+cat.id).innerHTML = html;
+}
+
+/* ---------- cabinet module UI ---------- */
+function cabinetCardHtml(){
+  const groupOpts = CABINET.map((g,i)=>`<option value="${i}">${g.name}</option>`).join('');
+  const optOpts = CABINET[0].options.map((o,i)=>`<option value="${i}">${o.name}</option>`).join('');
+  const warn = CABINET_PRICES_SET ? '' :
+    `<div class="cab-warn">⚠️ <b>Example prices in use.</b> The cabinet tier rates are placeholders — set your real rates in the <code>CABINET</code> table before quoting customers.</div>`;
+  return `
+  <div class="cat open" data-cat="cabinet">
+    <div class="cat-hd" onclick="this.parentElement.classList.toggle('open')">
+      <span class="chev">▶</span>
+      <span class="cname">Cabinet</span>
+      <span class="count zero" id="cnt-cabinet">0</span>
+    </div>
+    <div class="cat-bd">
+      ${warn}
+      <div class="cab-note">All cabinets record Length × Height × Depth in <b>mm</b>. The length is pre-filled to the default (= base price); <b>only length affects the price</b> — increasing it steps the price up.</div>
+      <div class="cab-grid">
+        <label class="fld">Cabinet Type
+          <select id="cab-group" onchange="cabGroupChange()">${groupOpts}</select></label>
+        <label class="fld">Design / Option
+          <select id="cab-option" onchange="cabOptionChange()">${optOpts}</select></label>
+      </div>
+      <div class="cab-grid3">
+        <label class="fld">Length (mm) <input id="cab-L" type="number" min="1" step="1" oninput="cabPreview()"></label>
+        <label class="fld">Height (mm) <input id="cab-H" type="number" min="1" step="1"></label>
+        <label class="fld">Depth (mm) <input id="cab-D" type="number" min="1" step="1"></label>
+      </div>
+      <div class="cab-preview" id="cab-preview"></div>
+      <button class="act b-primary" style="padding:11px 16px;font-size:13px" onclick="cabAdd()">+ Add Cabinet to Quote</button>
+      <div id="cab-lines" style="margin-top:14px"></div>
+    </div>
+  </div>`;
+}
+
+function cabGroupChange(){
+  const gi=+document.getElementById('cab-group').value;
+  const sel=document.getElementById('cab-option');
+  sel.innerHTML=CABINET[gi].options.map((o,i)=>`<option value="${i}">${o.name}</option>`).join('');
+  cabOptionChange();
+}
+function cabOptionChange(){
+  const {o}=cabSel();
+  document.getElementById('cab-L').value=o.defaultMm; // pre-fill default length
+  cabPreview();
+}
+function cabSel(){
+  const gi=+document.getElementById('cab-group').value;
+  const oi=+document.getElementById('cab-option').value;
+  return {gi,oi,g:CABINET[gi],o:CABINET[gi].options[oi]};
+}
+function cabPreview(){
+  const {o}=cabSel();
+  const L=parseFloat(document.getElementById('cab-L').value)||0;
+  let html=`<div class="cab-tiers"><b>Price tiers:</b> ${tierTableHtml(o.tiers)}</div>`;
+  if(L>0){
+    const atBase = L<=o.defaultMm;
+    html+=`<div class="cab-calc">Length ${L} mm → <b>RM ${fmt(cabinetPrice(o.tiers,L))}</b>${atBase?' <span style="font-weight:400;color:#6b7280">(base price)</span>':''}</div>`;
+  }
+  document.getElementById('cab-preview').innerHTML=html;
+}
+function cabAdd(){
+  const {g,o}=cabSel();
+  const L=parseFloat(document.getElementById('cab-L').value)||0;
+  const H=parseFloat(document.getElementById('cab-H').value)||0;
+  const D=parseFloat(document.getElementById('cab-D').value)||0;
+  if(!(L>0)){ alert('Please enter a Length (mm).'); return; }
+  if(!(H>0)){ alert('Height (mm) is required.'); document.getElementById('cab-H').focus(); return; }
+  if(!(D>0)){ alert('Depth (mm) is required.'); document.getElementById('cab-D').focus(); return; }
+  cabinetLines.push({gid:g.id,gname:g.name,oid:o.id,oname:o.name,L,H,D,price:cabinetPrice(o.tiers,L)});
+  document.getElementById('cab-H').value='';
+  document.getElementById('cab-D').value='';
+  cabOptionChange(); // reset length back to the option's default
+  renderCabLines(); recalc();
+}
+function cabRemove(i){ cabinetLines.splice(i,1); renderCabLines(); recalc(); }
+function dimStr(l){
+  return `L ${l.L} × H ${l.H} × D ${l.D} mm`;
+}
+function renderCabLines(){
+  const box=document.getElementById('cab-lines');
+  if(!box) return;
+  if(!cabinetLines.length){ box.innerHTML='<div class="cab-empty">No cabinets added yet.</div>'; return; }
+  box.innerHTML=cabinetLines.map((l,i)=>`<div class="cab-line">
+    <div class="cab-line-info"><b>${l.oname}</b> <span class="muted">· ${l.gname}</span><br><span class="cab-dim">${dimStr(l)}</span></div>
+    <div class="cab-amt">RM ${fmt(l.price)}</div>
+    <button class="cab-x" title="Remove" onclick="cabRemove(${i})">✕</button>
+  </div>`).join('');
+}
+
+function setVariant(catId,i){
+  activeVariant[catId]=i;
+  document.querySelectorAll('#vt-'+catId+' .vtab').forEach((b,bi)=>b.classList.toggle('active',bi===i));
+  const cat=CATALOG.find(c=>c.id===catId);
+  renderItems(cat);
+}
+
+function setQty(catId,idx,val){
+  const q=Math.max(0,parseInt(val)||0);
+  const key=`${catId}:${idx}`;
+  if(q>0) state[key]=q; else delete state[key];
+  const cat=CATALOG.find(c=>c.id===catId);
+  const it=cat.items[idx];
+  const amtEl=document.getElementById(`amt-${catId}-${idx}`);
+  if(amtEl) amtEl.textContent=fmt(q*it.price);
+  const rowEl=document.getElementById(`row-${catId}-${idx}`);
+  if(rowEl) rowEl.classList.toggle('active-row',q>0);
+  recalc();
+}
+
+/* ---------- totals + summary ---------- */
+function collectLines(){
+  const lines=[];
+  // cabinet lines first (qty 1 each; dimensions stored in sub)
+  cabinetLines.forEach(l=>{
+    lines.push({cat:l.gname,variantName:'',label:l.oname,sub:dimStr(l),price:l.price,qty:1,amount:l.price});
+  });
+  CATALOG.forEach(cat=>{
+    cat.items.forEach((it,idx)=>{
+      const key=`${cat.id}:${idx}`;
+      const qty=state[key];
+      if(qty>0){
+        const variantName = cat.variants.length?cat.variants[it.v]:'';
+        lines.push({cat:cat.name,variantName,label:it.label,sub:it.sub||'',price:it.price,qty,amount:qty*it.price});
+      }
+    });
+  });
+  return lines;
+}
+
+function recalc(){
+  const lines=collectLines();
+  // category counts
+  CATALOG.forEach(cat=>{
+    const c=lines.filter(l=>l.cat===cat.name).length;
+    const el=document.getElementById('cnt-'+cat.id);
+    if(el){el.textContent=c;el.classList.toggle('zero',c===0);}
+  });
+  const cabEl=document.getElementById('cnt-cabinet');
+  if(cabEl){cabEl.textContent=cabinetLines.length;cabEl.classList.toggle('zero',cabinetLines.length===0);}
+  // summary list
+  const box=document.getElementById('sumItems');
+  if(!lines.length){box.innerHTML='<div class="empty">No items selected yet.</div>';}
+  else{
+    box.innerHTML=lines.map(l=>`<div class="row"><span><span class="q">${l.qty}×</span> ${l.label}${l.variantName?` <span class="q">(${l.variantName.split('—')[1]?l.variantName.split('—')[1].trim():''})</span>`:''}</span><span>${fmt(l.amount)}</span></div>`).join('');
+  }
+  const sub=lines.reduce((s,l)=>s+l.amount,0);
+  const dep=parseFloat(document.getElementById('t_dep').value)||0;
+  const disc=parseFloat(document.getElementById('t_disc').value)||0;
+  const bal=sub-dep-disc;
+  document.getElementById('t_sub').textContent=fmt(sub);
+  document.getElementById('t_bal').textContent='RM '+fmt(bal);
+}
+document.getElementById('t_dep').addEventListener('input',recalc);
+document.getElementById('t_disc').addEventListener('input',recalc);
+
+/* ---------- quotation document ---------- */
+function buildDoc(){
+  const lines=collectLines();
+  const g=id=>document.getElementById(id).value.trim();
+  const sub=lines.reduce((s,l)=>s+l.amount,0);
+  const dep=parseFloat(document.getElementById('t_dep').value)||0;
+  const disc=parseFloat(document.getElementById('t_disc').value)||0;
+  const bal=sub-dep-disc;
+  const dateStr = g('c_date') ? new Date(g('c_date')).toLocaleDateString('en-GB') : new Date().toLocaleDateString('en-GB');
+
+  // group lines by category (cabinet groups first, then catalog categories)
+  let rowsHtml='';
+  const order=[...CABINET.map(gp=>gp.name), ...CATALOG.map(c=>c.name)];
+  const seen=new Set();
+  order.forEach(cname=>{
+    if(seen.has(cname)) return; seen.add(cname);
+    const cl=lines.filter(l=>l.cat===cname);
+    if(!cl.length) return;
+    const variantTag = cl[0].variantName?` — ${cl[0].variantName}`:'';
+    rowsHtml+=`<tr class="cat-row"><td colspan="4">${cname}${variantTag}</td></tr>`;
+    cl.forEach(l=>{
+      rowsHtml+=`<tr>
+        <td>${l.label}${l.sub?` <span style="color:#888">(${l.sub})</span>`:''}</td>
+        <td class="r">${fmt(l.price)}</td>
+        <td class="c">${l.qty}</td>
+        <td class="r">${fmt(l.amount)}</td>
+      </tr>`;
+    });
+  });
+  if(!rowsHtml) rowsHtml=`<tr><td colspan="4" style="text-align:center;color:#999;padding:20px">No items selected.</td></tr>`;
+
+  const remarks=g('c_remarks');
+
+  return `
+    <div class="doc-head">
+      <div class="co">TENN FASTENERS (MELAKA) SDN. BHD.
+        <small>200001016684 (519291-M) · A member of the Powerdrive (Melaka) Sdn. Bhd. Group<br>
+        11, 11-A, Jalan PM 1, Taman Perindustrian Merdeka, Batu Berendam, 75350 Melaka.<br>
+        Tel: 06-317 9645 / 317 2645 / 317 7563 · Email: tw_tenns@yahoo.com.my · tennfasteners.com</small>
+      </div>
+      <div class="qbox">
+        <div class="qt">QUOTATION</div>
+        <div class="qmeta"><b>No:</b> ${g('c_qno')||'—'}<br><b>Date:</b> ${dateStr}<br><b>PIC:</b> ${g('c_pic')||'—'}</div>
+      </div>
+    </div>
+
+    <div class="cust-grid">
+      <div><b>Name:</b> ${g('c_name')||'—'}</div>
+      <div><b>IC / Co.:</b> ${g('c_ic')||'—'}</div>
+      <div><b>Unit:</b> ${g('c_unit')||'—'}</div>
+      <div><b>H/Phone:</b> ${g('c_phone')||'—'}</div>
+      <div style="grid-column:1/3"><b>Email:</b> ${g('c_email')||'—'}</div>
+    </div>
+
+    <table class="doc-tbl">
+      <thead><tr><th>Description</th><th class="r">Unit Price</th><th class="c">Qty</th><th class="r">Amount (RM)</th></tr></thead>
+      <tbody>${rowsHtml}</tbody>
+    </table>
+
+    <div class="doc-totals">
+      <div class="tl"><span>Total Package</span><span>RM ${fmt(sub)}</span></div>
+      ${dep?`<div class="tl"><span>Less Deposit</span><span>− RM ${fmt(dep)}</span></div>`:''}
+      ${disc?`<div class="tl"><span>Less Discount</span><span>− RM ${fmt(disc)}</span></div>`:''}
+      <div class="tl big"><span>Total Balance</span><span>RM ${fmt(bal)}</span></div>
+    </div>
+
+    ${remarks?`<div class="doc-tc"><h4>Remarks</h4>${remarks.replace(/\n/g,'<br>')}</div>`:''}
+
+    <div class="doc-tc">
+      <h4>Terms &amp; Conditions</h4>
+      ${TERMS.map((t,i)=>`${i+1}) ${t}`).join('<br>')}
+      <br><br>Terms of Payment: 50% deposit to confirm order · Balance payable upon completion of work.
+    </div>
+
+    <div class="sign">
+      <div class="sigcol"><span class="sl">Prepared By &amp; Authorized Signature</span><span class="sigline"></span><span class="snm">Name: ${g('c_pic')||''}</span></div>
+      <div class="sigcol"><span class="sl">Confirmed By &amp; Authorized Signature</span><span class="sigline"></span><span class="snm">Name: ${g('c_name')||''}</span></div>
+    </div>
+  `;
+}
+
+/* ---------- staff name persistence + quotation numbering ----------
+   Number format: YYMMDD-HHMMSS  e.g. 260605-143052
+   The number is a timestamp down to the second, captured the moment a
+   quote is generated, so it can never repeat.                            */
+const SK_STAFF='tenn_staff';
+let committedNo=null, autoNo=null;
+
+function loadJSON(k){try{return JSON.parse(localStorage.getItem(k))||{}}catch(e){return{}}}
+function saveJSON(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
+
+function saveStaff(){saveJSON(SK_STAFF,{name:document.getElementById('c_pic').value});}
+
+function pad2(n){return String(n).padStart(2,'0');}
+function timestampNo(){
+  const d=new Date();
+  const date=String(d.getFullYear()).slice(2)+pad2(d.getMonth()+1)+pad2(d.getDate());
+  const time=pad2(d.getHours())+pad2(d.getMinutes())+pad2(d.getSeconds());
+  return date+'-'+time;
+}
+function setAuto(){autoNo=timestampNo();document.getElementById('c_qno').value=autoNo;}
+
+/* ---------- preview (commits the number on first generate) ---------- */
+function openPreview(){
+  if(committedNo===null){
+    const field=document.getElementById('c_qno').value.trim();
+    // re-stamp to the exact generate second, unless the user typed a custom number
+    const no=(field===''||field===autoNo)?timestampNo():field;
+    document.getElementById('c_qno').value=no;
+    committedNo=no;
+  }
+  const html=buildDoc();
+  document.getElementById('docBody').innerHTML=html;
+  document.getElementById('modal').classList.add('show');
+  document.body.style.overflow='hidden';
+}
+function closePreview(){
+  document.getElementById('modal').classList.remove('show');
+  document.body.style.overflow='';
+}
+
+/* ---------- copy register line for the shared sheet (tab-separated) ---------- */
+function copyRegister(){
+  const g=id=>(document.getElementById(id).value||'').trim();
+  const lines=collectLines();
+  const sub=lines.reduce((s,l)=>s+l.amount,0);
+  const dep=parseFloat(document.getElementById('t_dep').value)||0;
+  const disc=parseFloat(document.getElementById('t_disc').value)||0;
+  const bal=sub-dep-disc;
+  const dateStr=g('c_date')?new Date(g('c_date')).toLocaleDateString('en-GB'):new Date().toLocaleDateString('en-GB');
+  const cats=[...new Set(lines.map(l=>l.cat))].join(', ');
+  const row=[g('c_qno')||'(no number)',dateStr,g('c_pic'),g('c_name'),g('c_phone'),cats,fmt(bal)].join('\t');
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(row).then(flashCopied).catch(()=>fallbackCopy(row));
+  }else{fallbackCopy(row);}
+}
+function fallbackCopy(text){
+  const ta=document.createElement('textarea');ta.value=text;ta.style.position='fixed';ta.style.opacity='0';
+  document.body.appendChild(ta);ta.select();try{document.execCommand('copy');}catch(e){}
+  document.body.removeChild(ta);flashCopied();
+}
+function flashCopied(){
+  document.querySelectorAll('.copy-btn').forEach(b=>{
+    if(b.dataset.busy)return;const t=b.textContent;b.dataset.busy='1';
+    b.textContent='Copied ✓ — paste into sheet';
+    setTimeout(()=>{b.textContent=t;delete b.dataset.busy;},1800);
+  });
+}
+
+/* ---------- start a new quotation ---------- */
+function newQuote(){
+  if(!confirm('Start a new quotation? This clears the current customer and items. Your saved name and initials stay.')) return;
+  for(const k in state) delete state[k];
+  cabinetLines.length=0;
+  ['c_name','c_ic','c_unit','c_phone','c_email','c_remarks'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('t_dep').value=0;
+  document.getElementById('t_disc').value=0;
+  document.getElementById('c_date').value=new Date().toISOString().slice(0,10);
+  committedNo=null;
+  setAuto();
+  renderCatalog();
+}
+
+/* ---------- init ---------- */
+(function init(){
+  document.getElementById('c_date').value=new Date().toISOString().slice(0,10);
+  const staff=loadJSON(SK_STAFF);
+  if(staff.name) document.getElementById('c_pic').value=staff.name;
+  document.getElementById('c_qno').value='';
+  setAuto();
+  document.getElementById('c_pic').addEventListener('input',saveStaff);
+  renderCatalog();
+})();
+</script>
+</body>
+</html>
