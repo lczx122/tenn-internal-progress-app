@@ -21,7 +21,7 @@ export default function Login() {
     <div className="flex min-h-full items-center justify-center px-4">
       <div className="w-full max-w-sm">
         <div className="mb-6 text-center">
-          <h1 className="text-2xl font-bold text-slate-900">Reno Tracker</h1>
+          <h1 className="text-2xl font-bold text-slate-900">Tenn Renovation</h1>
           <p className="mt-1 text-sm text-slate-500">
             Sign in to view and update job progress
           </p>

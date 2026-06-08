@@ -1,4 +1,4 @@
-# Reno Tracker
+# Tenn Renovation
 
 A simple, mobile-first web app to replace your renovation-progress Excel file.
 Your team signs in on their phones and sees every customer's job, live —
