@@ -11,6 +11,7 @@ import { supabase } from '../lib/supabase'
 interface AuthState {
   session: Session | null
   displayName: string
+  isAdmin: boolean
   loading: boolean
   signIn: (email: string, password: string) => Promise<{ error: string | null }>
   signOut: () => Promise<void>
@@ -21,6 +22,7 @@ const AuthContext = createContext<AuthState | undefined>(undefined)
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
   const [displayName, setDisplayName] = useState('')
+  const [isAdmin, setIsAdmin] = useState(false)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -35,16 +37,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => sub.subscription.unsubscribe()
   }, [])
 
-  // Load the display name from the profiles table whenever the user changes.
+  // Load the display name + role from the profiles table when the user changes.
   useEffect(() => {
     if (!session) {
       setDisplayName('')
+      setIsAdmin(false)
+      if (typeof window !== 'undefined') (window as { tennIsAdmin?: boolean }).tennIsAdmin = false
       return
     }
     let active = true
     supabase
       .from('profiles')
-      .select('full_name')
+      .select('full_name, role')
       .eq('id', session.user.id)
       .single()
       .then(({ data }) => {
@@ -52,6 +56,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setDisplayName(
           data?.full_name ?? session.user.email?.split('@')[0] ?? 'Team member'
         )
+        const admin = data?.role === 'admin'
+        setIsAdmin(admin)
+        if (typeof window !== 'undefined') (window as { tennIsAdmin?: boolean }).tennIsAdmin = admin
       })
     return () => {
       active = false
@@ -72,7 +79,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ session, displayName, loading, signIn, signOut }}
+      value={{ session, displayName, isAdmin, loading, signIn, signOut }}
     >
       {children}
     </AuthContext.Provider>

@@ -12,7 +12,7 @@ import { formatDate, formatDateTime } from '../lib/format'
 
 export default function JobDetail() {
   const { id } = useParams<{ id: string }>()
-  const { displayName, session } = useAuth()
+  const { displayName, session, isAdmin } = useAuth()
   const navigate = useNavigate()
 
   const [job, setJob] = useState<Job | null>(null)
@@ -259,6 +259,7 @@ export default function JobDetail() {
                 onChangeStage={(s) => changeWorkStage(w, s)}
                 onSaveRemarks={(r) => saveWorkRemarks(w, r)}
                 onDelete={() => deleteWork(w)}
+                canDelete={isAdmin}
               />
             ))}
           </div>
@@ -306,12 +307,14 @@ export default function JobDetail() {
         )}
       </section>
 
-      <button
-        onClick={toggleArchive}
-        className="my-6 w-full rounded-lg border border-slate-300 py-2.5 text-sm font-medium text-slate-500 active:bg-slate-100"
-      >
-        {job.is_archived ? 'Unarchive unit' : 'Archive unit (mark complete)'}
-      </button>
+      {isAdmin && (
+        <button
+          onClick={toggleArchive}
+          className="my-6 w-full rounded-lg border border-slate-300 py-2.5 text-sm font-medium text-slate-500 active:bg-slate-100"
+        >
+          {job.is_archived ? 'Unarchive unit' : 'Archive unit (mark complete)'}
+        </button>
+      )}
     </Layout>
   )
 }
@@ -323,12 +326,14 @@ function WorkCard({
   onChangeStage,
   onSaveRemarks,
   onDelete,
+  canDelete,
 }: {
   work: JobWork
   busy: boolean
   onChangeStage: (stage: string) => void
   onSaveRemarks: (remarks: string) => void
   onDelete: () => void
+  canDelete: boolean
 }) {
   const cat = getCategory(work.category)
   const [remarks, setRemarks] = useState(work.remarks)
@@ -347,9 +352,11 @@ function WorkCard({
           </span>
           {work.title && <p className="mt-1 text-sm text-slate-600">{work.title}</p>}
         </div>
-        <button onClick={onDelete} className="shrink-0 text-xs text-slate-300 active:text-red-500">
-          Remove
-        </button>
+        {canDelete && (
+          <button onClick={onDelete} className="shrink-0 text-xs text-slate-300 active:text-red-500">
+            Remove
+          </button>
+        )}
       </div>
 
       <StageBar stageKey={work.stage} />

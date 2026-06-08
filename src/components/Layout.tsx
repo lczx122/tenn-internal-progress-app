@@ -16,7 +16,7 @@ export function Layout({
   back?: ReactNode
   bottomNav?: boolean
 }) {
-  const { displayName, signOut } = useAuth()
+  const { displayName, isAdmin, signOut } = useAuth()
   return (
     <div className="min-h-full">
       <header className="sticky top-0 z-10 bg-slate-900 text-white shadow">
@@ -24,7 +24,7 @@ export function Layout({
           {back}
           <h1 className="flex-1 truncate text-lg font-semibold">{title}</h1>
           <div className="text-right">
-            <div className="text-xs leading-tight text-slate-300">Signed in</div>
+            <div className="text-xs leading-tight text-slate-300">{isAdmin ? 'Admin' : 'Signed in'}</div>
             <div className="text-sm font-medium leading-tight">{displayName}</div>
           </div>
           <button

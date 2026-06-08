@@ -16,7 +16,7 @@ function defaultStart(): string {
 export default function AppointmentForm() {
   const { id } = useParams<{ id: string }>()
   const [params] = useSearchParams()
-  const { displayName, session } = useAuth()
+  const { displayName, session, isAdmin } = useAuth()
   const navigate = useNavigate()
   const isEdit = Boolean(id)
 
@@ -322,13 +322,15 @@ export default function AppointmentForm() {
               Reopen (mark scheduled)
             </button>
           )}
-          <button
-            onClick={remove}
-            disabled={busy}
-            className="w-full rounded-lg border border-red-200 py-2.5 text-sm font-medium text-red-600 active:bg-red-50 disabled:opacity-60"
-          >
-            Delete appointment
-          </button>
+          {isAdmin && (
+            <button
+              onClick={remove}
+              disabled={busy}
+              className="w-full rounded-lg border border-red-200 py-2.5 text-sm font-medium text-red-600 active:bg-red-50 disabled:opacity-60"
+            >
+              Delete appointment
+            </button>
+          )}
         </div>
       )}
     </Layout>

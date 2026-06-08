@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import { useAuth } from '../contexts/AuthContext'
 import type { DocType, Quotation } from '../lib/types'
 import { Layout } from '../components/Layout'
 import { relativeTime } from '../lib/format'
@@ -21,7 +22,13 @@ export default function QuotesRegister() {
   const [loading, setLoading] = useState(true)
   const [query, setQuery] = useState('')
   const [filter, setFilter] = useState<Filter>('all')
+  const { isAdmin } = useAuth()
   const navigate = useNavigate()
+
+  async function remove(r: Quotation) {
+    if (!window.confirm(`Delete ${r.number}? This cannot be undone.`)) return
+    await supabase.from('quotations').delete().eq('id', r.id)
+  }
 
   async function load() {
     const { data } = await supabase
@@ -146,14 +153,24 @@ export default function QuotesRegister() {
                       {r.prepared_by ? `By ${r.prepared_by} · ` : ''}
                       {relativeTime(r.created_at)}
                     </p>
-                    {!isSO && (
-                      <button
-                        onClick={() => navigate(`/quote?from=${r.id}&type=SO`)}
-                        className="shrink-0 rounded-lg border border-emerald-600 px-2.5 py-1 text-xs font-medium text-emerald-700 active:bg-emerald-50"
-                      >
-                        → Convert to SO
-                      </button>
-                    )}
+                    <div className="flex shrink-0 items-center gap-2">
+                      {!isSO && (
+                        <button
+                          onClick={() => navigate(`/quote?from=${r.id}&type=SO`)}
+                          className="rounded-lg border border-emerald-600 px-2.5 py-1 text-xs font-medium text-emerald-700 active:bg-emerald-50"
+                        >
+                          → Convert to SO
+                        </button>
+                      )}
+                      {isAdmin && (
+                        <button
+                          onClick={() => remove(r)}
+                          className="rounded-lg border border-red-200 px-2.5 py-1 text-xs font-medium text-red-600 active:bg-red-50"
+                        >
+                          Delete
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </li>
               )

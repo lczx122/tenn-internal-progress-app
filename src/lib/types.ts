@@ -40,6 +40,7 @@ export interface JobEvent {
 export interface Profile {
   id: string
   full_name: string
+  role: 'admin' | 'staff'
 }
 
 export type DocType = 'QT' | 'SO'
