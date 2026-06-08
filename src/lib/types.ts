@@ -42,9 +42,13 @@ export interface Profile {
   full_name: string
 }
 
+export type DocType = 'QT' | 'SO'
+
 export interface Quotation {
   id: string
   number: string
+  doc_type: DocType
+  source_id: string | null
   yymm: string
   seq: number
   customer_name: string

@@ -58,6 +58,12 @@
   .wrap{max-width:1240px;margin:0 auto;padding:26px;display:grid;grid-template-columns:1fr 380px;gap:24px;align-items:start}
   @media(max-width:980px){.wrap{grid-template-columns:1fr}}
 
+  /* ---------- document type toggle ---------- */
+  .doctype{display:flex;gap:6px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:6px;margin-bottom:24px;box-shadow:var(--shadow)}
+  .dt{flex:1;border:none;background:transparent;font-family:'Archivo';font-weight:700;font-size:14px;color:var(--muted);padding:11px;border-radius:8px;cursor:pointer;transition:.15s}
+  .dt.active{background:var(--navy);color:#fff}
+  .dt:hover:not(.active){background:#f0f3fb}
+
   .card{background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow)}
   .card .hd{padding:15px 18px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px}
   .card .hd h2{font-size:13px;text-transform:uppercase;letter-spacing:1.3px;color:var(--navy)}
@@ -215,8 +221,13 @@
 <div class="wrap">
   <!-- LEFT: builder -->
   <div>
+    <div class="doctype" id="doctype">
+      <button class="dt active" data-type="QT" onclick="setDocType('QT')">📄 Quotation</button>
+      <button class="dt" data-type="SO" onclick="setDocType('SO')">🧾 Sales Order</button>
+    </div>
+
     <div class="card" style="margin-bottom:24px">
-      <div class="hd"><h2>Customer &amp; Quotation Details</h2></div>
+      <div class="hd"><h2 id="detailsHd">Customer &amp; Quotation Details</h2></div>
       <div class="bd">
         <div class="grid2">
           <label class="fld">Customer Name <input id="c_name" placeholder="Full name"></label>
@@ -225,7 +236,7 @@
           <label class="fld">H / Phone <input id="c_phone" placeholder="Contact no."></label>
           <label class="fld">Email <input id="c_email" type="email" placeholder="email@example.com"></label>
           <label class="fld">Prepared By <input id="c_pic" placeholder="Staff name — saved on this device"></label>
-          <label class="fld">Quotation No.
+          <label class="fld"><span id="qno_label">Quotation No.</span>
             <input id="c_qno" readonly placeholder="Assigned on save">
             <span id="qno_status" style="font-size:11px;font-weight:600;color:var(--muted);text-transform:none;letter-spacing:0"></span>
           </label>
@@ -253,7 +264,7 @@
         <div class="sum-line" style="margin-top:8px"><span>Total Balance</span><span id="t_bal" class="grand">RM 0.00</span></div>
       </div>
       <div class="btns">
-        <button class="act b-primary" onclick="openPreview()">Preview Quotation</button>
+        <button class="act b-primary" id="previewBtn" onclick="openPreview()">Preview Quotation</button>
         <button class="act b-save" id="saveBtn" style="display:none" onclick="saveQuote()">💾 Save Quotation</button>
         <button class="act b-clear" onclick="newQuote()">New Quote</button>
       </div>
@@ -526,7 +537,7 @@ function renderCatalog(){
       <div class="cat-bd">
         ${cat.note?`<div class="cat-note">${cat.note}</div>`:''}
         ${cat.variants.length?`<div class="variant-tabs" id="vt-${cat.id}">${
-          cat.variants.map((v,i)=>`<button class="vtab${i===0?' active':''}" onclick="setVariant('${cat.id}',${i})">${v}</button>`).join('')
+          cat.variants.map((v,i)=>`<button class="vtab${i===activeVariant[cat.id]?' active':''}" onclick="setVariant('${cat.id}',${i})">${v}</button>`).join('')
         }</div>`:''}
         <div id="tbl-${cat.id}"></div>
       </div>`;
@@ -755,8 +766,8 @@ function buildDoc(){
         Tel: 06-317 9645 / 317 2645 / 317 7563 · Email: tw_tenns@yahoo.com.my · tennfasteners.com</small>
       </div>
       <div class="qbox">
-        <div class="qt">QUOTATION</div>
-        <div class="qmeta"><b>No:</b> ${currentNumber()}${committedNo?'':' (pending)'}<br><b>Date:</b> ${dateStr}<br><b>PIC:</b> ${g('c_pic')||'—'}</div>
+        <div class="qt">${docType==='SO'?'SALES ORDER':'QUOTATION'}</div>
+        <div class="qmeta"><b>No:</b> ${currentNumber()}${committedNo?'':' (pending)'}<br>${(docType==='SO'&&sourceNumber)?`<b>Ref Quote:</b> ${sourceNumber}<br>`:''}<b>Date:</b> ${dateStr}<br><b>PIC:</b> ${g('c_pic')||'—'}</div>
       </div>
     </div>
 
@@ -795,18 +806,24 @@ function buildDoc(){
   `;
 }
 
-/* ---------- staff persistence + quotation numbering ----------
-   Numbers use the shared format QT-YYMM-XXX (e.g. QT-2606-001). The running
-   sequence is assigned by the database the moment a quote is SAVED, so numbers
-   stay sequential and unique across the whole team. Before saving, the field
-   shows the next available number as a (pending) preview.
-   Opened on its own (no app / no Supabase), the tool falls back to a per-device
-   monthly counter so the QT-YYMM-XXX format stays consistent offline.        */
+/* ---------- staff persistence + document numbering ----------
+   The same builder produces two document types, each with its own running
+   monthly sequence assigned by the database when SAVED:
+     • Quotation    QT-YYMM-XXX
+     • Sales Order  SO-YYMM-XXX
+   Before saving, the field shows the next available number as a (pending)
+   preview. Opened on its own (no app / no Supabase) it falls back to a
+   per-device monthly counter so the format stays consistent offline.        */
 const SK_STAFF='tenn_staff';
 const SK_LOCALSEQ='tenn_quote_seq';
-let committedNo=null;   // the final number, once the quote is saved
+let docType='QT';       // 'QT' (Quotation) or 'SO' (Sales Order)
+let committedNo=null;   // the final number, once saved
 let pendingNo=null;     // provisional next number, shown before saving
 let savedId=null;       // database row id, once saved
+let sourceId=null;      // the quotation this SO was converted from (if any)
+let sourceNumber=null;  // …and its number, for the printed "Ref Quote" line
+
+function docName(t){return (t||docType)==='SO'?'Sales Order':'Quotation';}
 
 function loadJSON(k){try{return JSON.parse(localStorage.getItem(k))||{}}catch(e){return{}}}
 function saveJSON(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
@@ -821,27 +838,54 @@ function getSupa(){
   try{ if(window.parent&&window.parent!==window&&window.parent.tennSupabase) return window.parent.tennSupabase; }catch(e){}
   return window.tennSupabase||null;
 }
+// Make sure the parent's auth session has finished restoring before we query.
+async function ready(supa){ try{ await supa.auth.getSession(); }catch(e){} }
 
 function currentNumber(){return committedNo||pendingNo||'—';}
 function setQnoStatus(t){const el=document.getElementById('qno_status');if(el)el.textContent=t;}
 
-/* Show the next available number as a preview (not yet reserved). */
+// Reflect the current document type in the title bar, button labels and field.
+function updateDocLabels(){
+  const name=docName();
+  const pv=document.getElementById('previewBtn'); if(pv) pv.textContent='Preview '+name;
+  ['saveBtn','saveBtnModal'].forEach(id=>{const b=document.getElementById(id); if(b&&!b.dataset.busy){b.textContent='💾 Save '+name; b.dataset.label='💾 Save '+name;}});
+  const ql=document.getElementById('qno_label'); if(ql) ql.textContent=name+' No.';
+  const hd=document.getElementById('detailsHd'); if(hd) hd.textContent='Customer & '+name+' Details';
+}
+
+function applyDocTypeUI(t){
+  docType=t;
+  document.querySelectorAll('#doctype .dt').forEach(b=>b.classList.toggle('active',b.dataset.type===t));
+  updateDocLabels();
+}
+
+// User clicks the Quotation / Sales Order toggle.
+function setDocType(t){
+  if(t===docType) return;
+  applyDocTypeUI(t);
+  committedNo=null; savedId=null; sourceId=null; sourceNumber=null;
+  document.getElementById('saveBtn').style.display='none'; // re-preview the new type
+  refreshPendingNumber();
+}
+
+/* Show the next available number for this type as a preview (not yet reserved). */
 async function refreshPendingNumber(){
   if(committedNo) return;
   const ym=yymm(); const supa=getSupa(); let seq=1;
   if(supa){
     try{
-      const {data}=await supa.from('quotations').select('seq').eq('yymm',ym)
+      await ready(supa);
+      const {data}=await supa.from('quotations').select('seq').eq('doc_type',docType).eq('yymm',ym)
         .order('seq',{ascending:false}).limit(1);
       seq=(data&&data.length?data[0].seq:0)+1;
     }catch(e){ /* keep seq=1 */ }
   }else{
-    const m=loadJSON(SK_LOCALSEQ); seq=(m[ym]||0)+1;
+    const m=loadJSON(SK_LOCALSEQ); seq=(((m[docType]||{})[ym])||0)+1;
   }
-  pendingNo='QT-'+ym+'-'+pad3(seq);
+  pendingNo=docType+'-'+ym+'-'+pad3(seq);
   document.getElementById('c_qno').value=pendingNo;
   setQnoStatus(getSupa()
-    ? 'Pending — preview, then Save Quotation to finalise'
+    ? 'Pending — preview, then Save '+docName()+' to finalise'
     : 'Pending (offline) — saves on this device only');
 }
 
@@ -858,7 +902,7 @@ function flashSaved(msg){
   });
 }
 
-/* Reserve the next number and store the quote in the shared register. */
+/* Reserve the next number and store the document in the shared register. */
 async function saveQuote(){
   if(committedNo){ flashSaved('Saved ✓ — '+committedNo); return; }
   const lines=collectLines();
@@ -871,25 +915,32 @@ async function saveQuote(){
   const bal=sub-dep-disc;
   const cats=[...new Set(lines.map(l=>l.cat))].join(', ');
   const payload={
+    doc_type:docType,
     customer:{name:g('c_name'),ic:g('c_ic'),unit:g('c_unit'),phone:g('c_phone'),email:g('c_email')},
     date:g('c_date'), remarks:g('c_remarks'),
+    // machine-readable selection so the document can be reopened / converted
+    selections:Object.assign({},state),
+    cabinets:cabinetLines.map(l=>Object.assign({},l)),
+    variants:Object.assign({},activeVariant),
     lines, totals:{sub,deposit:dep,discount:disc,balance:bal}
   };
   const supa=getSupa();
   setSaving(true);
   try{
     if(supa){
-      const {data,error}=await supa.rpc('create_quotation',{
-        p_payload:payload, p_customer:g('c_name'), p_phone:g('c_phone'),
-        p_unit:g('c_unit'), p_prepared_by:g('c_pic'), p_categories:cats, p_total:bal
+      await ready(supa);
+      const {data,error}=await supa.rpc('create_document',{
+        p_type:docType, p_payload:payload, p_customer:g('c_name'), p_phone:g('c_phone'),
+        p_unit:g('c_unit'), p_prepared_by:g('c_pic'), p_categories:cats, p_total:bal,
+        p_source:sourceId
       });
       if(error) throw error;
       committedNo=data.number; savedId=data.id;
       setQnoStatus('✓ Saved to shared register');
     }else{
-      const ym=yymm(); const m=loadJSON(SK_LOCALSEQ); const seq=(m[ym]||0)+1;
-      m[ym]=seq; saveJSON(SK_LOCALSEQ,m);
-      committedNo='QT-'+ym+'-'+pad3(seq);
+      const ym=yymm(); const m=loadJSON(SK_LOCALSEQ); m[docType]=m[docType]||{};
+      const seq=(m[docType][ym]||0)+1; m[docType][ym]=seq; saveJSON(SK_LOCALSEQ,m);
+      committedNo=docType+'-'+ym+'-'+pad3(seq);
       setQnoStatus('Saved locally (offline)');
     }
     document.getElementById('c_qno').value=committedNo;
@@ -902,6 +953,37 @@ async function saveQuote(){
     alert('Could not save to register: '+((e&&e.message)||e));
   }finally{ setSaving(false); }
 }
+
+/* Open the tool pre-filled from a saved document (used by "Convert to SO").
+   Restores the exact item selection from the stored payload. */
+async function loadDocument(id, asType){
+  const supa=getSupa(); if(!supa||!id) return;
+  try{
+    await ready(supa);
+    const {data,error}=await supa.from('quotations').select('*').eq('id',id).single();
+    if(error||!data){ refreshPendingNumber(); return; }
+    const p=data.payload||{};
+    const c=p.customer||{};
+    setVal('c_name',c.name); setVal('c_ic',c.ic); setVal('c_unit',c.unit);
+    setVal('c_phone',c.phone); setVal('c_email',c.email); setVal('c_remarks',p.remarks);
+    for(const k in state) delete state[k];
+    if(p.selections) Object.assign(state,p.selections);
+    if(p.variants) Object.assign(activeVariant,p.variants);
+    cabinetLines.length=0;
+    if(Array.isArray(p.cabinets)) p.cabinets.forEach(l=>cabinetLines.push(Object.assign({},l)));
+    sourceId=(asType==='SO')?data.id:null;
+    sourceNumber=(asType==='SO')?data.number:null;
+    applyDocTypeUI(asType||'SO');
+    committedNo=null;
+    renderCatalog();   // re-renders items using the restored state/variants
+    await refreshPendingNumber();
+    if(!p.selections && !(p.cabinets&&p.cabinets.length))
+      setQnoStatus('Loaded customer from '+data.number+' — items could not be restored, please re-add');
+    else
+      setQnoStatus('Converting from '+data.number+' — preview, then Save Sales Order');
+  }catch(e){ refreshPendingNumber(); }
+}
+function setVal(id,v){const el=document.getElementById(id); if(el) el.value=v||'';}
 
 /* ---------- preview ---------- */
 function openPreview(){
@@ -917,16 +999,16 @@ function closePreview(){
   document.body.style.overflow='';
 }
 
-/* ---------- start a new quotation ---------- */
+/* ---------- start a new document ---------- */
 function newQuote(){
-  if(!confirm('Start a new quotation? This clears the current customer and items. Your saved name and initials stay.')) return;
+  if(!confirm('Start a new '+docName().toLowerCase()+'? This clears the current customer and items. Your saved name and initials stay.')) return;
   for(const k in state) delete state[k];
   cabinetLines.length=0;
   ['c_name','c_ic','c_unit','c_phone','c_email','c_remarks'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('t_dep').value=0;
   document.getElementById('t_disc').value=0;
   document.getElementById('c_date').value=new Date().toISOString().slice(0,10);
-  committedNo=null; pendingNo=null; savedId=null;
+  committedNo=null; pendingNo=null; savedId=null; sourceId=null; sourceNumber=null;
   setQnoStatus('');
   document.getElementById('saveBtn').style.display='none';
   renderCatalog();
@@ -941,7 +1023,15 @@ function newQuote(){
   document.getElementById('c_qno').value='';
   document.getElementById('c_pic').addEventListener('input',saveStaff);
   renderCatalog();
-  refreshPendingNumber();
+
+  // Deep-link support: /quotation.html?from=<id>&type=SO converts a saved
+  // quotation into a sales order, pre-filling its items.
+  const params=new URLSearchParams(location.search);
+  const fromId=params.get('from');
+  const asType=(params.get('type')||'QT').toUpperCase()==='SO'?'SO':'QT';
+  if(asType==='SO' && !fromId) applyDocTypeUI('SO');
+  if(fromId){ loadDocument(fromId, asType); }
+  else { refreshPendingNumber(); }
 })();
 </script>
 </body>
