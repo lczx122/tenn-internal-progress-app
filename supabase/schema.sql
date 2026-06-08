@@ -81,21 +81,6 @@ create table if not exists public.job_events (
 create index if not exists job_events_job_idx on public.job_events (job_id, created_at desc);
 
 -- ---------------------------------------------------------------------------
--- 4. JOB_PHOTOS
---    Metadata for progress photos. The file itself lives in Storage.
--- ---------------------------------------------------------------------------
-create table if not exists public.job_photos (
-  id           uuid primary key default gen_random_uuid(),
-  job_id       uuid not null references public.jobs (id) on delete cascade,
-  storage_path text not null,
-  caption      text not null default '',
-  author_name  text not null default '',
-  created_at   timestamptz not null default now()
-);
-
-create index if not exists job_photos_job_idx on public.job_photos (job_id, created_at desc);
-
--- ---------------------------------------------------------------------------
 -- 4b. JOB_WORKS
 --    One row per work category on a unit (Mindhome, Aluminium, EE, Smart Home,
 --    Smart Lock, Products). Each category tracks its OWN stage independently.
@@ -139,13 +124,11 @@ create trigger job_works_touch before update on public.job_works
 alter table public.profiles   enable row level security;
 alter table public.jobs       enable row level security;
 alter table public.job_events enable row level security;
-alter table public.job_photos enable row level security;
 alter table public.job_works  enable row level security;
 
 drop policy if exists "auth read profiles"  on public.profiles;
 drop policy if exists "auth all jobs"        on public.jobs;
 drop policy if exists "auth all events"      on public.job_events;
-drop policy if exists "auth all photos"      on public.job_photos;
 drop policy if exists "auth all works"       on public.job_works;
 drop policy if exists "auth update own profile" on public.profiles;
 
@@ -186,30 +169,7 @@ begin
     alter publication supabase_realtime add table public.job_events;
   end if;
   if not exists (select 1 from pg_publication_tables
-    where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'job_photos') then
-    alter publication supabase_realtime add table public.job_photos;
-  end if;
-  if not exists (select 1 from pg_publication_tables
     where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'job_works') then
     alter publication supabase_realtime add table public.job_works;
   end if;
 end $$;
-
--- ---------------------------------------------------------------------------
--- 7. STORAGE (photos)
---    Creates a private bucket "job-photos" and lets signed-in users use it.
--- ---------------------------------------------------------------------------
-insert into storage.buckets (id, name, public)
-values ('job-photos', 'job-photos', false)
-on conflict (id) do nothing;
-
-drop policy if exists "auth read photos"   on storage.objects;
-drop policy if exists "auth upload photos" on storage.objects;
-drop policy if exists "auth delete photos" on storage.objects;
-
-create policy "auth read photos" on storage.objects
-  for select using (bucket_id = 'job-photos' and auth.role() = 'authenticated');
-create policy "auth upload photos" on storage.objects
-  for insert with check (bucket_id = 'job-photos' and auth.role() = 'authenticated');
-create policy "auth delete photos" on storage.objects
-  for delete using (bucket_id = 'job-photos' and auth.role() = 'authenticated');

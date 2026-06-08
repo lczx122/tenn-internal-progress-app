@@ -1,8 +1,8 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
-import type { Job, JobEvent, JobPhoto, JobWork } from '../lib/types'
+import type { Job, JobEvent, JobWork } from '../lib/types'
 import { STAGES, getStage } from '../lib/stages'
 import { CATEGORIES, getCategory } from '../lib/categories'
 import { Layout } from '../components/Layout'
@@ -17,26 +17,21 @@ export default function JobDetail() {
   const [job, setJob] = useState<Job | null>(null)
   const [works, setWorks] = useState<JobWork[]>([])
   const [events, setEvents] = useState<JobEvent[]>([])
-  const [photos, setPhotos] = useState<JobPhoto[]>([])
-  const [photoUrls, setPhotoUrls] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(true)
   const [note, setNote] = useState('')
   const [busy, setBusy] = useState(false)
   const [adding, setAdding] = useState(false)
-  const fileRef = useRef<HTMLInputElement>(null)
 
   const loadAll = useCallback(async () => {
     if (!id) return
-    const [{ data: j }, { data: wk }, { data: ev }, { data: ph }] = await Promise.all([
+    const [{ data: j }, { data: wk }, { data: ev }] = await Promise.all([
       supabase.from('jobs').select('*').eq('id', id).single(),
       supabase.from('job_works').select('*').eq('job_id', id).order('created_at'),
       supabase.from('job_events').select('*').eq('job_id', id).order('created_at', { ascending: false }),
-      supabase.from('job_photos').select('*').eq('job_id', id).order('created_at', { ascending: false }),
     ])
     setJob((j as Job) ?? null)
     setWorks((wk as JobWork[]) ?? [])
     setEvents((ev as JobEvent[]) ?? [])
-    setPhotos((ph as JobPhoto[]) ?? [])
     setLoading(false)
   }, [id])
 
@@ -47,30 +42,11 @@ export default function JobDetail() {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'jobs', filter: `id=eq.${id}` }, () => loadAll())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'job_works', filter: `job_id=eq.${id}` }, () => loadAll())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'job_events', filter: `job_id=eq.${id}` }, () => loadAll())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'job_photos', filter: `job_id=eq.${id}` }, () => loadAll())
       .subscribe()
     return () => {
       supabase.removeChannel(channel)
     }
   }, [id, loadAll])
-
-  useEffect(() => {
-    if (photos.length === 0) return
-    let active = true
-    Promise.all(
-      photos.map(async (p) => {
-        const { data } = await supabase.storage
-          .from('job-photos')
-          .createSignedUrl(p.storage_path, 3600)
-        return [p.id, data?.signedUrl ?? ''] as const
-      })
-    ).then((pairs) => {
-      if (active) setPhotoUrls(Object.fromEntries(pairs))
-    })
-    return () => {
-      active = false
-    }
-  }, [photos])
 
   async function logEvent(type: JobEvent['type'], body: string) {
     if (!id) return
@@ -143,22 +119,6 @@ export default function JobDetail() {
     await logEvent('note', trimmed)
     await touchJob()
     setNote('')
-    setBusy(false)
-  }
-
-  async function uploadPhoto(file: File) {
-    if (!id) return
-    setBusy(true)
-    const ext = file.name.split('.').pop() || 'jpg'
-    const path = `${id}/${Date.now()}.${ext}`
-    const { error } = await supabase.storage.from('job-photos').upload(path, file, { upsert: false })
-    if (!error) {
-      await supabase.from('job_photos').insert({ job_id: id, storage_path: path, author_name: displayName })
-      await logEvent('note', '📷 Added a photo')
-      await touchJob()
-    } else {
-      window.alert(`Upload failed: ${error.message}`)
-    }
     setBusy(false)
   }
 
@@ -255,51 +215,6 @@ export default function JobDetail() {
                 onSaveRemarks={(r) => saveWorkRemarks(w, r)}
                 onDelete={() => deleteWork(w)}
               />
-            ))}
-          </div>
-        )}
-      </section>
-
-      {/* Photos */}
-      <section className="mt-4 rounded-xl bg-white p-4 shadow-sm">
-        <div className="mb-2 flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-slate-700">Photos</h2>
-          <button
-            onClick={() => fileRef.current?.click()}
-            disabled={busy}
-            className="rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-medium text-white active:bg-slate-700 disabled:opacity-60"
-          >
-            + Add photo
-          </button>
-          <input
-            ref={fileRef}
-            type="file"
-            accept="image/*"
-            capture="environment"
-            className="hidden"
-            onChange={(e) => {
-              const f = e.target.files?.[0]
-              if (f) uploadPhoto(f)
-              e.target.value = ''
-            }}
-          />
-        </div>
-        {photos.length === 0 ? (
-          <p className="py-4 text-center text-sm text-slate-400">No photos yet.</p>
-        ) : (
-          <div className="grid grid-cols-3 gap-2">
-            {photos.map((p) => (
-              <a
-                key={p.id}
-                href={photoUrls[p.id]}
-                target="_blank"
-                rel="noreferrer"
-                className="block aspect-square overflow-hidden rounded-lg bg-slate-100"
-              >
-                {photoUrls[p.id] && (
-                  <img src={photoUrls[p.id]} alt={p.caption || 'progress photo'} className="h-full w-full object-cover" />
-                )}
-              </a>
             ))}
           </div>
         )}

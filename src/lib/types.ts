@@ -37,15 +37,6 @@ export interface JobEvent {
   created_at: string
 }
 
-export interface JobPhoto {
-  id: string
-  job_id: string
-  storage_path: string
-  caption: string
-  author_name: string
-  created_at: string
-}
-
 export interface Profile {
   id: string
   full_name: string

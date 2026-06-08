@@ -2,18 +2,17 @@
 
 A simple, mobile-first web app to replace your renovation-progress Excel file.
 Your team signs in on their phones and sees every customer's job, live —
-progress stage, who has the keys, photos, dates, and a running activity log
+progress per work category, who has the keys, dates, and a running activity log
 showing **who** updated **what** and **when**.
 
 - 🔐 Email + password login (admin creates accounts; add as many staff as you like)
 - 📊 Fixed renovation stages with a progress bar per job
 - 🔑 Key-holder tracking with a logged handover history
-- 📷 Progress photos straight from the phone camera
 - 🗒️ Per-job activity timeline (stage changes, key handovers, notes — all stamped with the user)
 - ⚡ Real-time: every change appears on everyone's phone within a second, no refresh
 
 Built with React + Vite + TypeScript and [Supabase](https://supabase.com)
-(database, login, real-time, photo storage — all on the free tier).
+(database, login, real-time — all on the free tier).
 
 ---
 
@@ -34,7 +33,7 @@ You'll do this once. After that, adding the app to a phone takes 10 seconds.
 2. Open the file [`supabase/schema.sql`](supabase/schema.sql) from this repo,
    copy the **entire** contents, paste into the editor, and click **Run**.
 3. You should see "Success". This creates all the tables, security rules,
-   real-time, and the photo storage bucket. It's safe to re-run later.
+   and real-time. It's safe to re-run later.
 
 ### 3. Get your two keys
 
@@ -110,7 +109,6 @@ Any static host works. The easiest free option is **Vercel**:
 - **Job page** — tap a job to:
   - **Update progress** — tap a stage; the bar moves and it's logged.
   - **Change key holder** — tap the 🔑 row, type who has them now; logged as a handover.
-  - **Add photos** — opens the camera or gallery.
   - **Post a note** — free-text update for the timeline.
   - **Archive** — when a job is done, archive it (find it again via "View archived jobs").
 - Everything you do is stamped with your name and time, and shows up on
