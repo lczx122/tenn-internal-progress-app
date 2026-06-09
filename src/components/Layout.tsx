@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { BottomNav } from './BottomNav'
 
@@ -23,10 +24,17 @@ export function Layout({
         <div className="mx-auto flex max-w-lg items-center gap-3 px-4 py-3">
           {back}
           <h1 className="flex-1 truncate text-lg font-semibold">{title}</h1>
-          <div className="text-right">
-            <div className="text-xs leading-tight text-slate-300">{isAdmin ? 'Admin' : 'Signed in'}</div>
-            <div className="text-sm font-medium leading-tight">{displayName}</div>
-          </div>
+          {isAdmin ? (
+            <Link to="/staff" className="text-right active:opacity-70" title="Staff & roles">
+              <div className="text-xs leading-tight text-amber-300">Admin ⚙︎</div>
+              <div className="text-sm font-medium leading-tight">{displayName}</div>
+            </Link>
+          ) : (
+            <div className="text-right">
+              <div className="text-xs leading-tight text-slate-300">Signed in</div>
+              <div className="text-sm font-medium leading-tight">{displayName}</div>
+            </div>
+          )}
           <button
             onClick={signOut}
             className="rounded-md bg-slate-700 px-2 py-1 text-xs font-medium active:bg-slate-600"

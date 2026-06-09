@@ -10,6 +10,7 @@ import Quotation from './pages/Quotation'
 import QuotesRegister from './pages/QuotesRegister'
 import Schedule from './pages/Schedule'
 import AppointmentForm from './pages/AppointmentForm'
+import StaffAdmin from './pages/StaffAdmin'
 import SetupNotice from './pages/SetupNotice'
 
 export default function App() {
@@ -43,6 +44,7 @@ export default function App() {
       <Route path="/schedule" element={<Schedule />} />
       <Route path="/schedule/new" element={<AppointmentForm />} />
       <Route path="/appointment/:id" element={<AppointmentForm />} />
+      <Route path="/staff" element={<StaffAdmin />} />
       <Route path="/job/:id" element={<JobDetail />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

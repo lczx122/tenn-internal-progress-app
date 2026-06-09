@@ -30,10 +30,15 @@ You'll do this once. After that, adding the app to a phone takes 10 seconds.
 ### 2. Create the database tables
 
 1. In your project, open **SQL Editor** (left sidebar) → **New query**.
-2. Open the file [`supabase/schema.sql`](supabase/schema.sql) from this repo,
+2. Open the file [`supabase/setup.sql`](supabase/setup.sql) from this repo,
    copy the **entire** contents, paste into the editor, and click **Run**.
-3. You should see "Success". This creates all the tables, security rules,
-   and real-time. It's safe to re-run later.
+3. You should see "Success". This one file creates everything — units, work
+   categories, the activity log, quotations & sales orders, the appointments
+   schedule, admin permissions, and the editable price store. It's safe to
+   re-run later.
+
+> The individual `supabase/*.sql` files are the historical step-by-step
+> migrations; on a fresh project you only need `setup.sql`.
 
 ### 3. Get your two keys
 
@@ -56,6 +61,20 @@ You'll do this once. After that, adding the app to a phone takes 10 seconds.
 > Tip: turn **off** public sign-ups so only you can add staff:
 > **Authentication → Providers → Email →** disable "Enable sign ups" (or leave
 > the default; either way, this app has no self-signup screen).
+
+#### Make yourself an admin
+
+Everyone starts as **staff** (can do all day-to-day work). **Admins** can also
+delete records, archive units, and edit the generator's prices. Promote your own
+account once via the SQL Editor:
+
+```sql
+update public.profiles set role = 'admin'
+where id = (select id from auth.users where email = 'you@example.com');
+```
+
+After that, sign in and tap the **Admin ⚙︎** badge (top-right) to open
+**Staff & roles**, where you can promote or demote anyone else — no more SQL.
 
 ### 5. Connect the app to your Supabase project
 
