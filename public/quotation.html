@@ -64,6 +64,25 @@
   .dt.active{background:var(--navy);color:#fff}
   .dt:hover:not(.active){background:#f0f3fb}
 
+  /* ---------- admin: edit prices ---------- */
+  .edit-prices-btn{background:rgba(255,255,255,.14);color:#fff;border:1px solid rgba(255,255,255,.28);border-radius:8px;font-family:'Archivo';font-weight:700;font-size:12px;padding:7px 11px;cursor:pointer;white-space:nowrap}
+  .edit-prices-btn:hover{background:rgba(255,255,255,.24)}
+  @media(max-width:560px){.edit-prices-btn{font-size:11px;padding:6px 9px}}
+  .pe-cat{margin-bottom:18px}
+  .pe-cat h3{font-family:'Archivo';font-size:13px;text-transform:uppercase;letter-spacing:.6px;color:var(--navy);border-bottom:1px solid var(--line);padding-bottom:6px;margin-bottom:8px}
+  .pe-note{font-size:11.5px;color:var(--muted);margin-bottom:10px}
+  .pe-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:5px 0;border-bottom:1px dashed #eef0f6}
+  .pe-row:last-child{border-bottom:none}
+  .pe-lbl{font-size:13px;color:var(--ink)}
+  .pe-lbl small{color:var(--muted);font-size:11px;margin-left:4px}
+  .pe-row input{width:110px;text-align:right}
+  .pe-cab{border:1px solid var(--line);border-radius:9px;padding:10px 12px;margin-bottom:10px}
+  .pe-cab-name{font-size:13px;font-weight:600;color:var(--navy);margin-bottom:8px}
+  .pe-cab-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+  @media(max-width:560px){.pe-cab-grid{grid-template-columns:repeat(2,1fr)}}
+  .pe-f{display:flex;flex-direction:column;gap:3px;font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
+  .pe-f input{width:100%;text-align:right;padding:7px 8px}
+
   .card{background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow)}
   .card .hd{padding:15px 18px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px}
   .card .hd h2{font-size:13px;text-transform:uppercase;letter-spacing:1.3px;color:var(--navy)}
@@ -215,6 +234,7 @@
     <p>Quotation Generator</p>
   </div>
   <div class="spacer"></div>
+  <button id="editPricesBtn" class="edit-prices-btn" style="display:none" onclick="openPriceEditor()">✏️ Edit Prices</button>
   <div class="stars">★★★★★</div>
 </header>
 
@@ -282,6 +302,21 @@
       <button class="act b-ghost" onclick="closePreview()">Close</button>
     </div>
     <div class="doc print-area-on"><div class="doc-pad" id="docBody"></div></div>
+  </div>
+</div>
+
+<!-- ADMIN: EDIT PRICES -->
+<div class="modal" id="priceModal">
+  <div class="modal-inner">
+    <div class="modal-bar">
+      <button class="act b-save" id="savePricesBtn" onclick="savePrices()">Save prices</button>
+      <button class="act b-ghost" onclick="closePriceEditor()">Cancel</button>
+    </div>
+    <div class="doc"><div class="doc-pad">
+      <h2 style="font-family:'Archivo';color:var(--navy);margin-bottom:4px">Edit Prices</h2>
+      <p style="color:var(--muted);font-size:12.5px;margin-bottom:16px">Saved for the whole team. Applies to new quotations &amp; sales orders.</p>
+      <div id="priceBody"></div>
+    </div></div>
   </div>
 </div>
 
@@ -467,7 +502,8 @@ function cab(defaultMm, basePrice, stepMm, priceInc, steps=3){
   const tiers=[{maxMm:defaultMm, price:basePrice}];
   for(let i=1;i<steps;i++) tiers.push({maxMm:defaultMm+stepMm*i, price:basePrice+priceInc*i});
   tiers.push({maxMm:Infinity, price:basePrice+priceInc*steps});
-  return {defaultMm, tiers};
+  // keep the raw parameters so admins can edit them and the tiers can be rebuilt
+  return {defaultMm, basePrice, stepMm, priceInc, steps, tiers};
 }
 
 const CABINET = [
@@ -506,6 +542,112 @@ function tierTableHtml(tiers){
     prev = t.maxMm===Infinity?prev:t.maxMm;
     return `${range} → RM ${fmt(t.price)}${i===0?' <em>(base)</em>':''}`;
   }).join('  ·  ');
+}
+
+/* ---------- admin-editable price overlay ----------
+   Item prices and cabinet tier parameters can be overridden by an admin and
+   stored in Supabase (app_settings key='pricing'). The overlay is applied over
+   the coded defaults on load; everyone reads it, only admins can save it. */
+let priceOverlay = { items:{}, cabinets:{} };
+let isAdminUser = false;
+
+function itemKey(cat, it){ return cat.id+'|'+it.v+'|'+it.label; }
+
+function applyOverrides(ov){
+  if(!ov) return;
+  const items=ov.items||{}, cabs=ov.cabinets||{};
+  CATALOG.forEach(cat=>cat.items.forEach(it=>{
+    const v=items[itemKey(cat,it)];
+    if(v!=null && !isNaN(+v)) it.price=+v;
+  }));
+  CABINET.forEach(g=>g.options.forEach(o=>{
+    const v=cabs[g.id+':'+o.id];
+    if(!v) return;
+    if(v.defaultMm!=null) o.defaultMm=+v.defaultMm;
+    if(v.basePrice!=null) o.basePrice=+v.basePrice;
+    if(v.stepMm!=null)    o.stepMm=+v.stepMm;
+    if(v.priceInc!=null)  o.priceInc=+v.priceInc;
+    if(v.steps!=null)     o.steps=Math.max(1,+v.steps);
+    o.tiers=cab(o.defaultMm,o.basePrice,o.stepMm,o.priceInc,o.steps).tiers;
+  }));
+}
+
+async function loadPricing(){
+  const supa=getSupa(); if(!supa) return;
+  try{
+    await ready(supa);
+    const {data}=await supa.from('app_settings').select('value').eq('key','pricing').maybeSingle();
+    if(data&&data.value){
+      priceOverlay={items:(data.value.items||{}), cabinets:(data.value.cabinets||{})};
+      applyOverrides(priceOverlay);
+    }
+  }catch(e){}
+}
+
+async function checkAdmin(){
+  const supa=getSupa(); if(!supa) return false;
+  try{ await ready(supa); const {data}=await supa.rpc('is_admin'); return !!data; }catch(e){ return false; }
+}
+
+/* ---- price editor modal ---- */
+function openPriceEditor(){
+  document.getElementById('priceBody').innerHTML=buildPriceEditorHtml();
+  document.getElementById('priceModal').classList.add('show');
+  document.body.style.overflow='hidden';
+}
+function closePriceEditor(){
+  document.getElementById('priceModal').classList.remove('show');
+  document.body.style.overflow='';
+}
+function peField(key,field,val,label){
+  return `<label class="pe-f"><span>${label}</span><input type="number" step="1" min="0" data-kind="cab" data-key="${key}" data-field="${field}" value="${val}"></label>`;
+}
+function buildPriceEditorHtml(){
+  let h='';
+  CATALOG.forEach(cat=>{
+    h+=`<div class="pe-cat"><h3>${cat.name}</h3>`;
+    cat.items.forEach(it=>{
+      const vlabel = cat.variants.length?` · ${cat.variants[it.v].split('—').pop().trim()}`:'';
+      h+=`<label class="pe-row"><span class="pe-lbl">${it.label}${vlabel?`<small>${vlabel}</small>`:''}</span>
+        <input type="number" step="0.01" min="0" data-kind="item" data-key="${itemKey(cat,it)}" value="${it.price}"></label>`;
+    });
+    h+='</div>';
+  });
+  h+=`<div class="pe-cat"><h3>Cabinet — tier pricing</h3><p class="pe-note">Base = price at the default length; +RM/step is added per tier as the length grows.</p>`;
+  CABINET.forEach(g=>g.options.forEach(o=>{
+    const k=g.id+':'+o.id;
+    h+=`<div class="pe-cab"><div class="pe-cab-name">${g.name} · ${o.name}</div><div class="pe-cab-grid">
+      ${peField(k,'basePrice',o.basePrice,'Base RM')}
+      ${peField(k,'priceInc',o.priceInc,'+RM/step')}
+      ${peField(k,'defaultMm',o.defaultMm,'Default mm')}
+      ${peField(k,'stepMm',o.stepMm,'Step mm')}
+      ${peField(k,'steps',o.steps,'Tiers')}
+    </div></div>`;
+  }));
+  h+='</div>';
+  return h;
+}
+async function savePrices(){
+  const overlay={items:{},cabinets:{}};
+  document.querySelectorAll('#priceBody input[data-kind="item"]').forEach(inp=>{
+    const v=parseFloat(inp.value); if(!isNaN(v)) overlay.items[inp.dataset.key]=v;
+  });
+  document.querySelectorAll('#priceBody input[data-kind="cab"]').forEach(inp=>{
+    const k=inp.dataset.key,f=inp.dataset.field,v=parseFloat(inp.value);
+    (overlay.cabinets[k]=overlay.cabinets[k]||{})[f]=isNaN(v)?0:v;
+  });
+  const supa=getSupa();
+  if(!supa){ alert('Not connected — open this inside the app to save prices.'); return; }
+  const btn=document.getElementById('savePricesBtn'); if(btn){btn.disabled=true;btn.textContent='Saving…';}
+  try{
+    let uid=null; try{ uid=(await supa.auth.getUser()).data.user.id; }catch(e){}
+    const {error}=await supa.from('app_settings').upsert({key:'pricing',value:overlay,updated_by:uid,updated_at:new Date().toISOString()});
+    if(error) throw error;
+    priceOverlay=overlay; applyOverrides(priceOverlay); renderCatalog();
+    closePriceEditor();
+  }catch(e){
+    alert('Could not save prices: '+((e&&e.message)||e));
+  }finally{ if(btn){btn.disabled=false;btn.textContent='Save prices';} }
 }
 
 /* ---------- state ---------- */
@@ -1022,16 +1164,23 @@ function newQuote(){
   if(staff.name) document.getElementById('c_pic').value=staff.name;
   document.getElementById('c_qno').value='';
   document.getElementById('c_pic').addEventListener('input',saveStaff);
-  renderCatalog();
+  renderCatalog(); // instant paint with coded defaults
 
-  // Deep-link support: /quotation.html?from=<id>&type=SO converts a saved
-  // quotation into a sales order, pre-filling its items.
   const params=new URLSearchParams(location.search);
   const fromId=params.get('from');
   const asType=(params.get('type')||'QT').toUpperCase()==='SO'?'SO':'QT';
   if(asType==='SO' && !fromId) applyDocTypeUI('SO');
-  if(fromId){ loadDocument(fromId, asType); }
-  else { refreshPendingNumber(); }
+
+  (async ()=>{
+    await loadPricing();           // apply admin price overrides if any
+    renderCatalog();               // re-paint with the live prices
+    // Deep-link: /quotation.html?from=<id>&type=SO converts a saved quotation.
+    if(fromId) await loadDocument(fromId, asType);
+    else await refreshPendingNumber();
+    // Reveal the price editor for admins only (DB also enforces write access).
+    isAdminUser = await checkAdmin();
+    if(isAdminUser) document.getElementById('editPricesBtn').style.display='';
+  })();
 })();
 </script>
 </body>
