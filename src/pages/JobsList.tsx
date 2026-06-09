@@ -20,7 +20,27 @@ export default function JobsList() {
   const [catFilter, setCatFilter] = useState(searchParams.get('cat') ?? '')
   const [stageFilter, setStageFilter] = useState(searchParams.get('stage') ?? '')
   const [showArchived, setShowArchived] = useState(false)
+  const [collapsed, setCollapsed] = useState<Set<string>>(() => {
+    try {
+      return new Set(JSON.parse(localStorage.getItem('tenn_collapsed_projects') || '[]'))
+    } catch {
+      return new Set()
+    }
+  })
   const navigate = useNavigate()
+
+  function toggleCollapse(project: string) {
+    setCollapsed((prev) => {
+      const next = new Set(prev)
+      next.has(project) ? next.delete(project) : next.add(project)
+      try {
+        localStorage.setItem('tenn_collapsed_projects', JSON.stringify([...next]))
+      } catch {
+        // ignore storage failures
+      }
+      return next
+    })
+  }
 
   async function load() {
     const [{ data: j }, { data: w }] = await Promise.all([
@@ -194,14 +214,21 @@ export default function JobsList() {
         </div>
       ) : (
         <div className="space-y-5">
-          {groups.map((g) => (
+          {groups.map((g) => {
+            const isCollapsed = collapsed.has(g.project)
+            return (
             <section key={g.project}>
-              <div className="mb-2 flex items-center gap-2 px-1">
+              <button
+                onClick={() => toggleCollapse(g.project)}
+                className="mb-2 flex w-full items-center gap-2 px-1 active:opacity-70"
+              >
+                <span className={`text-xs text-slate-400 transition-transform ${isCollapsed ? '' : 'rotate-90'}`}>▶</span>
                 <h2 className="text-sm font-semibold text-slate-700">{g.project}</h2>
                 <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[11px] font-semibold text-slate-600">
                   {g.items.length}
                 </span>
-              </div>
+              </button>
+              {!isCollapsed && (
               <ul className="space-y-3">
                 {g.items.map((job) => {
                   const w = worksByJob.get(job.id) ?? []
@@ -259,8 +286,10 @@ export default function JobsList() {
                   )
                 })}
               </ul>
+              )}
             </section>
-          ))}
+            )
+          })}
         </div>
       )}
     </Layout>
