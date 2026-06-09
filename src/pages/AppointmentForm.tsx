@@ -204,8 +204,8 @@ export default function AppointmentForm() {
               placeholder="e.g. Measure balcony grill"
             />
           </div>
-          <div className="flex gap-3">
-            <div className="flex-1">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="min-w-0">
               <label className={labelCls}>Starts</label>
               <input
                 type="datetime-local"
@@ -214,7 +214,7 @@ export default function AppointmentForm() {
                 onChange={(e) => set('starts_at', e.target.value)}
               />
             </div>
-            <div className="flex-1">
+            <div className="min-w-0">
               <label className={labelCls}>Ends (optional)</label>
               <input
                 type="datetime-local"

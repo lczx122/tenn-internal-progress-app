@@ -19,8 +19,8 @@ export function Layout({
 }) {
   const { displayName, isAdmin, signOut } = useAuth()
   return (
-    <div className="min-h-full">
-      <header className="sticky top-0 z-10 bg-slate-900 text-white shadow">
+    <div className="flex h-[100dvh] flex-col">
+      <header className="shrink-0 bg-slate-900 text-white shadow pt-[env(safe-area-inset-top)]">
         <div className="mx-auto flex max-w-lg items-center gap-3 px-4 py-3">
           {back}
           <h1 className="flex-1 truncate text-lg font-semibold">{title}</h1>
@@ -43,8 +43,8 @@ export function Layout({
           </button>
         </div>
       </header>
-      <main className={`mx-auto max-w-lg px-4 py-4 ${bottomNav ? 'pb-24' : ''}`}>
-        {children}
+      <main className="flex-1 overflow-y-auto">
+        <div className="mx-auto max-w-lg px-4 py-4">{children}</div>
       </main>
       {bottomNav && <BottomNav />}
     </div>

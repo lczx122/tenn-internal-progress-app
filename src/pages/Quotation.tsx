@@ -12,7 +12,7 @@ export default function Quotation() {
   const src = '/quotation.html' + (qs ? `?${qs}` : '')
   return (
     <div className="flex h-[100dvh] flex-col bg-slate-100">
-      <div className="min-h-0 flex-1 pb-14">
+      <div className="min-h-0 flex-1">
         <iframe
           key={qs}
           src={src}

@@ -12,7 +12,7 @@ const tabs = [
 
 export function BottomNav() {
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-20 border-t border-slate-200 bg-white">
+    <nav className="shrink-0 border-t border-slate-200 bg-white pb-[env(safe-area-inset-bottom)]">
       <div className="mx-auto flex max-w-lg">
         {tabs.map((t) => (
           <NavLink
