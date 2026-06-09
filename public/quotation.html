@@ -65,9 +65,8 @@
   .dt:hover:not(.active){background:#f0f3fb}
 
   /* ---------- admin: edit prices ---------- */
-  .edit-prices-btn{background:rgba(255,255,255,.14);color:#fff;border:1px solid rgba(255,255,255,.28);border-radius:8px;font-family:'Archivo';font-weight:700;font-size:12px;padding:7px 11px;cursor:pointer;white-space:nowrap}
-  .edit-prices-btn:hover{background:rgba(255,255,255,.24)}
-  @media(max-width:560px){.edit-prices-btn{font-size:11px;padding:6px 9px}}
+  .edit-prices-btn{background:var(--navy);color:#fff;border:none;border-radius:8px;font-family:'Archivo';font-weight:700;font-size:11.5px;padding:6px 11px;cursor:pointer;white-space:nowrap}
+  .edit-prices-btn:hover{background:var(--navy-2)}
   .pe-cat{margin-bottom:18px}
   .pe-cat h3{font-family:'Archivo';font-size:13px;text-transform:uppercase;letter-spacing:.6px;color:var(--navy);border-bottom:1px solid var(--line);padding-bottom:6px;margin-bottom:8px}
   .pe-note{font-size:11.5px;color:var(--muted);margin-bottom:10px}
@@ -234,7 +233,6 @@
     <p>Quotation Generator</p>
   </div>
   <div class="spacer"></div>
-  <button id="editPricesBtn" class="edit-prices-btn" style="display:none" onclick="openPriceEditor()">✏️ Edit Prices</button>
   <div class="stars">★★★★★</div>
 </header>
 
@@ -267,7 +265,7 @@
     </div>
 
     <div class="card">
-      <div class="hd"><h2>Select Products</h2></div>
+      <div class="hd" style="justify-content:space-between"><h2>Select Products</h2><button id="editPricesBtn" class="edit-prices-btn" style="display:none" onclick="openPriceEditor()">✏️ Edit Prices</button></div>
       <div class="bd" id="catalog"><!-- categories injected here --></div>
     </div>
   </div>
@@ -1167,6 +1165,8 @@ function newQuote(){
   renderCatalog(); // instant paint with coded defaults
 
   const params=new URLSearchParams(location.search);
+  // Embedded in the app? Hide the tool's own header — the app supplies one.
+  if(params.get('embed')==='1'){ const tb=document.querySelector('header.topbar'); if(tb) tb.style.display='none'; }
   const fromId=params.get('from');
   const asType=(params.get('type')||'QT').toUpperCase()==='SO'?'SO':'QT';
   if(asType==='SO' && !fromId) applyDocTypeUI('SO');

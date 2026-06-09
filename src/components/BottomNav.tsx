@@ -8,7 +8,7 @@ const tabs = [
   { to: '/units', label: 'Units', end: false, icon: 'home' },
   { to: '/schedule', label: 'Schedule', end: false, icon: 'calendar' },
   { to: '/quote', label: 'Quote', end: false, icon: 'receipt' },
-  { to: '/quotes', label: 'Register', end: false, icon: 'ledger' },
+  { to: '/quotes', label: 'Orders', end: false, icon: 'ledger' },
 ] as const
 
 function TabIcon({ name }: { name: string }) {
