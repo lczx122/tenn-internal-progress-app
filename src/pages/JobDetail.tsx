@@ -155,6 +155,14 @@ export default function JobDetail() {
     <Layout title={job.customer_name} back={<BackLink />}>
       {/* Summary card */}
       <section className="rounded-xl bg-white p-4 shadow-sm">
+        {job.project && (
+          <Link
+            to={`/units?project=${encodeURIComponent(job.project)}`}
+            className="mb-2 inline-block rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600 active:bg-slate-200"
+          >
+            📁 {job.project}
+          </Link>
+        )}
         {job.address && <p className="text-slate-700">🏠 {job.address}</p>}
         {job.phone && (
           <p className="mt-1 text-slate-700">

@@ -16,6 +16,7 @@ export default function JobsList() {
   // /units?stage=installing, /units?cat=Aluminium, or /units?q=Ahmad).
   const [searchParams] = useSearchParams()
   const [query, setQuery] = useState(searchParams.get('q') ?? '')
+  const [projectFilter, setProjectFilter] = useState(searchParams.get('project') ?? '')
   const [catFilter, setCatFilter] = useState(searchParams.get('cat') ?? '')
   const [stageFilter, setStageFilter] = useState(searchParams.get('stage') ?? '')
   const [showArchived, setShowArchived] = useState(false)
@@ -55,10 +56,18 @@ export default function JobsList() {
     return m
   }, [works])
 
+  // All project names, for the filter dropdown.
+  const projects = useMemo(() => {
+    const s = new Set<string>()
+    for (const j of jobs) if (j.project) s.add(j.project)
+    return [...s].sort()
+  }, [jobs])
+
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase()
     return jobs
       .filter((j) => j.is_archived === showArchived)
+      .filter((j) => !projectFilter || j.project === projectFilter)
       .filter(
         (j) =>
           !q ||
@@ -82,7 +91,18 @@ export default function JobsList() {
             (!stageFilter || x.stage === stageFilter)
         )
       })
-  }, [jobs, query, showArchived, worksByJob, catFilter, stageFilter])
+  }, [jobs, query, showArchived, projectFilter, worksByJob, catFilter, stageFilter])
+
+  // Group the visible units under their project, preserving recency order.
+  const groups = useMemo(() => {
+    const m = new Map<string, Job[]>()
+    for (const j of visible) {
+      const p = j.project || 'Unassigned'
+      if (!m.has(p)) m.set(p, [])
+      m.get(p)!.push(j)
+    }
+    return [...m.entries()].map(([project, items]) => ({ project, items }))
+  }, [visible])
 
   return (
     <Layout title="Units" bottomNav>
@@ -100,6 +120,23 @@ export default function JobsList() {
           + New
         </button>
       </div>
+
+      {projects.length > 1 && (
+        <div className="mb-3">
+          <select
+            value={projectFilter}
+            onChange={(e) => setProjectFilter(e.target.value)}
+            className={`w-full rounded-lg border bg-white px-2 py-2 text-sm outline-none focus:border-slate-900 ${projectFilter ? 'border-slate-900 font-medium' : 'border-slate-300 text-slate-700'}`}
+          >
+            <option value="">All projects</option>
+            {projects.map((p) => (
+              <option key={p} value={p}>
+                {p}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
 
       <div className="mb-3 flex gap-2">
         <select
@@ -135,11 +172,12 @@ export default function JobsList() {
         >
           {showArchived ? '← Back to active units' : 'View archived units'}
         </button>
-        {(catFilter || stageFilter) && (
+        {(catFilter || stageFilter || projectFilter) && (
           <button
             onClick={() => {
               setCatFilter('')
               setStageFilter('')
+              setProjectFilter('')
             }}
             className="text-xs font-medium text-slate-500"
           >
@@ -155,63 +193,75 @@ export default function JobsList() {
           {showArchived ? 'No archived units.' : 'No units yet. Tap “+ New”.'}
         </div>
       ) : (
-        <ul className="space-y-3">
-          {visible.map((job) => {
-            const w = worksByJob.get(job.id) ?? []
-            const pct = overallPercent(w.map((x) => x.stage))
-            return (
-              <li key={job.id}>
-                <Link
-                  to={`/job/${job.id}`}
-                  className="block rounded-xl bg-white p-4 shadow-sm active:bg-slate-50"
-                >
-                  <div className="mb-2 flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <p className="truncate font-semibold text-slate-900">
-                        {job.customer_name}
-                      </p>
-                      {job.address && (
-                        <p className="truncate text-sm text-slate-500">
-                          {job.address}
+        <div className="space-y-5">
+          {groups.map((g) => (
+            <section key={g.project}>
+              <div className="mb-2 flex items-center gap-2 px-1">
+                <h2 className="text-sm font-semibold text-slate-700">{g.project}</h2>
+                <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[11px] font-semibold text-slate-600">
+                  {g.items.length}
+                </span>
+              </div>
+              <ul className="space-y-3">
+                {g.items.map((job) => {
+                  const w = worksByJob.get(job.id) ?? []
+                  const pct = overallPercent(w.map((x) => x.stage))
+                  return (
+                    <li key={job.id}>
+                      <Link
+                        to={`/job/${job.id}`}
+                        className="block rounded-xl bg-white p-4 shadow-sm active:bg-slate-50"
+                      >
+                        <div className="mb-2 flex items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <p className="truncate font-semibold text-slate-900">
+                              {job.customer_name}
+                            </p>
+                            {job.address && (
+                              <p className="truncate text-sm text-slate-500">
+                                {job.address}
+                              </p>
+                            )}
+                          </div>
+                          <span className="shrink-0 rounded-full bg-amber-100 px-2 py-1 text-xs font-medium text-amber-800">
+                            🔑 {job.key_holder}
+                          </span>
+                        </div>
+
+                        {/* Per-category chips, each dot coloured by its own stage. */}
+                        {w.length > 0 && (
+                          <div className="mb-2 flex flex-wrap gap-1.5">
+                            {w.map((x) => (
+                              <span
+                                key={x.id}
+                                className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium ${getCategory(x.category).accent}`}
+                                title={`${getCategory(x.category).label}: ${getStage(x.stage).label}`}
+                              >
+                                <span className={`h-1.5 w-1.5 rounded-full ${getStage(x.stage).color}`} />
+                                {getCategory(x.category).label}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+
+                        {w.length > 0 ? (
+                          <PercentBar percent={pct} label={`Overall · ${w.length} ${w.length === 1 ? 'category' : 'categories'}`} />
+                        ) : (
+                          <p className="text-xs text-slate-400">No work categories yet.</p>
+                        )}
+
+                        <p className="mt-2 text-xs text-slate-400">
+                          Updated {relativeTime(job.updated_at)}
+                          {job.updated_by ? ` by ${job.updated_by}` : ''}
                         </p>
-                      )}
-                    </div>
-                    <span className="shrink-0 rounded-full bg-amber-100 px-2 py-1 text-xs font-medium text-amber-800">
-                      🔑 {job.key_holder}
-                    </span>
-                  </div>
-
-                  {/* Per-category chips, each dot coloured by its own stage. */}
-                  {w.length > 0 && (
-                    <div className="mb-2 flex flex-wrap gap-1.5">
-                      {w.map((x) => (
-                        <span
-                          key={x.id}
-                          className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium ${getCategory(x.category).accent}`}
-                          title={`${getCategory(x.category).label}: ${getStage(x.stage).label}`}
-                        >
-                          <span className={`h-1.5 w-1.5 rounded-full ${getStage(x.stage).color}`} />
-                          {getCategory(x.category).label}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-
-                  {w.length > 0 ? (
-                    <PercentBar percent={pct} label={`Overall · ${w.length} ${w.length === 1 ? 'category' : 'categories'}`} />
-                  ) : (
-                    <p className="text-xs text-slate-400">No work categories yet.</p>
-                  )}
-
-                  <p className="mt-2 text-xs text-slate-400">
-                    Updated {relativeTime(job.updated_at)}
-                    {job.updated_by ? ` by ${job.updated_by}` : ''}
-                  </p>
-                </Link>
-              </li>
-            )
-          })}
-        </ul>
+                      </Link>
+                    </li>
+                  )
+                })}
+              </ul>
+            </section>
+          ))}
+        </div>
       )}
     </Layout>
   )

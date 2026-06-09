@@ -47,6 +47,7 @@ create table if not exists public.jobs (
   customer_name  text not null,
   address        text not null default '',
   phone          text not null default '',
+  project        text not null default 'Ambience Pulau Gadong',
   stage          text not null default 'booked',
   key_holder     text not null default 'Office',
   start_date     date,
@@ -56,7 +57,9 @@ create table if not exists public.jobs (
   updated_at     timestamptz not null default now(),
   updated_by     text not null default ''
 );
+alter table public.jobs add column if not exists project text not null default 'Ambience Pulau Gadong';
 create index if not exists jobs_updated_at_idx on public.jobs (updated_at desc);
+create index if not exists jobs_project_idx    on public.jobs (project);
 
 create table if not exists public.job_events (
   id          uuid primary key default gen_random_uuid(),

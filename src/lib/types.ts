@@ -3,6 +3,7 @@ export interface Job {
   customer_name: string
   address: string
   phone: string
+  project: string
   stage: string
   key_holder: string
   start_date: string | null

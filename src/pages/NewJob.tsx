@@ -1,8 +1,10 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import { Layout } from '../components/Layout'
+
+const DEFAULT_PROJECT = 'Ambience Pulau Gadong'
 
 export default function NewJob() {
   const { displayName, session } = useAuth()
@@ -11,12 +13,31 @@ export default function NewJob() {
     customer_name: '',
     address: '',
     phone: '',
+    project: '',
     key_holder: 'Office',
     start_date: '',
     target_date: '',
   })
+  const [projects, setProjects] = useState<string[]>([])
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // Load existing project names; default a new unit to the most recent one.
+  useEffect(() => {
+    supabase
+      .from('jobs')
+      .select('project, updated_at')
+      .order('updated_at', { ascending: false })
+      .then(({ data }) => {
+        const seen = new Set<string>()
+        for (const r of (data as { project: string }[]) ?? []) {
+          if (r.project) seen.add(r.project)
+        }
+        const list = [...seen]
+        setProjects(list)
+        setForm((f) => (f.project ? f : { ...f, project: list[0] ?? DEFAULT_PROJECT }))
+      })
+  }, [])
 
   function set<K extends keyof typeof form>(k: K, v: string) {
     setForm((f) => ({ ...f, [k]: v }))
@@ -37,6 +58,7 @@ export default function NewJob() {
         customer_name: form.customer_name.trim(),
         address: form.address.trim(),
         phone: form.phone.trim(),
+        project: form.project.trim() || projects[0] || DEFAULT_PROJECT,
         key_holder: form.key_holder.trim() || 'Office',
         start_date: form.start_date || null,
         target_date: form.target_date || null,
@@ -78,6 +100,22 @@ export default function NewJob() {
     >
       <form onSubmit={onSubmit} className="space-y-4">
         <div className="rounded-xl bg-white p-4 shadow-sm space-y-4">
+          <div>
+            <label className={labelCls}>Project</label>
+            <input
+              className={field}
+              list="projects"
+              value={form.project}
+              onChange={(e) => set('project', e.target.value)}
+              placeholder="e.g. Ambience Pulau Gadong"
+            />
+            <datalist id="projects">
+              {projects.map((p) => (
+                <option key={p} value={p} />
+              ))}
+            </datalist>
+            <p className="mt-1 text-xs text-slate-400">Pick an existing project or type a new one.</p>
+          </div>
           <div>
             <label className={labelCls}>Unit code *</label>
             <input
