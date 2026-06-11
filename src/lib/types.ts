@@ -55,6 +55,7 @@ export interface Appointment {
   location: string
   who: string
   assigned_to: string | null
+  assignee_ids: string[]
   starts_at: string
   ends_at: string | null
   status: 'scheduled' | 'done' | 'cancelled'

@@ -30,7 +30,7 @@ export default function AppointmentForm() {
   const [form, setForm] = useState({
     type: 'site_visit',
     title: '',
-    assigned_to: '',
+    assignee_ids: [] as string[],
     starts_at: defaultStart(),
     ends_at: '',
     job_id: params.get('job_id') ?? '',
@@ -39,8 +39,17 @@ export default function AppointmentForm() {
     notes: '',
   })
 
-  function set<K extends keyof typeof form>(k: K, v: string) {
+  function set<K extends keyof typeof form>(k: K, v: (typeof form)[K]) {
     setForm((f) => ({ ...f, [k]: v }))
+  }
+
+  function toggleAssignee(id: string) {
+    setForm((f) => ({
+      ...f,
+      assignee_ids: f.assignee_ids.includes(id)
+        ? f.assignee_ids.filter((x) => x !== id)
+        : [...f.assignee_ids, id],
+    }))
   }
 
   // Load active units (for the link dropdown) and everyone (for the PIC list).
@@ -60,7 +69,8 @@ export default function AppointmentForm() {
 
   // Default a brand-new appointment's PIC to the signed-in user.
   useEffect(() => {
-    if (!isEdit && session) setForm((f) => (f.assigned_to ? f : { ...f, assigned_to: session.user.id }))
+    if (!isEdit && session)
+      setForm((f) => (f.assignee_ids.length ? f : { ...f, assignee_ids: [session.user.id] }))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session])
 
@@ -79,7 +89,7 @@ export default function AppointmentForm() {
             setForm({
               type: a.type,
               title: a.title,
-              assigned_to: a.assigned_to ?? '',
+              assignee_ids: a.assignee_ids?.length ? a.assignee_ids : a.assigned_to ? [a.assigned_to] : [],
               starts_at: toLocalInput(a.starts_at),
               ends_at: toLocalInput(a.ends_at),
               job_id: a.job_id ?? '',
@@ -125,12 +135,15 @@ export default function AppointmentForm() {
     }
     setBusy(true)
     setError(null)
-    const pic = people.find((p) => p.id === form.assigned_to)
+    const names = form.assignee_ids
+      .map((id) => people.find((p) => p.id === id)?.full_name)
+      .filter(Boolean)
     const row = {
       type: form.type,
       title: form.title.trim(),
-      assigned_to: form.assigned_to || null,
-      who: pic?.full_name ?? '', // denormalised name for list display
+      assignee_ids: form.assignee_ids,
+      assigned_to: form.assignee_ids[0] ?? null, // first PIC, for back-compat
+      who: names.join(', '), // denormalised names for list display
       starts_at: new Date(form.starts_at).toISOString(),
       ends_at: form.ends_at ? new Date(form.ends_at).toISOString() : null,
       job_id: form.job_id || null,
@@ -239,19 +252,29 @@ export default function AppointmentForm() {
             </div>
           </div>
           <div>
-            <label className={labelCls}>Person in charge</label>
-            <select
-              className={field}
-              value={form.assigned_to}
-              onChange={(e) => set('assigned_to', e.target.value)}
-            >
-              <option value="">— Unassigned —</option>
-              {people.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.full_name}
-                </option>
-              ))}
-            </select>
+            <label className={labelCls}>Persons in charge</label>
+            <div className="flex flex-wrap gap-2">
+              {people.map((p) => {
+                const on = form.assignee_ids.includes(p.id)
+                return (
+                  <button
+                    type="button"
+                    key={p.id}
+                    onClick={() => toggleAssignee(p.id)}
+                    className={
+                      'rounded-full border px-3 py-1.5 text-sm font-medium ' +
+                      (on
+                        ? 'border-slate-900 bg-slate-900 text-white'
+                        : 'border-slate-300 bg-white text-slate-600 active:bg-slate-50')
+                    }
+                  >
+                    {on ? '✓ ' : ''}
+                    {p.full_name}
+                  </button>
+                )
+              })}
+              {people.length === 0 && <p className="text-sm text-slate-400">No users found.</p>}
+            </div>
           </div>
         </div>
 

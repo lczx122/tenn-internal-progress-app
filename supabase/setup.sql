@@ -129,6 +129,7 @@ create table if not exists public.appointments (
   location        text not null default '',
   who             text not null default '',
   assigned_to     uuid references public.profiles (id),
+  assignee_ids    uuid[] not null default '{}',
   starts_at       timestamptz not null,
   ends_at         timestamptz,
   status          text not null default 'scheduled',
@@ -139,9 +140,11 @@ create table if not exists public.appointments (
   updated_at      timestamptz not null default now()
 );
 alter table public.appointments add column if not exists assigned_to uuid references public.profiles (id);
-create index if not exists appointments_starts_idx   on public.appointments (starts_at);
-create index if not exists appointments_job_idx      on public.appointments (job_id);
-create index if not exists appointments_assigned_idx on public.appointments (assigned_to);
+alter table public.appointments add column if not exists assignee_ids uuid[] not null default '{}';
+create index if not exists appointments_starts_idx    on public.appointments (starts_at);
+create index if not exists appointments_job_idx       on public.appointments (job_id);
+create index if not exists appointments_assigned_idx  on public.appointments (assigned_to);
+create index if not exists appointments_assignees_idx on public.appointments using gin (assignee_ids);
 
 -- ---------------------------------------------------------------------------
 -- 5. APP SETTINGS (admin-editable price overlay, key = 'pricing')
@@ -219,6 +222,15 @@ begin
     raise exception 'Cannot remove the last admin';
   end if;
   update public.profiles set role = new_role where id = target;
+end; $$;
+
+create or replace function public.set_full_name(target uuid, name text)
+returns void language plpgsql security definer set search_path = public
+as $$
+begin
+  if not public.is_admin() then raise exception 'Admins only'; end if;
+  if coalesce(btrim(name), '') = '' then raise exception 'Name required'; end if;
+  update public.profiles set full_name = btrim(name) where id = target;
 end; $$;
 
 -- create a quotation or sales order with an atomic per-type monthly sequence

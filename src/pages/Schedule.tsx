@@ -54,7 +54,7 @@ export default function Schedule() {
     const q = query.trim().toLowerCase()
     return appts.filter(
       (a) =>
-        (scope === 'all' || a.assigned_to === myId) &&
+        (scope === 'all' || (!!myId && (a.assignee_ids ?? []).includes(myId))) &&
         (!typeFilter || a.type === typeFilter) &&
         (!q ||
           a.title.toLowerCase().includes(q) ||

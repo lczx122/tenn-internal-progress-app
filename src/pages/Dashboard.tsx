@@ -119,7 +119,7 @@ export default function Dashboard() {
     const now = Date.now()
     const horizon = addDays(startOfDay(new Date()), 8).getTime() // through the next week
     return appts
-      .filter((a) => a.assigned_to === myId)
+      .filter((a) => !!myId && (a.assignee_ids ?? []).includes(myId))
       .filter((a) => new Date(a.starts_at).getTime() < horizon)
       .map((a) => ({ ...a, overdue: new Date(a.starts_at).getTime() < now }))
       .slice(0, 6)
