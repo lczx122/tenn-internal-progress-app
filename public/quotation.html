@@ -359,42 +359,6 @@ const CATALOG = [
     ]
   },
   {
-    id:'irongrill', name:'Gril Besi (Iron)',
-    note:'Harga per sqft / ft run — masukkan keluasan sebagai kuantiti.',
-    variants:[],
-    items:[
-      {v:0,label:'Pintu Pagar Utama',sub:'per sqft',price:45},
-      {v:0,label:'ADDON Pintu Pagar Utama — Auto Moto',sub:'Harga ikut spesifikasi',price:0},
-      {v:0,label:'Pintu Depan',sub:'per ft run · >12ft: RM480',price:525},
-      {v:0,label:'Balkoni',sub:'per sqft',price:45},
-      {v:0,label:'Tingkap Bilik Utama',sub:'per sqft',price:45},
-      {v:0,label:'Tingkap Bilik 1',sub:'per sqft',price:45},
-      {v:0,label:'Tingkap Bilik 2',sub:'per sqft',price:45},
-      {v:0,label:'Tingkap Bilik 3',sub:'per sqft',price:45},
-      {v:0,label:'Pintu Belakang',sub:'per sqft',price:45},
-      {v:0,label:'Awning — PU Metal Roofing',sub:'per sqft',price:49},
-      {v:0,label:'Awning Standard',sub:'per sqft',price:17},
-    ]
-  },
-  {
-    id:'alugrill', name:'Gril Hollow Aluminium',
-    note:'Harga per sqft / ft run (ikut spesifikasi) — masukkan keluasan sebagai kuantiti.',
-    variants:[],
-    items:[
-      {v:0,label:'Pintu Pagar Utama',sub:'per sqft',price:0},
-      {v:0,label:'ADDON Pintu Pagar Utama — Auto Moto',sub:'Harga ikut spesifikasi',price:0},
-      {v:0,label:'Pintu Depan',sub:'per ft run',price:0},
-      {v:0,label:'Balkoni',sub:'per sqft',price:0},
-      {v:0,label:'Tingkap Bilik Utama',sub:'per sqft',price:0},
-      {v:0,label:'Tingkap Bilik 1',sub:'per sqft',price:0},
-      {v:0,label:'Tingkap Bilik 2',sub:'per sqft',price:0},
-      {v:0,label:'Tingkap Bilik 3',sub:'per sqft',price:0},
-      {v:0,label:'Pintu Belakang',sub:'per sqft',price:0},
-      {v:0,label:'Awning — PU Metal Roofing',sub:'per sqft',price:0},
-      {v:0,label:'Awning Standard',sub:'per sqft',price:0},
-    ]
-  },
-  {
     id:'other', name:'Perkhidmatan Lain',
     note:'Harga ikut spesifikasi / keluasan.',
     variants:[],
@@ -466,6 +430,133 @@ const CABINET = [
   ]},
 ];
 
+/* ============================================================
+   GRILL MODULE — measure & auto-price (per sqft / per ft run)
+   Area items: enter Width × Height in INCHES -> sqft × rate.
+   Run items (doors): enter Run in FEET -> ft × rate (tier > 12ft).
+   Aluminium rates are 0 until set in Edit Prices.
+   ============================================================ */
+const GRILL = [
+  { id:'iron', name:'Gril Besi (Iron)', options:[
+      { id:'pagar',    name:'Pintu Pagar Utama',             unit:'sqft',  rate:45 },
+      { id:'automoto', name:'ADDON Pintu Pagar — Auto Moto', unit:'flat',  rate:0 },
+      { id:'depan',    name:'Pintu Depan',                   unit:'ftrun', rate:525, tier:{overFt:12, overRate:480} },
+      { id:'balkoni',  name:'Balkoni',                       unit:'sqft',  rate:45 },
+      { id:'tutama',   name:'Tingkap Bilik Utama',           unit:'sqft',  rate:45 },
+      { id:'t1',       name:'Tingkap Bilik 1',               unit:'sqft',  rate:45 },
+      { id:'t2',       name:'Tingkap Bilik 2',               unit:'sqft',  rate:45 },
+      { id:'t3',       name:'Tingkap Bilik 3',               unit:'sqft',  rate:45 },
+      { id:'belakang', name:'Pintu Belakang',                unit:'sqft',  rate:45 },
+      { id:'awnpu',    name:'Awning — PU Metal Roofing',     unit:'sqft',  rate:49 },
+      { id:'awnstd',   name:'Awning Standard',               unit:'sqft',  rate:17 },
+  ]},
+  { id:'alu', name:'Gril Hollow Aluminium', options:[
+      { id:'pagar',    name:'Pintu Pagar Utama',             unit:'sqft',  rate:0 },
+      { id:'automoto', name:'ADDON Pintu Pagar — Auto Moto', unit:'flat',  rate:0 },
+      { id:'depan',    name:'Pintu Depan',                   unit:'ftrun', rate:0, tier:{overFt:12, overRate:0} },
+      { id:'balkoni',  name:'Balkoni',                       unit:'sqft',  rate:0 },
+      { id:'tutama',   name:'Tingkap Bilik Utama',           unit:'sqft',  rate:0 },
+      { id:'t1',       name:'Tingkap Bilik 1',               unit:'sqft',  rate:0 },
+      { id:'t2',       name:'Tingkap Bilik 2',               unit:'sqft',  rate:0 },
+      { id:'t3',       name:'Tingkap Bilik 3',               unit:'sqft',  rate:0 },
+      { id:'belakang', name:'Pintu Belakang',                unit:'sqft',  rate:0 },
+      { id:'awnpu',    name:'Awning — PU Metal Roofing',     unit:'sqft',  rate:0 },
+      { id:'awnstd',   name:'Awning Standard',               unit:'sqft',  rate:0 },
+  ]},
+];
+
+function grillSel(){
+  const gi=+document.getElementById('grl-group').value;
+  const oi=+document.getElementById('grl-option').value;
+  return {gi,oi,g:GRILL[gi],o:GRILL[gi].options[oi]};
+}
+function grillCompute(o,W,H,L){
+  if(o.unit==='sqft'){ const area=(W*H)/144; return {amount:area*(+o.rate||0)}; }
+  if(o.unit==='ftrun'){ const run=L; const rate=(o.tier && run>o.tier.overFt)?(+o.tier.overRate||0):(+o.rate||0); return {amount:run*rate}; }
+  return {amount:(+o.rate||0)}; // flat
+}
+function grillDimStr(l){
+  if(l.unit==='sqft'){ const a=(l.W*l.H)/144; return `${l.W}\" × ${l.H}\" = ${a.toFixed(2)} sqft`; }
+  if(l.unit==='ftrun'){ return `${l.L} ft run`; }
+  return 'Addon';
+}
+function grillGroupChange(){
+  const gi=+document.getElementById('grl-group').value;
+  document.getElementById('grl-option').innerHTML=GRILL[gi].options.map((o,i)=>`<option value="${i}">${o.name}</option>`).join('');
+  grillOptionChange();
+}
+function grillOptionChange(){
+  const {o}=grillSel();
+  const showWH=o.unit==='sqft', showL=o.unit==='ftrun';
+  document.getElementById('grl-wrap-W').style.display=showWH?'':'none';
+  document.getElementById('grl-wrap-H').style.display=showWH?'':'none';
+  document.getElementById('grl-wrap-L').style.display=showL?'':'none';
+  document.getElementById('grl-W').value=''; document.getElementById('grl-H').value=''; document.getElementById('grl-L').value='';
+  grillPreview();
+}
+function grillPreview(){
+  const {o}=grillSel();
+  const W=parseFloat(document.getElementById('grl-W').value)||0;
+  const H=parseFloat(document.getElementById('grl-H').value)||0;
+  const L=parseFloat(document.getElementById('grl-L').value)||0;
+  const c=grillCompute(o,W,H,L);
+  let html='';
+  if(o.unit==='flat'){ html=`<div class="cab-calc">Harga tetap → <b>RM ${fmt(+o.rate||0)}</b></div>`; }
+  else if(o.unit==='sqft'){ html=`<div class="cab-tiers"><b>RM ${fmt(+o.rate||0)}</b> / sqft</div>`; if(W>0&&H>0) html+=`<div class="cab-calc">${W}\" × ${H}\" = ${((W*H)/144).toFixed(2)} sqft → <b>RM ${fmt(c.amount)}</b></div>`; }
+  else { const tn=o.tier?` · >${o.tier.overFt}ft: RM ${fmt(+o.tier.overRate||0)}/ft`:''; html=`<div class="cab-tiers"><b>RM ${fmt(+o.rate||0)}</b> / ft run${tn}</div>`; if(L>0) html+=`<div class="cab-calc">${L} ft → <b>RM ${fmt(c.amount)}</b></div>`; }
+  document.getElementById('grl-preview').innerHTML=html;
+}
+function grillAdd(){
+  const {g,o}=grillSel();
+  const W=parseFloat(document.getElementById('grl-W').value)||0;
+  const H=parseFloat(document.getElementById('grl-H').value)||0;
+  const L=parseFloat(document.getElementById('grl-L').value)||0;
+  if(o.unit==='sqft' && !(W>0 && H>0)){ alert('Masukkan Width & Height (inci).'); return; }
+  if(o.unit==='ftrun' && !(L>0)){ alert('Masukkan Run (ft).'); return; }
+  const c=grillCompute(o,W,H,L);
+  grillLines.push({gid:g.id,gname:g.name,oid:o.id,oname:o.name,unit:o.unit,W,H,L,price:c.amount});
+  document.getElementById('grl-W').value=''; document.getElementById('grl-H').value=''; document.getElementById('grl-L').value='';
+  grillPreview(); renderGrillLines(); recalc();
+}
+function grillRemove(i){ grillLines.splice(i,1); renderGrillLines(); recalc(); }
+function renderGrillLines(){
+  const box=document.getElementById('grl-lines'); if(!box) return;
+  if(!grillLines.length){ box.innerHTML='<div class="cab-empty">No gril added yet.</div>'; return; }
+  box.innerHTML=grillLines.map((l,i)=>`<div class="cab-line">
+    <div class="cab-line-info"><b>${l.oname}</b> <span class="muted">· ${l.gname}</span><br><span class="cab-dim">${grillDimStr(l)}</span></div>
+    <div class="cab-amt">RM ${fmt(l.price)}</div>
+    <button class="cab-x" title="Remove" onclick="grillRemove(${i})">✕</button>
+  </div>`).join('');
+}
+function grillCardHtml(){
+  const groupOpts=GRILL.map((g,i)=>`<option value="${i}">${g.name}</option>`).join('');
+  const optOpts=GRILL[0].options.map((o,i)=>`<option value="${i}">${o.name}</option>`).join('');
+  return `
+  <div class="cat" data-cat="grill">
+    <div class="cat-hd" onclick="this.parentElement.classList.toggle('open')">
+      <span class="chev">▶</span>
+      <span class="cname">Gril (Iron / Aluminium)</span>
+      <span class="count zero" id="cnt-grill">0</span>
+    </div>
+    <div class="cat-bd">
+      <div class="cab-note">Pilih jenis gril & item, masukkan ukuran, harga dikira automatik. Luas dalam <b>inci</b> (W × H → sqft); pintu mengikut <b>ft run</b>.</div>
+      <div class="cab-grid">
+        <label class="fld">Jenis Gril <select id="grl-group" onchange="grillGroupChange()">${groupOpts}</select></label>
+        <label class="fld">Item <select id="grl-option" onchange="grillOptionChange()">${optOpts}</select></label>
+      </div>
+      <div class="cab-grid3">
+        <label class="fld" id="grl-wrap-W">Width (in) <input id="grl-W" type="number" min="0" step="0.1" oninput="grillPreview()"></label>
+        <label class="fld" id="grl-wrap-H">Height (in) <input id="grl-H" type="number" min="0" step="0.1" oninput="grillPreview()"></label>
+        <label class="fld" id="grl-wrap-L">Run (ft) <input id="grl-L" type="number" min="0" step="0.1" oninput="grillPreview()"></label>
+      </div>
+      <div class="cab-preview" id="grl-preview"></div>
+      <button class="act b-primary" style="padding:11px 16px;font-size:13px" onclick="grillAdd()">+ Add Gril to Quote</button>
+      <div id="grl-lines" style="margin-top:14px"></div>
+    </div>
+  </div>`;
+}
+
+
 function cabinetPrice(tiers, lengthMm){
   for(const t of tiers){ if(lengthMm <= t.maxMm) return t.price; }
   return tiers.length ? tiers[tiers.length-1].price : 0;
@@ -483,14 +574,14 @@ function tierTableHtml(tiers){
    Item prices and cabinet tier parameters can be overridden by an admin and
    stored in Supabase (app_settings key='pricing'). The overlay is applied over
    the coded defaults on load; everyone reads it, only admins can save it. */
-let priceOverlay = { items:{}, cabinets:{} };
+let priceOverlay = { items:{}, cabinets:{}, grills:{} };
 let isAdminUser = false;
 
 function itemKey(cat, it){ return cat.id+'|'+it.v+'|'+it.label; }
 
 function applyOverrides(ov){
   if(!ov) return;
-  const items=ov.items||{}, cabs=ov.cabinets||{};
+  const items=ov.items||{}, cabs=ov.cabinets||{}, grls=ov.grills||{};
   CATALOG.forEach(cat=>cat.items.forEach(it=>{
     const v=items[itemKey(cat,it)];
     if(v!=null && !isNaN(+v)) it.price=+v;
@@ -505,6 +596,12 @@ function applyOverrides(ov){
     if(v.steps!=null)     o.steps=Math.max(1,+v.steps);
     o.tiers=cab(o.defaultMm,o.basePrice,o.stepMm,o.priceInc,o.steps).tiers;
   }));
+  GRILL.forEach(g=>g.options.forEach(o=>{
+    const v=grls[g.id+':'+o.id];
+    if(!v) return;
+    if(v.rate!=null) o.rate=+v.rate;
+    if(o.tier && v.overRate!=null) o.tier.overRate=+v.overRate;
+  }));
 }
 
 async function loadPricing(){
@@ -513,7 +610,7 @@ async function loadPricing(){
     await ready(supa);
     const {data}=await supa.from('app_settings').select('value').eq('key','pricing').maybeSingle();
     if(data&&data.value){
-      priceOverlay={items:(data.value.items||{}), cabinets:(data.value.cabinets||{})};
+      priceOverlay={items:(data.value.items||{}), cabinets:(data.value.cabinets||{}), grills:(data.value.grills||{})};
       applyOverrides(priceOverlay);
     }
   }catch(e){}
@@ -534,8 +631,8 @@ function closePriceEditor(){
   document.getElementById('priceModal').classList.remove('show');
   document.body.style.overflow='';
 }
-function peField(key,field,val,label){
-  return `<label class="pe-f"><span>${label}</span><input type="number" step="1" min="0" data-kind="cab" data-key="${key}" data-field="${field}" value="${val}"></label>`;
+function peField(kind,key,field,val,label){
+  return `<label class="pe-f"><span>${label}</span><input type="number" step="1" min="0" data-kind="${kind}" data-key="${key}" data-field="${field}" value="${val}"></label>`;
 }
 function buildPriceEditorHtml(){
   let h='';
@@ -552,24 +649,38 @@ function buildPriceEditorHtml(){
   CABINET.forEach(g=>g.options.forEach(o=>{
     const k=g.id+':'+o.id;
     h+=`<div class="pe-cab"><div class="pe-cab-name">${g.name} · ${o.name}</div><div class="pe-cab-grid">
-      ${peField(k,'basePrice',o.basePrice,'Base RM')}
-      ${peField(k,'priceInc',o.priceInc,'+RM/step')}
-      ${peField(k,'defaultMm',o.defaultMm,'Default mm')}
-      ${peField(k,'stepMm',o.stepMm,'Step mm')}
-      ${peField(k,'steps',o.steps,'Tiers')}
+      ${peField('cab',k,'basePrice',o.basePrice,'Base RM')}
+      ${peField('cab',k,'priceInc',o.priceInc,'+RM/step')}
+      ${peField('cab',k,'defaultMm',o.defaultMm,'Default mm')}
+      ${peField('cab',k,'stepMm',o.stepMm,'Step mm')}
+      ${peField('cab',k,'steps',o.steps,'Tiers')}
+    </div></div>`;
+  }));
+  h+='</div>';
+  h+=`<div class="pe-cat"><h3>Gril — kadar (rate)</h3><p class="pe-note">Area items: RM / sqft · Pintu (run): RM / ft. Aluminium rates start at 0.</p>`;
+  GRILL.forEach(g=>g.options.forEach(o=>{
+    const k=g.id+':'+o.id;
+    const ul=o.unit==='sqft'?'RM/sqft':(o.unit==='ftrun'?'RM/ft':'RM');
+    h+=`<div class="pe-cab"><div class="pe-cab-name">${g.name} · ${o.name}</div><div class="pe-cab-grid">
+      ${peField('grill',k,'rate',o.rate,ul)}
+      ${o.unit==='ftrun'?peField('grill',k,'overRate',(o.tier?o.tier.overRate:0),'RM/ft >12ft'):''}
     </div></div>`;
   }));
   h+='</div>';
   return h;
 }
 async function savePrices(){
-  const overlay={items:{},cabinets:{}};
+  const overlay={items:{},cabinets:{},grills:{}};
   document.querySelectorAll('#priceBody input[data-kind="item"]').forEach(inp=>{
     const v=parseFloat(inp.value); if(!isNaN(v)) overlay.items[inp.dataset.key]=v;
   });
   document.querySelectorAll('#priceBody input[data-kind="cab"]').forEach(inp=>{
     const k=inp.dataset.key,f=inp.dataset.field,v=parseFloat(inp.value);
     (overlay.cabinets[k]=overlay.cabinets[k]||{})[f]=isNaN(v)?0:v;
+  });
+  document.querySelectorAll('#priceBody input[data-kind="grill"]').forEach(inp=>{
+    const k=inp.dataset.key,f=inp.dataset.field,v=parseFloat(inp.value);
+    (overlay.grills[k]=overlay.grills[k]||{})[f]=isNaN(v)?0:v;
   });
   const supa=getSupa();
   if(!supa){ alert('Not connected — open this inside the app to save prices.'); return; }
@@ -589,6 +700,7 @@ async function savePrices(){
 const state = {}; // key `${catId}:${itemIndex}` -> qty
 const activeVariant = {}; // catId -> variant index
 const cabinetLines = []; // [{gid,gname,oid,oname,L,H,D,price}]
+const grillLines = []; // [{gid,gname,oid,oname,unit,W,H,L,price}]
 
 const fmt = n => n.toLocaleString('en-MY',{minimumFractionDigits:2,maximumFractionDigits:2});
 
@@ -599,6 +711,9 @@ function renderCatalog(){
   root.insertAdjacentHTML('beforeend', cabinetCardHtml());
   cabGroupChange();           // populate option select for first group
   renderCabLines();
+  root.insertAdjacentHTML('beforeend', grillCardHtml());
+  grillGroupChange();         // populate grill option select
+  renderGrillLines();
   CATALOG.forEach((cat,ci)=>{
     if(activeVariant[cat.id]===undefined) activeVariant[cat.id]=0;
     const wrap = document.createElement('div');
@@ -763,6 +878,9 @@ function collectLines(){
   cabinetLines.forEach(l=>{
     lines.push({cat:l.gname,variantName:'',label:l.oname,sub:dimStr(l),price:l.price,qty:1,amount:l.price});
   });
+  grillLines.forEach(l=>{
+    lines.push({cat:l.gname,variantName:'',label:l.oname,sub:grillDimStr(l),price:l.price,qty:1,amount:l.price});
+  });
   CATALOG.forEach(cat=>{
     cat.items.forEach((it,idx)=>{
       const key=`${cat.id}:${idx}`;
@@ -786,6 +904,8 @@ function recalc(){
   });
   const cabEl=document.getElementById('cnt-cabinet');
   if(cabEl){cabEl.textContent=cabinetLines.length;cabEl.classList.toggle('zero',cabinetLines.length===0);}
+  const grlEl=document.getElementById('cnt-grill');
+  if(grlEl){grlEl.textContent=grillLines.length;grlEl.classList.toggle('zero',grillLines.length===0);}
   // summary list
   const box=document.getElementById('sumItems');
   if(!lines.length){box.innerHTML='<div class="empty">No items selected yet.</div>';}
@@ -814,7 +934,7 @@ function buildDoc(){
 
   // group lines by category (cabinet groups first, then catalog categories)
   let rowsHtml='';
-  const order=[...CABINET.map(gp=>gp.name), ...CATALOG.map(c=>c.name)];
+  const order=[...CABINET.map(gp=>gp.name), ...GRILL.map(gp=>gp.name), ...CATALOG.map(c=>c.name)];
   const seen=new Set();
   order.forEach(cname=>{
     if(seen.has(cname)) return; seen.add(cname);
@@ -998,6 +1118,7 @@ async function saveQuote(){
     // machine-readable selection so the document can be reopened / converted
     selections:Object.assign({},state),
     cabinets:cabinetLines.map(l=>Object.assign({},l)),
+    grills:grillLines.map(l=>Object.assign({},l)),
     variants:Object.assign({},activeVariant),
     lines, totals:{sub,deposit:dep,discount:disc,balance:bal}
   };
@@ -1048,13 +1169,15 @@ async function loadDocument(id, asType){
     if(p.variants) Object.assign(activeVariant,p.variants);
     cabinetLines.length=0;
     if(Array.isArray(p.cabinets)) p.cabinets.forEach(l=>cabinetLines.push(Object.assign({},l)));
+    grillLines.length=0;
+    if(Array.isArray(p.grills)) p.grills.forEach(l=>grillLines.push(Object.assign({},l)));
     sourceId=(asType==='SO')?data.id:null;
     sourceNumber=(asType==='SO')?data.number:null;
     applyDocTypeUI(asType||'SO');
     committedNo=null;
     renderCatalog();   // re-renders items using the restored state/variants
     await refreshPendingNumber();
-    if(!p.selections && !(p.cabinets&&p.cabinets.length))
+    if(!p.selections && !(p.cabinets&&p.cabinets.length) && !(p.grills&&p.grills.length))
       setQnoStatus('Loaded customer from '+data.number+' — items could not be restored, please re-add');
     else
       setQnoStatus('Converting from '+data.number+' — preview, then Save Sales Order');
@@ -1081,6 +1204,7 @@ function newQuote(){
   if(!confirm('Start a new '+docName().toLowerCase()+'? This clears the current customer and items. Your saved name and initials stay.')) return;
   for(const k in state) delete state[k];
   cabinetLines.length=0;
+  grillLines.length=0;
   ['c_name','c_ic','c_unit','c_phone','c_email','c_remarks'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('t_dep').value=0;
   document.getElementById('t_disc').value=0;
