@@ -228,7 +228,9 @@ create or replace function public.guard_profile_role()
 returns trigger language plpgsql security definer set search_path = public
 as $$
 begin
-  if new.role is distinct from old.role and not public.is_admin() then
+  -- auth.uid() is null in the SQL editor / service role (which bypass RLS
+  -- anyway), so only guard changes made by an actual signed-in API user.
+  if new.role is distinct from old.role and auth.uid() is not null and not public.is_admin() then
     raise exception 'Only admins can change roles';
   end if;
   return new;
