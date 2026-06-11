@@ -133,6 +133,10 @@ export default function AppointmentForm() {
       setError('Pick a date and time.')
       return
     }
+    if (form.ends_at && new Date(form.ends_at) < new Date(form.starts_at)) {
+      setError('End time must be after the start time.')
+      return
+    }
     setBusy(true)
     setError(null)
     const names = form.assignee_ids
@@ -197,7 +201,7 @@ export default function AppointmentForm() {
   }
 
   const field =
-    'w-full rounded-lg border border-slate-300 px-3 py-2.5 text-base outline-none focus:border-slate-900'
+    'block w-full min-w-0 rounded-lg border border-slate-300 px-3 py-2.5 text-base outline-none focus:border-slate-900'
   const labelCls = 'mb-1 block text-sm font-medium text-slate-700'
 
   if (loading) {
@@ -231,25 +235,24 @@ export default function AppointmentForm() {
               placeholder="e.g. Measure balcony grill"
             />
           </div>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div className="min-w-0">
-              <label className={labelCls}>Starts</label>
-              <input
-                type="datetime-local"
-                className={field}
-                value={form.starts_at}
-                onChange={(e) => set('starts_at', e.target.value)}
-              />
-            </div>
-            <div className="min-w-0">
-              <label className={labelCls}>Ends (optional)</label>
-              <input
-                type="datetime-local"
-                className={field}
-                value={form.ends_at}
-                onChange={(e) => set('ends_at', e.target.value)}
-              />
-            </div>
+          <div>
+            <label className={labelCls}>Starts</label>
+            <input
+              type="datetime-local"
+              className={field}
+              value={form.starts_at}
+              onChange={(e) => set('starts_at', e.target.value)}
+            />
+          </div>
+          <div>
+            <label className={labelCls}>Ends (optional)</label>
+            <input
+              type="datetime-local"
+              className={field}
+              min={form.starts_at || undefined}
+              value={form.ends_at}
+              onChange={(e) => set('ends_at', e.target.value)}
+            />
           </div>
           <div>
             <label className={labelCls}>Persons in charge</label>
