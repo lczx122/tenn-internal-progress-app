@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import type { Costing } from '../lib/types'
 import { Layout } from '../components/Layout'
-import { calcCosting, categoryLabel, money, num, COSTING_CATEGORIES } from '../lib/costing'
+import { calcCosting, categoryLabel, money, num, templateFor, COSTING_CATEGORIES } from '../lib/costing'
 
 type View = 'list' | 'sheet'
 
@@ -194,91 +194,99 @@ function Cards({ rows, onOpen }: { rows: Costing[]; onOpen: (id: string) => void
   )
 }
 
-// ---------- desktop spreadsheet, grouped by category with subtotals ----------
+// ---------- desktop spreadsheet: one table per category, its own columns ----------
+function costVal(r: Costing, label: string): number {
+  return num((r.costs ?? []).find((c) => c.label === label)?.amount ?? 0)
+}
+
 function Sheet({ rows, onOpen }: { rows: Costing[]; onOpen: (id: string) => void }) {
   const order = [...COSTING_CATEGORIES.map((c) => c.key), '']
-  const byCat = new Map<string, Costing[]>()
+  const byCat = new Map()
   for (const r of rows) {
     const k = r.category || ''
     if (!byCat.has(k)) byCat.set(k, [])
-    byCat.get(k)!.push(r)
+    byCat.get(k).push(r)
   }
-  const groups = order.filter((k) => byCat.has(k)).map((k) => ({ key: k, rows: byCat.get(k)! }))
-
+  const groups = order.filter((k) => byCat.has(k)).map((k) => ({ key: k, rows: byCat.get(k) }))
   return (
-    <div className="overflow-x-auto rounded-xl bg-white shadow-sm">
-      <table className="w-full min-w-[760px] text-sm">
-        <thead>
-          <tr className="border-b border-slate-200 text-left text-[11px] uppercase tracking-wide text-slate-400">
-            <th className="px-3 py-2">Cash sale</th>
-            <th className="px-3 py-2">Unit / item</th>
-            <th className="px-3 py-2 text-right">Selling</th>
-            <th className="px-3 py-2 text-right">Total cost</th>
-            <th className="px-3 py-2 text-right">Gross profit</th>
-            <th className="px-3 py-2 text-right">Margin</th>
-            <th className="px-3 py-2 text-right">Sharing</th>
-            <th className="px-3 py-2">Status</th>
-          </tr>
-        </thead>
-        <tbody>
-          {groups.map((g) => {
-            const sub = g.rows.reduce(
-              (a, r) => {
-                const c = calcCosting(r)
-                return { rev: a.rev + num(r.revenue), cost: a.cost + c.totalCost, gp: a.gp + c.grossProfit, sh: a.sh + c.totalShared }
-              },
-              { rev: 0, cost: 0, gp: 0, sh: 0 },
-            )
-            return (
-              <CategoryGroup key={g.key} label={categoryLabel(g.key)} rows={g.rows} sub={sub} onOpen={onOpen} />
-            )
-          })}
-        </tbody>
-      </table>
+    <div className="space-y-5">
+      {groups.map((g) => (
+        <CategorySheet key={g.key} catKey={g.key} rows={g.rows} onOpen={onOpen} />
+      ))}
     </div>
   )
 }
 
-function CategoryGroup({
-  label,
-  rows,
-  sub,
-  onOpen,
-}: {
-  label: string
-  rows: Costing[]
-  sub: { rev: number; cost: number; gp: number; sh: number }
-  onOpen: (id: string) => void
-}) {
+function CategorySheet({ catKey, rows, onOpen }: { catKey: string; rows: Costing[]; onOpen: (id: string) => void }) {
+  const cols = templateFor(catKey)
+  const th = 'px-3 py-2 text-right'
+  // subtotals
+  const colSums = cols.map((col) => rows.reduce((s, r) => s + costVal(r, col), 0))
+  const sub = rows.reduce(
+    (a, r) => {
+      const c = calcCosting(r)
+      return { rev: a.rev + num(r.revenue), cost: a.cost + c.totalCost, gp: a.gp + c.grossProfit, sh: a.sh + c.totalShared }
+    },
+    { rev: 0, cost: 0, gp: 0, sh: 0 },
+  )
+  const minW = (cols.length + 8) * 96
   return (
-    <>
-      <tr className="bg-slate-100">
-        <td colSpan={8} className="px-3 py-1.5 text-[11px] font-bold uppercase tracking-wide text-slate-600">{label}</td>
-      </tr>
-      {rows.map((r) => {
-        const c = calcCosting(r)
-        return (
-          <tr key={r.id} onClick={() => onOpen(r.id)} className="cursor-pointer border-b border-slate-100 hover:bg-slate-50">
-            <td className="px-3 py-2 font-mono text-xs text-slate-700">{r.cash_sale_no || '—'}</td>
-            <td className="px-3 py-2 text-slate-700">{r.customer || '—'}</td>
-            <td className="px-3 py-2 text-right text-slate-700">{money(num(r.revenue))}</td>
-            <td className="px-3 py-2 text-right text-slate-500">{money(c.totalCost)}</td>
-            <td className={'px-3 py-2 text-right font-medium ' + (c.grossProfit < 0 ? 'text-rose-600' : 'text-emerald-700')}>{money(c.grossProfit)}</td>
-            <td className="px-3 py-2 text-right text-slate-500">{c.margin.toFixed(1)}%</td>
-            <td className="px-3 py-2 text-right text-slate-500">{money(c.totalShared)}</td>
-            <td className="px-3 py-2 text-xs text-slate-500">{r.status}</td>
-          </tr>
-        )
-      })}
-      <tr className="border-b-2 border-slate-200 text-xs font-semibold text-slate-600">
-        <td className="px-3 py-1.5" colSpan={2}>Subtotal</td>
-        <td className="px-3 py-1.5 text-right">{money(sub.rev)}</td>
-        <td className="px-3 py-1.5 text-right">{money(sub.cost)}</td>
-        <td className="px-3 py-1.5 text-right text-emerald-700">{money(sub.gp)}</td>
-        <td className="px-3 py-1.5"></td>
-        <td className="px-3 py-1.5 text-right">{money(sub.sh)}</td>
-        <td className="px-3 py-1.5"></td>
-      </tr>
-    </>
+    <div>
+      <h3 className="mb-1.5 flex items-center gap-2 px-1 text-sm font-semibold text-slate-700">
+        {categoryLabel(catKey)}
+        <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[11px] font-semibold text-slate-600">{rows.length}</span>
+      </h3>
+      <div className="overflow-x-auto rounded-xl bg-white shadow-sm">
+        <table className="w-full text-xs" style={{ minWidth: minW }}>
+          <thead>
+            <tr className="border-b border-slate-200 text-left text-[10px] uppercase tracking-wide text-slate-400">
+              <th className="px-3 py-2">Cash sale</th>
+              <th className="px-3 py-2">Unit / item</th>
+              {cols.map((col) => (
+                <th key={col} className={th}>{col}</th>
+              ))}
+              <th className={th}>Selling</th>
+              <th className={th}>Total cost</th>
+              <th className={th}>Gross profit</th>
+              <th className={th}>Margin</th>
+              <th className={th}>Sharing</th>
+              <th className="px-3 py-2">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r) => {
+              const c = calcCosting(r)
+              return (
+                <tr key={r.id} onClick={() => onOpen(r.id)} className="cursor-pointer border-b border-slate-100 hover:bg-slate-50">
+                  <td className="px-3 py-2 font-mono text-slate-700">{r.cash_sale_no || '—'}</td>
+                  <td className="px-3 py-2 text-slate-700">{r.customer || '—'}</td>
+                  {cols.map((col) => (
+                    <td key={col} className="px-3 py-2 text-right text-slate-500">{money(costVal(r, col))}</td>
+                  ))}
+                  <td className="px-3 py-2 text-right text-slate-700">{money(num(r.revenue))}</td>
+                  <td className="px-3 py-2 text-right text-slate-500">{money(c.totalCost)}</td>
+                  <td className={'px-3 py-2 text-right font-medium ' + (c.grossProfit < 0 ? 'text-rose-600' : 'text-emerald-700')}>{money(c.grossProfit)}</td>
+                  <td className="px-3 py-2 text-right text-slate-500">{c.margin.toFixed(1)}%</td>
+                  <td className="px-3 py-2 text-right text-slate-500">{money(c.totalShared)}</td>
+                  <td className="px-3 py-2 text-slate-500">{r.status}</td>
+                </tr>
+              )
+            })}
+            <tr className="text-xs font-semibold text-slate-600">
+              <td className="px-3 py-1.5" colSpan={2}>Subtotal</td>
+              {colSums.map((s, i) => (
+                <td key={i} className="px-3 py-1.5 text-right">{money(s)}</td>
+              ))}
+              <td className="px-3 py-1.5 text-right">{money(sub.rev)}</td>
+              <td className="px-3 py-1.5 text-right">{money(sub.cost)}</td>
+              <td className="px-3 py-1.5 text-right text-emerald-700">{money(sub.gp)}</td>
+              <td className="px-3 py-1.5"></td>
+              <td className="px-3 py-1.5 text-right">{money(sub.sh)}</td>
+              <td className="px-3 py-1.5"></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
   )
 }

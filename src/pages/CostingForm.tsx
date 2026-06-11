@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import type { Costing } from '../lib/types'
 import { Layout } from '../components/Layout'
-import { calcCosting, money, num, COSTING_CATEGORIES, COSTING_STATUSES } from '../lib/costing'
+import { calcCosting, money, num, COSTING_CATEGORIES, COSTING_STATUSES, templateFor } from '../lib/costing'
 
 type CostRow = { label: string; amount: string }
 type CommRow = { name: string; kind: 'fixed' | 'pct'; value: string }
@@ -27,7 +27,9 @@ export default function CostingForm() {
   const [date, setDate] = useState('')
   const [status, setStatus] = useState('In Progress')
   const [revenue, setRevenue] = useState('')
-  const [costs, setCosts] = useState<CostRow[]>([{ label: '', amount: '' }])
+  const [costs, setCosts] = useState<CostRow[]>(
+    templateFor(COSTING_CATEGORIES[0].key).map((l) => ({ label: l, amount: '' })),
+  )
   const [commissions, setCommissions] = useState<CommRow[]>([])
   const [shares, setShares] = useState<ShareRow[]>([{ name: '', percent: '50' }])
   const [notes, setNotes] = useState('')
@@ -68,6 +70,14 @@ export default function CostingForm() {
 
   const calc = calcCosting({ revenue, costs, commissions, shares })
 
+  // Switching category (on a fresh costing) loads that category's cost columns.
+  function changeCategory(key: string) {
+    setCategory(key)
+    if (!isEdit && costs.every((c) => !c.amount.trim())) {
+      setCosts(templateFor(key).map((l) => ({ label: l, amount: '' })))
+    }
+  }
+
   async function onSubmit(e: FormEvent) {
     e.preventDefault()
     setBusy(true)
@@ -104,6 +114,9 @@ export default function CostingForm() {
 
   const field =
     'block w-full min-w-0 rounded-lg border border-slate-300 px-3 py-2.5 text-base outline-none focus:border-slate-900'
+  // Row inputs sit in flex rows — no w-full (it fights flex-1 and collapses them).
+  const rowField =
+    'min-w-0 rounded-lg border border-slate-300 px-3 py-2.5 text-base outline-none focus:border-slate-900'
   const labelCls = 'mb-1 block text-sm font-medium text-slate-700'
 
   if (!isBoss) {
@@ -133,7 +146,7 @@ export default function CostingForm() {
             </div>
             <div>
               <label className={labelCls}>Category</label>
-              <select className={field} value={category} onChange={(e) => setCategory(e.target.value)}>
+              <select className={field} value={category} onChange={(e) => changeCategory(e.target.value)}>
                 {COSTING_CATEGORIES.map((c) => (
                   <option key={c.key} value={c.key}>{c.label}</option>
                 ))}
@@ -160,8 +173,8 @@ export default function CostingForm() {
         <Section title="Costs (material, supplier, bank…)" total={money(calc.directCost)}>
           {costs.map((c, i) => (
             <div key={i} className="flex gap-2">
-              <input className={field + ' flex-1'} placeholder="Label" value={c.label} onChange={(e) => setCosts(upd(costs, i, { label: e.target.value }))} />
-              <input type="number" step="0.01" className={field + ' w-28'} placeholder="RM" value={c.amount} onChange={(e) => setCosts(upd(costs, i, { amount: e.target.value }))} />
+              <input className={rowField + ' flex-1'} placeholder="Label" value={c.label} onChange={(e) => setCosts(upd(costs, i, { label: e.target.value }))} />
+              <input type="number" step="0.01" className={rowField + ' w-28'} placeholder="RM" value={c.amount} onChange={(e) => setCosts(upd(costs, i, { amount: e.target.value }))} />
               <RemoveBtn onClick={() => setCosts(costs.filter((_, j) => j !== i))} />
             </div>
           ))}
@@ -172,12 +185,12 @@ export default function CostingForm() {
         <Section title="Commissions (counted as cost)" total={money(calc.totalCommission)}>
           {commissions.map((c, i) => (
             <div key={i} className="flex items-center gap-2">
-              <input className={field + ' flex-1'} list="people" placeholder="Name" value={c.name} onChange={(e) => setCommissions(upd(commissions, i, { name: e.target.value }))} />
-              <select className={field + ' w-24'} value={c.kind} onChange={(e) => setCommissions(upd(commissions, i, { kind: e.target.value as 'fixed' | 'pct' }))}>
+              <input className={rowField + ' flex-1'} list="people" placeholder="Name" value={c.name} onChange={(e) => setCommissions(upd(commissions, i, { name: e.target.value }))} />
+              <select className={rowField + ' w-24'} value={c.kind} onChange={(e) => setCommissions(upd(commissions, i, { kind: e.target.value as 'fixed' | 'pct' }))}>
                 <option value="fixed">RM</option>
                 <option value="pct">% sale</option>
               </select>
-              <input type="number" step="0.01" className={field + ' w-20'} placeholder={c.kind === 'pct' ? '%' : 'RM'} value={c.value} onChange={(e) => setCommissions(upd(commissions, i, { value: e.target.value }))} />
+              <input type="number" step="0.01" className={rowField + ' w-20'} placeholder={c.kind === 'pct' ? '%' : 'RM'} value={c.value} onChange={(e) => setCommissions(upd(commissions, i, { value: e.target.value }))} />
               <span className="w-24 shrink-0 text-right text-sm font-medium text-slate-700">{money(calc.commissionAmounts[i] ?? 0)}</span>
               <RemoveBtn onClick={() => setCommissions(commissions.filter((_, j) => j !== i))} />
             </div>
@@ -192,9 +205,9 @@ export default function CostingForm() {
         <Section title="Profit sharing (% of gross profit)" total={money(calc.totalShared)}>
           {shares.map((c, i) => (
             <div key={i} className="flex items-center gap-2">
-              <input className={field + ' flex-1'} list="people" placeholder="Partner name" value={c.name} onChange={(e) => setShares(upd(shares, i, { name: e.target.value }))} />
+              <input className={rowField + ' flex-1'} list="people" placeholder="Partner name" value={c.name} onChange={(e) => setShares(upd(shares, i, { name: e.target.value }))} />
               <div className="flex items-center gap-1">
-                <input type="number" step="0.1" className={field + ' w-20'} placeholder="%" value={c.percent} onChange={(e) => setShares(upd(shares, i, { percent: e.target.value }))} />
+                <input type="number" step="0.1" className={rowField + ' w-20'} placeholder="%" value={c.percent} onChange={(e) => setShares(upd(shares, i, { percent: e.target.value }))} />
                 <span className="text-slate-400">%</span>
               </div>
               <span className="w-24 shrink-0 text-right text-sm font-medium text-slate-700">{money(calc.shareAmounts[i] ?? 0)}</span>
