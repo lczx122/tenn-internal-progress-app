@@ -149,7 +149,7 @@ export default function Dashboard() {
   }, [jobs])
 
   return (
-    <Layout title="Dashboard" bottomNav>
+    <Layout title="Dashboard" bottomNav onRefresh={load}>
       {loading ? (
         <p className="py-10 text-center text-slate-400">Loading…</p>
       ) : (

@@ -69,7 +69,7 @@ export default function Schedule() {
   }, [appts, query, typeFilter, scope, myId])
 
   return (
-    <Layout title="Schedule" bottomNav>
+    <Layout title="Schedule" bottomNav onRefresh={load}>
       <div className="mb-3 flex gap-2">
         <input
           value={query}

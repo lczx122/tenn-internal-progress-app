@@ -68,7 +68,7 @@ export default function StaffAdmin() {
   }
 
   return (
-    <Layout title="Staff & roles" back={<BackLink />}>
+    <Layout title="Staff & roles" back={<BackLink />} onRefresh={load}>
       <p className="mb-3 px-1 text-xs text-slate-500">
         Tap <b>Rename</b> to set a staff member's display name (used everywhere in the app). Admins can
         also delete records, archive units, and edit prices. Add new staff in your Supabase dashboard

@@ -163,7 +163,7 @@ export default function JobDetail() {
   const usedCategories = new Set(works.map((w) => w.category))
 
   return (
-    <Layout title={job.customer_name} back={<BackLink />}>
+    <Layout title={job.customer_name} back={<BackLink />} onRefresh={loadAll}>
       {/* Summary card */}
       <section className="rounded-xl bg-white p-4 shadow-sm">
         {job.project && (

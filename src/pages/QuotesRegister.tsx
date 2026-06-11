@@ -78,7 +78,7 @@ export default function QuotesRegister() {
   const total = useMemo(() => visible.reduce((s, r) => s + Number(r.total || 0), 0), [visible])
 
   return (
-    <Layout title="Orders" bottomNav>
+    <Layout title="Orders" bottomNav onRefresh={load}>
       <div className="mb-3 flex gap-2">
         <input
           value={query}

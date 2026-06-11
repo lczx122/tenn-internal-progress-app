@@ -151,7 +151,7 @@ export default function JobsList() {
   }, [visible, sortBy, pinned, worksByJob])
 
   return (
-    <Layout title="Units" bottomNav>
+    <Layout title="Units" bottomNav onRefresh={load}>
       <div className="mb-3 flex gap-2">
         <input
           value={query}

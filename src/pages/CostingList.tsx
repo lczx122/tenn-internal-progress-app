@@ -112,6 +112,11 @@ export default function CostingList() {
     loadProgress()
   })
 
+  async function refreshAll() {
+    if (editingRef.current) return
+    await Promise.all([load(), loadProgress()])
+  }
+
   // Effective progress/status: a linked unit's live value wins over the stored
   // status; unlinked costings keep their manual status.
   function unitProgress(r: Costing): UnitProgress | null {
@@ -234,7 +239,7 @@ export default function CostingList() {
   }
 
   return (
-    <Layout title="Costing" bottomNav wide>
+    <Layout title="Costing" bottomNav wide onRefresh={refreshAll}>
       <div className="space-y-3 lg:max-w-3xl">
         <div className="flex gap-2">
           <input
