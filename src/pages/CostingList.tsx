@@ -4,21 +4,23 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import type { Costing } from '../lib/types'
 import { Layout } from '../components/Layout'
-import { calcCosting, money } from '../lib/costing'
-import { relativeTime } from '../lib/format'
+import { calcCosting, categoryLabel, money, num, COSTING_CATEGORIES } from '../lib/costing'
+
+type View = 'list' | 'sheet'
 
 export default function CostingList() {
   const { isBoss } = useAuth()
   const [rows, setRows] = useState<Costing[]>([])
   const [loading, setLoading] = useState(true)
   const [query, setQuery] = useState('')
+  const [catFilter, setCatFilter] = useState('')
+  const [view, setView] = useState<View>(() =>
+    typeof window !== 'undefined' && window.innerWidth >= 1024 ? 'sheet' : 'list',
+  )
   const navigate = useNavigate()
 
   async function load() {
-    const { data } = await supabase
-      .from('costings')
-      .select('*')
-      .order('created_at', { ascending: false })
+    const { data } = await supabase.from('costings').select('*').order('created_at', { ascending: false })
     setRows((data as Costing[]) ?? [])
     setLoading(false)
   }
@@ -40,28 +42,39 @@ export default function CostingList() {
 
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase()
-    if (!q) return rows
-    return rows.filter(
-      (r) => r.cash_sale_no.toLowerCase().includes(q) || r.customer.toLowerCase().includes(q),
-    )
-  }, [rows, query])
+    return rows
+      .filter((r) => !catFilter || r.category === catFilter)
+      .filter(
+        (r) => !q || r.cash_sale_no.toLowerCase().includes(q) || r.customer.toLowerCase().includes(q),
+      )
+  }, [rows, query, catFilter])
 
-  const totals = useMemo(() => {
-    let rev = 0
-    let profit = 0
+  // Per-category summary + grand totals (mirrors the workbook's Summary sheet).
+  const summary = useMemo(() => {
+    const order = [...COSTING_CATEGORIES.map((c) => c.key), '']
+    const map = new Map<string, { count: number; revenue: number; cost: number; gp: number }>()
     for (const r of visible) {
-      rev += Number(r.revenue || 0)
-      profit += calcCosting(r).netProfit
+      const k = r.category || ''
+      const cur = map.get(k) ?? { count: 0, revenue: 0, cost: 0, gp: 0 }
+      const c = calcCosting(r)
+      cur.count++
+      cur.revenue += num(r.revenue)
+      cur.cost += c.totalCost
+      cur.gp += c.grossProfit
+      map.set(k, cur)
     }
-    return { rev, profit }
+    const groups = order.filter((k) => map.has(k)).map((k) => ({ key: k, ...map.get(k)! }))
+    const grand = groups.reduce(
+      (a, g) => ({ count: a.count + g.count, revenue: a.revenue + g.revenue, cost: a.cost + g.cost, gp: a.gp + g.gp }),
+      { count: 0, revenue: 0, cost: 0, gp: 0 },
+    )
+    return { groups, grand }
   }, [visible])
 
   if (!isBoss) {
     return (
       <Layout title="Costing" bottomNav>
-        <p className="rounded-xl border border-dashed border-slate-300 py-12 text-center text-slate-400">
-          Boss only.
-        </p>
+        <p className="rounded-xl border border-dashed border-slate-300 py-12 text-center text-slate-400">Boss only.</p>
       </Layout>
     )
   }
@@ -75,73 +88,197 @@ export default function CostingList() {
           placeholder="Search cash sale no. or customer…"
           className="flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-slate-900"
         />
-        <button
-          onClick={() => navigate('/costing/new')}
-          className="shrink-0 rounded-lg bg-slate-900 px-3 py-2 text-sm font-medium text-white active:bg-slate-700"
-        >
+        <button onClick={() => navigate('/costing/new')} className="shrink-0 rounded-lg bg-slate-900 px-3 py-2 text-sm font-medium text-white active:bg-slate-700">
           + New
         </button>
+      </div>
+
+      <div className="mb-3 flex gap-2">
+        <select
+          value={catFilter}
+          onChange={(e) => setCatFilter(e.target.value)}
+          className={`flex-1 rounded-lg border bg-white px-2 py-2 text-sm outline-none focus:border-slate-900 ${catFilter ? 'border-slate-900 font-medium' : 'border-slate-300 text-slate-600'}`}
+        >
+          <option value="">All categories</option>
+          {COSTING_CATEGORIES.map((c) => (
+            <option key={c.key} value={c.key}>{c.label}</option>
+          ))}
+        </select>
+        <div className="flex rounded-lg border border-slate-300 bg-white p-0.5">
+          {(['list', 'sheet'] as View[]).map((v) => (
+            <button
+              key={v}
+              onClick={() => setView(v)}
+              className={'rounded-md px-3 py-1.5 text-sm font-medium ' + (view === v ? 'bg-slate-900 text-white' : 'text-slate-600')}
+            >
+              {v === 'list' ? 'List' : 'Spreadsheet'}
+            </button>
+          ))}
+        </div>
       </div>
 
       {loading ? (
         <p className="py-10 text-center text-slate-400">Loading…</p>
       ) : visible.length === 0 ? (
         <div className="rounded-xl border border-dashed border-slate-300 py-12 text-center text-slate-400">
-          {rows.length === 0 ? 'No costings yet. Tap “+ New”.' : 'Nothing matches your search.'}
+          {rows.length === 0 ? 'No costings yet. Tap “+ New”.' : 'Nothing matches your filter.'}
         </div>
       ) : (
         <>
-          <div className="mb-3 grid grid-cols-2 gap-3">
-            <div className="rounded-xl bg-white p-3 shadow-sm">
-              <div className="text-xs text-slate-400">Revenue ({visible.length})</div>
-              <div className="text-lg font-bold text-slate-900">{money(totals.rev)}</div>
-            </div>
-            <div className="rounded-xl bg-white p-3 shadow-sm">
-              <div className="text-xs text-slate-400">Net profit</div>
-              <div className={'text-lg font-bold ' + (totals.profit < 0 ? 'text-rose-600' : 'text-emerald-600')}>
-                {money(totals.profit)}
-              </div>
-            </div>
+          {/* Summary */}
+          <div className="mb-4 overflow-hidden rounded-xl bg-white shadow-sm">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-slate-200 text-left text-[11px] uppercase tracking-wide text-slate-400">
+                  <th className="px-3 py-2">Category</th>
+                  <th className="px-3 py-2 text-right">Units</th>
+                  <th className="px-3 py-2 text-right">Sales</th>
+                  <th className="px-3 py-2 text-right">Gross profit</th>
+                </tr>
+              </thead>
+              <tbody>
+                {summary.groups.map((g) => (
+                  <tr key={g.key} className="border-b border-slate-100">
+                    <td className="px-3 py-2 font-medium text-slate-700">{categoryLabel(g.key)}</td>
+                    <td className="px-3 py-2 text-right text-slate-500">{g.count}</td>
+                    <td className="px-3 py-2 text-right text-slate-700">{money(g.revenue)}</td>
+                    <td className={'px-3 py-2 text-right font-medium ' + (g.gp < 0 ? 'text-rose-600' : 'text-emerald-600')}>{money(g.gp)}</td>
+                  </tr>
+                ))}
+                <tr className="bg-slate-900 font-semibold text-white">
+                  <td className="px-3 py-2">Total</td>
+                  <td className="px-3 py-2 text-right">{summary.grand.count}</td>
+                  <td className="px-3 py-2 text-right">{money(summary.grand.revenue)}</td>
+                  <td className="px-3 py-2 text-right">{money(summary.grand.gp)}</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
-          <ul className="space-y-3">
-            {visible.map((r) => {
-              const c = calcCosting(r)
-              return (
-                <li
-                  key={r.id}
-                  onClick={() => navigate(`/costing/${r.id}`)}
-                  className="cursor-pointer rounded-xl bg-white p-4 shadow-sm active:bg-slate-50"
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono text-sm font-semibold text-slate-900">
-                          {r.cash_sale_no || '(no cash sale no.)'}
-                        </span>
-                        {r.status === 'finalized' && (
-                          <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-bold text-emerald-700">
-                            FINAL
-                          </span>
-                        )}
-                      </div>
-                      <p className="mt-0.5 truncate font-medium text-slate-800">{r.customer || '—'}</p>
-                    </div>
-                    <div className="shrink-0 text-right">
-                      <div className="text-xs text-slate-400">Net profit</div>
-                      <div className={'font-semibold ' + (c.netProfit < 0 ? 'text-rose-600' : 'text-emerald-600')}>
-                        {money(c.netProfit)}
-                      </div>
-                    </div>
-                  </div>
-                  <p className="mt-1.5 text-xs text-slate-400">
-                    Revenue {money(Number(r.revenue))} · {relativeTime(r.created_at)}
-                  </p>
-                </li>
-              )
-            })}
-          </ul>
+
+          {view === 'sheet' ? <Sheet rows={visible} onOpen={(id) => navigate(`/costing/${id}`)} /> : <Cards rows={visible} onOpen={(id) => navigate(`/costing/${id}`)} />}
         </>
       )}
     </Layout>
+  )
+}
+
+// ---------- mobile card list ----------
+function Cards({ rows, onOpen }: { rows: Costing[]; onOpen: (id: string) => void }) {
+  return (
+    <ul className="space-y-3">
+      {rows.map((r) => {
+        const c = calcCosting(r)
+        return (
+          <li key={r.id} onClick={() => onOpen(r.id)} className="cursor-pointer rounded-xl bg-white p-4 shadow-sm active:bg-slate-50">
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="font-mono text-sm font-semibold text-slate-900">{r.cash_sale_no || '(no CS no.)'}</span>
+                  <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-600">{categoryLabel(r.category)}</span>
+                </div>
+                <p className="mt-0.5 truncate font-medium text-slate-800">{r.customer || '—'}</p>
+              </div>
+              <div className="shrink-0 text-right">
+                <div className={'font-semibold ' + (c.grossProfit < 0 ? 'text-rose-600' : 'text-emerald-600')}>{money(c.grossProfit)}</div>
+                <div className="text-xs text-slate-400">{c.margin.toFixed(1)}% margin</div>
+              </div>
+            </div>
+            <p className="mt-1.5 text-xs text-slate-400">
+              Sale {money(num(r.revenue))} · cost {money(c.totalCost)}
+              {r.status ? ` · ${r.status}` : ''}
+            </p>
+          </li>
+        )
+      })}
+    </ul>
+  )
+}
+
+// ---------- desktop spreadsheet, grouped by category with subtotals ----------
+function Sheet({ rows, onOpen }: { rows: Costing[]; onOpen: (id: string) => void }) {
+  const order = [...COSTING_CATEGORIES.map((c) => c.key), '']
+  const byCat = new Map<string, Costing[]>()
+  for (const r of rows) {
+    const k = r.category || ''
+    if (!byCat.has(k)) byCat.set(k, [])
+    byCat.get(k)!.push(r)
+  }
+  const groups = order.filter((k) => byCat.has(k)).map((k) => ({ key: k, rows: byCat.get(k)! }))
+
+  return (
+    <div className="overflow-x-auto rounded-xl bg-white shadow-sm">
+      <table className="w-full min-w-[760px] text-sm">
+        <thead>
+          <tr className="border-b border-slate-200 text-left text-[11px] uppercase tracking-wide text-slate-400">
+            <th className="px-3 py-2">Cash sale</th>
+            <th className="px-3 py-2">Unit / item</th>
+            <th className="px-3 py-2 text-right">Selling</th>
+            <th className="px-3 py-2 text-right">Total cost</th>
+            <th className="px-3 py-2 text-right">Gross profit</th>
+            <th className="px-3 py-2 text-right">Margin</th>
+            <th className="px-3 py-2 text-right">Sharing</th>
+            <th className="px-3 py-2">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {groups.map((g) => {
+            const sub = g.rows.reduce(
+              (a, r) => {
+                const c = calcCosting(r)
+                return { rev: a.rev + num(r.revenue), cost: a.cost + c.totalCost, gp: a.gp + c.grossProfit, sh: a.sh + c.totalShared }
+              },
+              { rev: 0, cost: 0, gp: 0, sh: 0 },
+            )
+            return (
+              <CategoryGroup key={g.key} label={categoryLabel(g.key)} rows={g.rows} sub={sub} onOpen={onOpen} />
+            )
+          })}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
+function CategoryGroup({
+  label,
+  rows,
+  sub,
+  onOpen,
+}: {
+  label: string
+  rows: Costing[]
+  sub: { rev: number; cost: number; gp: number; sh: number }
+  onOpen: (id: string) => void
+}) {
+  return (
+    <>
+      <tr className="bg-slate-100">
+        <td colSpan={8} className="px-3 py-1.5 text-[11px] font-bold uppercase tracking-wide text-slate-600">{label}</td>
+      </tr>
+      {rows.map((r) => {
+        const c = calcCosting(r)
+        return (
+          <tr key={r.id} onClick={() => onOpen(r.id)} className="cursor-pointer border-b border-slate-100 hover:bg-slate-50">
+            <td className="px-3 py-2 font-mono text-xs text-slate-700">{r.cash_sale_no || '—'}</td>
+            <td className="px-3 py-2 text-slate-700">{r.customer || '—'}</td>
+            <td className="px-3 py-2 text-right text-slate-700">{money(num(r.revenue))}</td>
+            <td className="px-3 py-2 text-right text-slate-500">{money(c.totalCost)}</td>
+            <td className={'px-3 py-2 text-right font-medium ' + (c.grossProfit < 0 ? 'text-rose-600' : 'text-emerald-700')}>{money(c.grossProfit)}</td>
+            <td className="px-3 py-2 text-right text-slate-500">{c.margin.toFixed(1)}%</td>
+            <td className="px-3 py-2 text-right text-slate-500">{money(c.totalShared)}</td>
+            <td className="px-3 py-2 text-xs text-slate-500">{r.status}</td>
+          </tr>
+        )
+      })}
+      <tr className="border-b-2 border-slate-200 text-xs font-semibold text-slate-600">
+        <td className="px-3 py-1.5" colSpan={2}>Subtotal</td>
+        <td className="px-3 py-1.5 text-right">{money(sub.rev)}</td>
+        <td className="px-3 py-1.5 text-right">{money(sub.cost)}</td>
+        <td className="px-3 py-1.5 text-right text-emerald-700">{money(sub.gp)}</td>
+        <td className="px-3 py-1.5"></td>
+        <td className="px-3 py-1.5 text-right">{money(sub.sh)}</td>
+        <td className="px-3 py-1.5"></td>
+      </tr>
+    </>
   )
 }

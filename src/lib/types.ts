@@ -51,7 +51,15 @@ export interface CostLine {
   amount: number
 }
 
-export interface PctLine {
+// Commission is a COST: fixed RM, or a % of the selling price.
+export interface CommLine {
+  name: string
+  kind: 'fixed' | 'pct'
+  value: number
+}
+
+// Profit share is a % of gross profit.
+export interface ShareLine {
   name: string
   percent: number
 }
@@ -59,14 +67,15 @@ export interface PctLine {
 export interface Costing {
   id: string
   cash_sale_no: string
+  category: string
   customer: string
   costing_date: string | null
-  revenue: number
+  revenue: number // selling price
   costs: CostLine[]
-  commissions: PctLine[]
-  shares: PctLine[]
+  commissions: CommLine[]
+  shares: ShareLine[]
   notes: string
-  status: 'draft' | 'finalized'
+  status: string
   created_by: string | null
   created_at: string
   updated_at: string
