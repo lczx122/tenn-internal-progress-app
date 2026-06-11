@@ -136,6 +136,40 @@ export default function CostingList() {
       .eq('id', r.id)
   }
 
+  const sheetRows = visible.filter((r) => (r.category || '') === sheetCat)
+
+  function exportCsv() {
+    const cols = templateFor(sheetCat)
+    const header = ['Cash sale', 'Unit / item', ...cols, 'Selling', 'Total cost', 'Gross profit', 'Margin %', 'Sharing', 'Status']
+    const esc = (v: unknown) => {
+      const s = String(v ?? '')
+      return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s
+    }
+    const lines = [header.map(esc).join(',')]
+    for (const r of sheetRows) {
+      const c = calcCosting(r)
+      const cells = [
+        r.cash_sale_no,
+        r.customer,
+        ...cols.map((col) => costVal(r, col).toFixed(2)),
+        num(r.revenue).toFixed(2),
+        c.totalCost.toFixed(2),
+        c.grossProfit.toFixed(2),
+        c.margin.toFixed(2),
+        c.totalShared.toFixed(2),
+        r.status,
+      ]
+      lines.push(cells.map(esc).join(','))
+    }
+    const blob = new Blob(['﻿' + lines.join('\n')], { type: 'text/csv;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `costing-${sheetCat || 'all'}-${new Date().toISOString().slice(0, 10)}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
   if (!isBoss) {
     return (
       <Layout title="Costing" bottomNav>
@@ -143,8 +177,6 @@ export default function CostingList() {
       </Layout>
     )
   }
-
-  const sheetRows = visible.filter((r) => (r.category || '') === sheetCat)
 
   return (
     <Layout title="Costing" bottomNav wide>
@@ -227,7 +259,7 @@ export default function CostingList() {
           {view === 'sheet' ? (
             <>
               {/* category tabs */}
-              <div className="mb-3 flex flex-wrap gap-2">
+              <div className="mb-3 flex flex-wrap items-center gap-2">
                 {groups.map((k) => {
                   const active = k === sheetCat
                   return (
@@ -247,6 +279,12 @@ export default function CostingList() {
                     </button>
                   )
                 })}
+                <button
+                  onClick={exportCsv}
+                  className="ml-auto rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-600 active:bg-slate-50"
+                >
+                  ⬇ Export CSV
+                </button>
               </div>
               <EditableSheet
                 catKey={sheetCat}
@@ -302,26 +340,27 @@ function EditableSheet({
     },
     { rev: 0, cost: 0, gp: 0, sh: 0 },
   )
-  const th = 'px-2 py-2.5 text-right'
+  const thBase = 'sticky top-0 z-10 border-b border-slate-200 bg-slate-50 px-2 py-2.5'
+  const thNum = thBase + ' text-right'
   const editCls = 'w-full rounded bg-transparent px-1 py-0.5 text-right outline-none hover:bg-slate-100 focus:bg-amber-50'
 
   return (
-    <div className={`overflow-x-auto rounded-xl border-l-4 bg-white shadow-sm ${CATEGORY_BORDER[catKey] ?? 'border-slate-400'}`}>
+    <div className={`max-h-[75vh] overflow-auto rounded-xl border-l-4 bg-white shadow-sm ${CATEGORY_BORDER[catKey] ?? 'border-slate-400'}`}>
       <table className="w-full whitespace-nowrap text-[13px]">
         <thead>
-          <tr className="border-b border-slate-200 bg-slate-50 text-left text-[10px] uppercase tracking-wide text-slate-500">
-            <th className="px-2 py-2.5">Cash sale</th>
-            <th className="px-2 py-2.5">Unit / item</th>
+          <tr className="text-left text-[10px] uppercase tracking-wide text-slate-500">
+            <th className={thBase + ' left-0 z-20 w-[112px] border-r'}>Cash sale</th>
+            <th className={thBase + ' left-[112px] z-20 border-r'}>Unit / item</th>
             {cols.map((col) => (
-              <th key={col} className={th}>{col}</th>
+              <th key={col} className={thNum}>{col}</th>
             ))}
-            <th className={th}>Selling</th>
-            <th className={th}>Total cost</th>
-            <th className={th}>Gross profit</th>
-            <th className={th}>Margin</th>
-            <th className={th}>Sharing</th>
-            <th className="px-2 py-2.5">Status</th>
-            <th className="px-2 py-2.5"></th>
+            <th className={thNum}>Selling</th>
+            <th className={thNum}>Total cost</th>
+            <th className={thNum}>Gross profit</th>
+            <th className={thNum}>Margin</th>
+            <th className={thNum}>Sharing</th>
+            <th className={thBase}>Status</th>
+            <th className={thBase}></th>
           </tr>
         </thead>
         <tbody>
@@ -330,10 +369,10 @@ function EditableSheet({
             const focus = { onFocus, onBlur: () => onBlurSave(r.id) }
             return (
               <tr key={r.id} className={'border-b border-slate-100 ' + (ri % 2 ? 'bg-slate-50/60' : '')}>
-                <td className="px-2 py-1">
+                <td className="sticky left-0 z-[1] w-[112px] border-r border-slate-100 bg-white px-2 py-1">
                   <input className={editCls + ' text-left font-mono text-xs'} value={r.cash_sale_no} {...focus} onChange={(e) => onPatch(r.id, { cash_sale_no: e.target.value })} />
                 </td>
-                <td className="min-w-[160px] px-2 py-1">
+                <td className="sticky left-[112px] z-[1] min-w-[160px] border-r border-slate-100 bg-white px-2 py-1">
                   <input className={editCls + ' text-left'} value={r.customer} {...focus} onChange={(e) => onPatch(r.id, { customer: e.target.value })} />
                 </td>
                 {cols.map((col) => {
@@ -373,7 +412,7 @@ function EditableSheet({
             )
           })}
           <tr className="border-t-2 border-slate-200 bg-slate-50 text-xs font-bold text-slate-700">
-            <td className="px-2 py-2" colSpan={2}>Subtotal</td>
+            <td className="sticky left-0 z-[1] border-r border-slate-200 bg-slate-50 px-2 py-2" colSpan={2}>Subtotal</td>
             {colSums.map((s, i) => (
               <td key={i} className="px-2 py-2 text-right">{nf(s)}</td>
             ))}

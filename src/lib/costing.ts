@@ -28,15 +28,23 @@ export const COSTING_STATUSES = [
   'Completed',
 ]
 
-// The cost columns each category uses in the workbook. Picking a category
-// pre-fills these as cost lines so the form matches that category's sheet.
+// The cost columns each category uses in the workbook (exact headers). Picking
+// a category pre-fills these as cost lines so the form/sheet match that sheet.
 export const CATEGORY_TEMPLATES: Record<string, string[]> = {
-  reno: ['Material Costing', 'Bank Installment Charges', 'Bank Charges', 'Salesman Commission'],
-  smarthome: ['Material Costing', 'Bank Interest', 'Salesman Commission', 'Overriding Commission'],
-  smartlock: ['Device Costing', 'Installation', 'Lalamove', 'Salesman Commission', 'Bank Commission'],
+  reno: [
+    'Material Costing',
+    'Bank Installment Charges',
+    'Bank Charges',
+    'Comm Bal',
+    'Salesman Comm (w/c/l/g)',
+    'Salesman Comm (angel/sally)',
+    'Salesman Comm (CZX/GES)',
+  ],
+  smarthome: ['Bank Interest', 'Material Costing', 'Salesman Comm', 'Overriding Comm'],
+  smartlock: ['Bank Comm', 'Device Costing', 'Installation', 'Lalamove', 'Salesman Comm (3%)'],
   alucab: ['Cabinet Costing', 'Sink & Paip'],
-  ee: ['EE Costing'],
-  product: ['Product Costing'],
+  ee: ['Costing'],
+  product: ['Costing'],
 }
 
 export function templateFor(category: string): string[] {
