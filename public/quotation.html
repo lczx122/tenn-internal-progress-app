@@ -326,145 +326,82 @@
    ============================================================ */
 const CATALOG = [
   {
+    id:'smarthome', name:'Smart Home & Plug Point',
+    variants:[],
+    items:[
+      {v:0,label:'Smart Home (Ansuran)',sub:'RM99.00/bulan × 60 bulan',price:5940},
+      {v:0,label:'Smart Home (Full Pay)',sub:'Bayaran penuh',price:0},
+      {v:0,label:'ADDON CCTV',sub:'Harga ikut spesifikasi',price:0},
+      {v:0,label:'ADDON Plug Point Biasa',sub:'Termasuk wayar & casing',price:200},
+      {v:0,label:'ADDON Plug Aircond & Pemanas Air',sub:'Termasuk wayar & casing',price:450},
+    ]
+  },
+  {
     id:'smartlock', name:'Smart Lock',
     variants:[],
     items:[
-      {v:0,label:'Extravagant Super Smart Lock',sub:'RM98/mo × 24 months · incl. installation',price:2352},
-      {v:0,label:'6-in-1 Smart Lock',sub:'Fingerprint · Password · RFID · OTP · Emergency key · App',price:1299},
+      {v:0,label:'6-in-1 Sistem (Full Pay)',sub:'Fingerprint · Password · RFID · OTP · Emergency key · App',price:1299},
+      {v:0,label:'Premium Smart Lock Sistem (Full Pay)',sub:'',price:2352},
     ]
   },
   {
-    id:'plugtop', name:'Add-on Plug Top',
+    id:'painting', name:'Cat (Painting)',
+    note:'Harga bergantung pada keluasan (sqft) & bahan. Jenis rumah: Single / Double / Semi-D / Banglo · Lot: Corner / Intermediate / End',
     variants:[],
     items:[
-      {v:0,label:'Standard Plug Top',sub:'Incl. wire with casing & plug top',price:200},
-      {v:0,label:'Aircond & Heater Plug Top',sub:'Incl. wire with casing & plug top',price:450},
+      {v:0,label:'Cat Dalaman Rumah',sub:'',price:0},
+      {v:0,label:'Cat Dinding Luar',sub:'',price:0},
+      {v:0,label:'Cat Bilik Bedroom 1',sub:'',price:0},
+      {v:0,label:'Cat Bilik Bedroom 2',sub:'',price:0},
+      {v:0,label:'Cat Bilik Bedroom 3',sub:'',price:0},
+      {v:0,label:'Cat Bilik Bedroom 4',sub:'',price:0},
+      {v:0,label:'Cat Seluruh Rumah',sub:'',price:0},
     ]
   },
   {
-    id:'painting', name:'Painting',
-    note:'Colour Package: Vinyl Glo / Eco Wall (5 options)',
-    variants:['Type A — 2 Room (688 sqft)','Type B — 3 Room (1088 sqft)'],
+    id:'irongrill', name:'Gril Besi (Iron)',
+    note:'Harga per sqft / ft run — masukkan keluasan sebagai kuantiti.',
+    variants:[],
     items:[
-      {v:0,label:'Interior Painting',sub:'Promotion price',price:1499},
-      {v:0,label:'Ceiling',price:499},
-      {v:0,label:'Door & Frame',sub:'per set',price:100},
-      {v:0,label:'Frame',sub:'per set',price:50},
-      {v:1,label:'Interior Painting',sub:'Promotion price',price:1999},
-      {v:1,label:'Ceiling',price:699},
-      {v:1,label:'Door & Frame',sub:'per set',price:100},
-      {v:1,label:'Frame',sub:'per set',price:50},
+      {v:0,label:'Pintu Pagar Utama',sub:'per sqft',price:45},
+      {v:0,label:'ADDON Pintu Pagar Utama — Auto Moto',sub:'Harga ikut spesifikasi',price:0},
+      {v:0,label:'Pintu Depan',sub:'per ft run · >12ft: RM480',price:525},
+      {v:0,label:'Balkoni',sub:'per sqft',price:45},
+      {v:0,label:'Tingkap Bilik Utama',sub:'per sqft',price:45},
+      {v:0,label:'Tingkap Bilik 1',sub:'per sqft',price:45},
+      {v:0,label:'Tingkap Bilik 2',sub:'per sqft',price:45},
+      {v:0,label:'Tingkap Bilik 3',sub:'per sqft',price:45},
+      {v:0,label:'Pintu Belakang',sub:'per sqft',price:45},
+      {v:0,label:'Awning — PU Metal Roofing',sub:'per sqft',price:49},
+      {v:0,label:'Awning Standard',sub:'per sqft',price:17},
     ]
   },
   {
-    id:'alugrill', name:'Aluminium Hollow Grill',
-    note:'Double Line Design · Colour: White',
-    variants:['Type A — 2 Room','Type B — 3 Room'],
+    id:'alugrill', name:'Gril Hollow Aluminium',
+    note:'Harga per sqft / ft run (ikut spesifikasi) — masukkan keluasan sebagai kuantiti.',
+    variants:[],
     items:[
-      // 2 Room
-      {v:0,label:'Balcony — 2 Leaf Sliding Door',sub:'95" × 88½"',price:1880},
-      {v:0,label:'Main Door',sub:'34½" × 79¼"',price:1080},
-      {v:0,label:'Yard Grill — Ground Floor',sub:'80" × 107"H',price:1650},
-      {v:0,label:'Yard Grill — 1st Floor',sub:'80" × 100"H',price:1650},
-      {v:0,label:'Yard Grill — 2nd Floor',sub:'80" × 159"H',price:2000},
-      {v:0,label:'Yard Grill — 3rd Floor & Above',sub:'80" × 77"H',price:1000},
-      {v:0,label:'Window Grill — Master Room',sub:"6' × 4'",price:650},
-      {v:0,label:'Window Grill — Room 2',sub:"4' × 4'",price:450},
-      // 3 Room
-      {v:1,label:'Balcony — 3 Leaf Sliding Door',sub:'106" × 88½"',price:2250},
-      {v:1,label:'Main Door',sub:'66" × 119"',price:1650},
-      {v:1,label:'Yard Grill — Ground Floor',sub:'92" × 104"H',price:2000},
-      {v:1,label:'Yard Grill — 1st Floor',sub:'92" × 100"H',price:2000},
-      {v:1,label:'Yard Grill — 2nd Floor',sub:'92" × 159"H',price:2380},
-      {v:1,label:'Yard Grill — 3rd Floor & Above',sub:'92" × 77"H',price:1350},
-      {v:1,label:'Window Grill — Master Room',sub:"6' × 4'",price:650},
-      {v:1,label:'Window Grill — Room 2',sub:"4' × 4'",price:450},
-      {v:1,label:'Window Grill — Room 3',sub:"4' × 4'",price:450},
-      {v:1,label:'Window Grill — Master Room Toilet',sub:"2' × 4'",price:250},
+      {v:0,label:'Pintu Pagar Utama',sub:'per sqft',price:0},
+      {v:0,label:'ADDON Pintu Pagar Utama — Auto Moto',sub:'Harga ikut spesifikasi',price:0},
+      {v:0,label:'Pintu Depan',sub:'per ft run',price:0},
+      {v:0,label:'Balkoni',sub:'per sqft',price:0},
+      {v:0,label:'Tingkap Bilik Utama',sub:'per sqft',price:0},
+      {v:0,label:'Tingkap Bilik 1',sub:'per sqft',price:0},
+      {v:0,label:'Tingkap Bilik 2',sub:'per sqft',price:0},
+      {v:0,label:'Tingkap Bilik 3',sub:'per sqft',price:0},
+      {v:0,label:'Pintu Belakang',sub:'per sqft',price:0},
+      {v:0,label:'Awning — PU Metal Roofing',sub:'per sqft',price:0},
+      {v:0,label:'Awning Standard',sub:'per sqft',price:0},
     ]
   },
   {
-    id:'yard', name:'Yard — Aluminium / Polycarbonate / Acrylic',
-    note:'Colour: Aluminium White · Acrylic White or Transparent · Flame Black',
-    variants:['Type A — 2 Room','Type B — 3 Room'],
+    id:'other', name:'Perkhidmatan Lain',
+    note:'Harga ikut spesifikasi / keluasan.',
+    variants:[],
     items:[
-      // 2 Room
-      {v:0,label:'Ground Floor — Aluminium',sub:'80" × 107"H',price:2350},
-      {v:0,label:'Ground Floor — Polycarbonate',sub:'80" × 107"H',price:1750},
-      {v:0,label:'Ground Floor — Moru Acrylic',sub:'80" × 107"H',price:2200},
-      {v:0,label:'1st Floor — Aluminium',sub:'80" × 100"H',price:2150},
-      {v:0,label:'1st Floor — Polycarbonate',sub:'80" × 100"H',price:1650},
-      {v:0,label:'1st Floor — Moru Acrylic',sub:'80" × 100"H',price:2000},
-      {v:0,label:'2nd Floor — Aluminium',sub:'80" × 159"H',price:3350},
-      {v:0,label:'2nd Floor — Polycarbonate',sub:'80" × 159"H',price:2250},
-      {v:0,label:'2nd Floor — Moru Acrylic',sub:'80" × 159"H',price:2650},
-      {v:0,label:'3rd Floor & Above — Aluminium',sub:'80" × 77"H',price:1850},
-      {v:0,label:'3rd Floor & Above — Polycarbonate',sub:'80" × 77"H',price:1400},
-      {v:0,label:'3rd Floor & Above — Moru Acrylic',sub:'80" × 77"H',price:1750},
-      // 3 Room
-      {v:1,label:'Ground Floor — Aluminium',sub:'92" × 104"H',price:2580},
-      {v:1,label:'Ground Floor — Polycarbonate',sub:'92" × 104"H',price:1900},
-      {v:1,label:'Ground Floor — Moru Acrylic',sub:'92" × 104"H',price:2350},
-      {v:1,label:'1st Floor — Aluminium',sub:'92" × 100"H',price:2500},
-      {v:1,label:'1st Floor — Polycarbonate',sub:'92" × 100"H',price:1750},
-      {v:1,label:'1st Floor — Moru Acrylic',sub:'92" × 100"H',price:2080},
-      {v:1,label:'2nd Floor — Aluminium',sub:'92" × 159"H',price:3200},
-      {v:1,label:'2nd Floor — Polycarbonate',sub:'92" × 159"H',price:2400},
-      {v:1,label:'2nd Floor — Moru Acrylic',sub:'92" × 159"H',price:2850},
-      {v:1,label:'3rd Floor & Above — Aluminium',sub:'92" × 77"H',price:2080},
-      {v:1,label:'3rd Floor & Above — Polycarbonate',sub:'92" × 77"H',price:1500},
-      {v:1,label:'3rd Floor & Above — Moru Acrylic',sub:'92" × 77"H',price:1850},
-    ]
-  },
-  {
-    id:'ironwork', name:'Iron Work',
-    note:'Double Line Design · Powder Coat: White (rough surface) / White',
-    variants:['Type A — 2 Room','Type B — 3 Room'],
-    items:[
-      // 2 Room
-      {v:0,label:'Balcony — 2 Leaf Sliding Door',sub:'95" × 88½"',price:1400},
-      {v:0,label:'Main Door',sub:'34½" × 79¼"',price:850},
-      {v:0,label:'Yard Grill — Ground Floor',sub:'80" × 107"H',price:1200},
-      {v:0,label:'Yard Grill — 1st Floor',sub:'80" × 100"H',price:1200},
-      {v:0,label:'Yard Grill — 2nd Floor',sub:'80" × 159"H',price:1850},
-      {v:0,label:'Yard Grill — 3rd Floor & Above',sub:'80" × 77"H',price:850},
-      {v:0,label:'Window Grill — Master Room',sub:"6' × 4'",price:500},
-      {v:0,label:'Window Grill — Room 2',sub:"4' × 4'",price:330},
-      // 3 Room
-      {v:1,label:'Balcony — 3 Leaf Sliding Door',sub:'106" × 88½"',price:2000},
-      {v:1,label:'Main Door',sub:'66" × 119"',price:1650},
-      {v:1,label:'Yard Grill — Ground Floor',sub:'92" × 104"H',price:1450},
-      {v:1,label:'Yard Grill — 1st Floor',sub:'92" × 100"H',price:1450},
-      {v:1,label:'Yard Grill — 2nd Floor',sub:'92" × 159"H',price:2180},
-      {v:1,label:'Yard Grill — 3rd Floor & Above',sub:'92" × 77"H',price:960},
-      {v:1,label:'Window Grill — Master Room',sub:"6' × 4'",price:500},
-      {v:1,label:'Window Grill — Room 2',sub:"4' × 4'",price:330},
-      {v:1,label:'Window Grill — Room 3',sub:"4' × 4'",price:330},
-      {v:1,label:'Window Grill — Master Room Toilet',sub:"2' × 4'",price:175},
-    ]
-  },
-  {
-    id:'invisible', name:'Invisible Grill (Balcony)',
-    variants:['Type A — 2 Room','Type B — 3 Room'],
-    items:[
-      // 2 Room
-      {v:0,label:'Ground Floor — Half Balcony',sub:'117" × 89"H',price:1450},
-      {v:0,label:'Ground Floor — Full Balcony',sub:'117" × 136"H',price:2350},
-      {v:0,label:'1st Floor — Half Balcony',sub:'117" × 83½"H',price:1450},
-      {v:0,label:'1st Floor — Full Balcony',sub:'117" × 136"H',price:2350},
-      {v:0,label:'2nd Floor — Half Balcony',sub:'117" × 144"H',price:2280},
-      {v:0,label:'2nd Floor — Full Balcony',sub:'117" × 192"H',price:3050},
-      {v:0,label:'3rd Floor & Above — Half Balcony',sub:'117" × 61"H',price:950},
-      {v:0,label:'3rd Floor & Above — Full Balcony',sub:'117" × 109"H',price:1750},
-      // 3 Room
-      {v:1,label:'Ground Floor — Half Balcony',sub:'137" × 89"H',price:1650},
-      {v:1,label:'Ground Floor — Full Balcony',sub:'137" × 137"H',price:2500},
-      {v:1,label:'1st Floor — Half Balcony',sub:'137" × 89"H',price:1650},
-      {v:1,label:'1st Floor — Full Balcony',sub:'137" × 137"H',price:2500},
-      {v:1,label:'2nd Floor — Half Balcony',sub:'137" × 144"H',price:2750},
-      {v:1,label:'2nd Floor — Full Balcony',sub:'137" × 192"H',price:3600},
-      {v:1,label:'3rd Floor & Above — Half Balcony',sub:'137" × 59"H',price:1150},
-      {v:1,label:'3rd Floor & Above — Full Balcony',sub:'137" × 107"H',price:2000},
+      {v:0,label:'Aluminium Louvered',sub:'Harga ikut spesifikasi',price:0},
+      {v:0,label:'Invisible Grill',sub:'Harga ikut spesifikasi',price:0},
+      {v:0,label:'Moru Acrylic',sub:'Harga ikut spesifikasi',price:0},
     ]
   },
 ];
@@ -505,27 +442,27 @@ function cab(defaultMm, basePrice, stepMm, priceInc, steps=3){
 }
 
 const CABINET = [
-  { id:'kitchen', name:'Kitchen Cabinet', options:[
-      { id:'top',  name:'Top Kitchen Cabinet',  ...cab(1200, 1200, 600, 500) },
-      { id:'base', name:'Base Kitchen Cabinet', ...cab(1200, 1500, 600, 700) },
+  { id:'dapur', name:'Kabinet Dapur', options:[
+      { id:'atas',      name:'Kabinet Dapur Atas',            ...cab(1200, 1200, 600, 500) },
+      { id:'bawah',     name:'Kabinet Dapur Bawah',           ...cab(1200, 1500, 600, 700) },
+      { id:'atas_alu',  name:'Kabinet Dapur Atas Aluminium',  ...cab(1200, 1400, 600, 550) },
+      { id:'bawah_alu', name:'Kabinet Dapur Bawah Aluminium', ...cab(1200, 1700, 600, 700) },
   ]},
-  { id:'wardrobe', name:'Wardrobe', options:[
-      { id:'tatami',  name:'With Tatami',       ...cab(1800, 2500, 600, 900) },
-      { id:'table',   name:'With Table',        ...cab(1800, 2200, 600, 800) },
-      { id:'opencab', name:'With Open Cabinet', ...cab(1800, 2000, 600, 750) },
-      { id:'only',    name:'Wardrobe Only',     ...cab(1800, 1800, 600, 700) },
+  { id:'tv', name:'Kabinet TV', options:[
+      { id:'standard', name:'Kabinet TV',                  ...cab(2400, 1000, 600, 450) },
+      { id:'backdrop', name:'Kabinet TV bersama Backdrop', ...cab(2400, 1600, 600, 600) },
   ]},
-  { id:'tv', name:'TV Cabinet', options:[
-      { id:'backdrop',   name:'With Backdrop', ...cab(2400, 1600, 600, 600) },
-      { id:'nobackdrop', name:'No Backdrop',   ...cab(2400, 1000, 600, 450) },
+  { id:'almari', name:'Almari Pakaian', options:[
+      { id:'standard', name:'Almari Pakaian',                        ...cab(1800, 1800, 600, 700) },
+      { id:'tatami',   name:'Almari Pakaian Tatami',                 ...cab(1800, 2500, 600, 900) },
+      { id:'meja',     name:'Almari Pakaian bersama Meja',           ...cab(1800, 2200, 600, 800) },
+      { id:'terbuka',  name:'Almari Pakaian dengan Kabinet Terbuka', ...cab(1800, 2000, 600, 750) },
   ]},
-  { id:'dining', name:'Dining Cabinet', options:[
-      { id:'base', name:'Dining Cabinet Base', ...cab(1200, 1200, 600, 550) },
+  { id:'dining', name:'Kabinet Dining', options:[
+      { id:'standard', name:'Kabinet Dining', ...cab(1200, 1200, 600, 550) },
   ]},
-  { id:'alu', name:'Aluminium Cabinet', options:[
-      { id:'top',   name:'Top Kitchen Cabinet',  ...cab(1200, 1400, 600, 550) },
-      { id:'base',  name:'Base Kitchen Cabinet', ...cab(1200, 1700, 600, 700) },
-      { id:'shoes', name:'Shoes Cabinet',        ...cab(900,  900, 600, 450) },
+  { id:'kasut', name:'Kabinet Kasut', options:[
+      { id:'alu', name:'Kabinet Kasut Aluminium', ...cab(900, 900, 600, 450) },
   ]},
 ];
 
