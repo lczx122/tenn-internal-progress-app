@@ -239,7 +239,8 @@ export default function AppointmentForm() {
             <label className={labelCls}>Starts</label>
             <input
               type="datetime-local"
-              className={field}
+              className={`${field} appearance-none text-left`}
+              style={{ WebkitAppearance: 'none' }}
               value={form.starts_at}
               onChange={(e) => set('starts_at', e.target.value)}
             />
@@ -248,7 +249,8 @@ export default function AppointmentForm() {
             <label className={labelCls}>Ends (optional)</label>
             <input
               type="datetime-local"
-              className={field}
+              className={`${field} appearance-none text-left`}
+              style={{ WebkitAppearance: 'none' }}
               min={form.starts_at || undefined}
               value={form.ends_at}
               onChange={(e) => set('ends_at', e.target.value)}
