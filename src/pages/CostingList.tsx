@@ -387,19 +387,37 @@ function EditableSheet({
     { rev: 0, cost: 0, gp: 0, sh: 0 },
   )
   // Column order matches the workbook: Unit → costs → Total → Selling → Gross
-  // profit → Margin → Sharing → Status → Cash sale. Only the Unit column is
-  // frozen (a single sticky column avoids the offset-overlap problem).
-  const thBase = 'sticky top-0 z-10 border-b border-slate-200 bg-slate-50 px-2 py-2.5'
+  // profit → Margin → Sharing → Status → Cash sale. On desktop the table is
+  // fixed-layout and fits the (wide) container, so every column is visible
+  // without horizontal scrolling — headers wrap onto multiple lines like the
+  // original sheet. Below lg the table keeps a min width and scrolls, with the
+  // Unit column frozen.
+  const thBase = 'sticky top-0 z-10 border-b border-slate-200 bg-slate-50 px-1.5 py-2 align-bottom leading-tight'
   const thNum = thBase + ' text-right'
   const editCls = 'w-full rounded bg-transparent px-1 py-0.5 text-right outline-none hover:bg-slate-100 focus:bg-amber-50'
-  const unitTd = 'sticky left-0 z-[1] w-[210px] min-w-[210px] max-w-[210px] border-r border-slate-200 bg-white px-2 py-1'
+  const numTd = 'whitespace-nowrap px-1.5 py-2.5 text-right'
+  const unitTd = 'sticky left-0 z-[1] border-r border-slate-200 bg-white px-2 py-1'
 
   return (
     <div className={`max-h-[75vh] overflow-auto rounded-xl border-l-4 bg-white shadow-sm ${CATEGORY_BORDER[catKey] ?? 'border-slate-400'}`}>
-      <table className="w-full whitespace-nowrap text-[13px]">
+      <table className="w-full min-w-[1100px] table-fixed text-[12px] lg:min-w-0">
+        <colgroup>
+          <col className="w-[170px]" />
+          {cols.map((col) => (
+            <col key={col} />
+          ))}
+          <col />
+          <col />
+          <col />
+          <col className="w-[58px]" />
+          <col />
+          <col className="w-[118px]" />
+          <col className="w-[110px]" />
+          <col className="w-9" />
+        </colgroup>
         <thead>
           <tr className="text-left text-[10px] uppercase tracking-wide text-slate-500">
-            <th className={thBase + ' left-0 z-30 w-[210px] min-w-[210px] max-w-[210px] border-r'}>Unit / item</th>
+            <th className={thBase + ' left-0 z-30 border-r'}>Unit / item</th>
             {cols.map((col) => (
               <th key={col} className={thNum}>{col}</th>
             ))}
@@ -421,38 +439,38 @@ function EditableSheet({
             return (
               <tr key={r.id} className={'border-b border-slate-100 ' + (ri % 2 ? 'bg-slate-50' : 'bg-white')}>
                 <td className={unitTd + (ri % 2 ? ' !bg-slate-50' : '')}>
-                  <input className={editCls + ' text-left'} value={r.customer} {...focus} onChange={(e) => onPatch(r.id, { customer: e.target.value })} />
+                  <input className={editCls + ' text-left'} title={r.customer} value={r.customer} {...focus} onChange={(e) => onPatch(r.id, { customer: e.target.value })} />
                 </td>
                 {cols.map((col) => {
                   const v = costVal(r, col)
                   return (
-                    <td key={col} className="px-2 py-1">
+                    <td key={col} className="px-1.5 py-1">
                       <input type="number" step="0.01" className={editCls + ' text-slate-600'} value={v === 0 ? '' : v} {...focus} onChange={(e) => onSetCost(r.id, col, e.target.value)} />
                     </td>
                   )
                 })}
-                <td className="px-2 py-2.5 text-right text-slate-500">{nf(c.totalCost)}</td>
-                <td className="px-2 py-1">
+                <td className={numTd + ' text-slate-500'}>{nf(c.totalCost)}</td>
+                <td className="px-1.5 py-1">
                   <input type="number" step="0.01" className={editCls + ' font-medium text-slate-800'} value={num(r.revenue) === 0 ? '' : (r.revenue as number) ?? ''} {...focus} onChange={(e) => onPatch(r.id, { revenue: e.target.value })} />
                 </td>
-                <td className={'px-2 py-2.5 text-right font-semibold ' + (c.grossProfit < 0 ? 'text-rose-600' : 'text-emerald-700')}>{nf(c.grossProfit)}</td>
-                <td className={'px-2 py-2.5 text-right font-medium ' + marginColor(c.margin)}>{c.margin.toFixed(1)}%</td>
-                <td className="px-2 py-2.5 text-right text-slate-500">{nf(c.totalShared)}</td>
-                <td className="px-2 py-1">
+                <td className={numTd + ' font-semibold ' + (c.grossProfit < 0 ? 'text-rose-600' : 'text-emerald-700')}>{nf(c.grossProfit)}</td>
+                <td className={numTd + ' font-medium ' + marginColor(c.margin)}>{c.margin.toFixed(1)}%</td>
+                <td className={numTd + ' text-slate-500'}>{nf(c.totalShared)}</td>
+                <td className="px-1.5 py-1">
                   {prog ? (
                     // Linked to a unit — status is derived from its work cards.
                     <button
                       type="button"
                       onClick={() => r.job_id && onOpenUnit(r.job_id)}
                       title="Synced from linked unit — open unit"
-                      className="flex items-center gap-1.5"
+                      className="flex w-full flex-wrap items-center gap-1"
                     >
                       <span className={'rounded-full px-2 py-0.5 text-[11px] font-medium ' + statusStyle(prog.status)}>{prog.status}</span>
-                      <span className="text-[11px] text-slate-400">🔗 {prog.percent}%</span>
+                      <span className="whitespace-nowrap text-[11px] text-slate-400">🔗 {prog.percent}%</span>
                     </button>
                   ) : (
                     <select
-                      className={'rounded-full border-0 px-2 py-0.5 text-[11px] font-medium outline-none ' + statusStyle(r.status)}
+                      className={'w-full rounded-full border-0 px-2 py-0.5 text-[11px] font-medium outline-none ' + statusStyle(r.status)}
                       value={r.status}
                       {...focus}
                       onChange={(e) => {
@@ -466,10 +484,10 @@ function EditableSheet({
                     </select>
                   )}
                 </td>
-                <td className="px-2 py-1">
-                  <input className={editCls + ' text-left font-mono text-xs'} value={r.cash_sale_no} {...focus} onChange={(e) => onPatch(r.id, { cash_sale_no: e.target.value })} />
+                <td className="px-1.5 py-1">
+                  <input className={editCls + ' text-left font-mono text-[11px]'} value={r.cash_sale_no} {...focus} onChange={(e) => onPatch(r.id, { cash_sale_no: e.target.value })} />
                 </td>
-                <td className="px-2 py-1 text-right">
+                <td className="px-1 py-1 text-right">
                   <button onClick={() => onOpen(r.id)} className="rounded px-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700" title="Open full form (cost breakdown, commissions, sharing)">⋯</button>
                 </td>
               </tr>
@@ -478,13 +496,13 @@ function EditableSheet({
           <tr className="border-t-2 border-slate-200 bg-slate-100 text-xs font-bold text-slate-700">
             <td className="sticky left-0 z-[1] border-r border-slate-200 bg-slate-100 px-2 py-2">Subtotal</td>
             {colSums.map((s, i) => (
-              <td key={i} className="px-2 py-2 text-right">{nf(s)}</td>
+              <td key={i} className="whitespace-nowrap px-1.5 py-2 text-right">{nf(s)}</td>
             ))}
-            <td className="px-2 py-2 text-right">{nf(sub.cost)}</td>
-            <td className="px-2 py-2 text-right">{nf(sub.rev)}</td>
-            <td className="px-2 py-2 text-right text-emerald-700">{nf(sub.gp)}</td>
+            <td className="whitespace-nowrap px-1.5 py-2 text-right">{nf(sub.cost)}</td>
+            <td className="whitespace-nowrap px-1.5 py-2 text-right">{nf(sub.rev)}</td>
+            <td className="whitespace-nowrap px-1.5 py-2 text-right text-emerald-700">{nf(sub.gp)}</td>
             <td></td>
-            <td className="px-2 py-2 text-right">{nf(sub.sh)}</td>
+            <td className="whitespace-nowrap px-1.5 py-2 text-right">{nf(sub.sh)}</td>
             <td colSpan={3}></td>
           </tr>
         </tbody>

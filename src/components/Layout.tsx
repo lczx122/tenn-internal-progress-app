@@ -8,7 +8,7 @@ import { BottomNav } from './BottomNav'
 // has the same header.
 export function AppHeader({ title, back, wide }: { title: string; back?: ReactNode; wide?: boolean }) {
   const { displayName, isAdmin, signOut } = useAuth()
-  const w = wide ? 'max-w-lg lg:max-w-6xl' : 'max-w-lg'
+  const w = wide ? 'max-w-lg lg:max-w-screen-2xl' : 'max-w-lg'
   return (
     <header className="shrink-0 bg-slate-900 text-white shadow pt-[env(safe-area-inset-top)]">
       <div className={`mx-auto flex ${w} items-center gap-3 px-4 py-3`}>
@@ -56,7 +56,7 @@ export function Layout({
     <div className="flex h-[100dvh] flex-col">
       <AppHeader title={title} back={back} wide={wide} />
       <main className="flex-1 overflow-y-auto">
-        <div className={`mx-auto px-4 py-4 ${wide ? 'max-w-lg lg:max-w-6xl' : 'max-w-lg'}`}>{children}</div>
+        <div className={`mx-auto px-4 py-4 ${wide ? 'max-w-lg lg:max-w-screen-2xl' : 'max-w-lg'}`}>{children}</div>
       </main>
       {bottomNav && <BottomNav />}
     </div>
