@@ -11,6 +11,8 @@ import QuotesRegister from './pages/QuotesRegister'
 import Schedule from './pages/Schedule'
 import AppointmentForm from './pages/AppointmentForm'
 import StaffAdmin from './pages/StaffAdmin'
+import CostingList from './pages/CostingList'
+import CostingForm from './pages/CostingForm'
 import SetupNotice from './pages/SetupNotice'
 
 export default function App() {
@@ -45,6 +47,9 @@ export default function App() {
       <Route path="/schedule/new" element={<AppointmentForm />} />
       <Route path="/appointment/:id" element={<AppointmentForm />} />
       <Route path="/staff" element={<StaffAdmin />} />
+      <Route path="/costing" element={<CostingList />} />
+      <Route path="/costing/new" element={<CostingForm />} />
+      <Route path="/costing/:id" element={<CostingForm />} />
       <Route path="/job/:id" element={<JobDetail />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

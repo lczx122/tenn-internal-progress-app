@@ -2,11 +2,17 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
-import type { Profile } from '../lib/types'
+import type { Profile, Role } from '../lib/types'
 import { Layout } from '../components/Layout'
 
+const ROLE_STYLE: Record<Role, string> = {
+  boss: 'bg-amber-100 text-amber-700',
+  admin: 'bg-emerald-100 text-emerald-700',
+  staff: 'bg-slate-100 text-slate-600',
+}
+
 export default function StaffAdmin() {
-  const { isAdmin, session } = useAuth()
+  const { isAdmin, isBoss, session } = useAuth()
   const [people, setPeople] = useState<Profile[]>([])
   const [loading, setLoading] = useState(true)
   const [busyId, setBusyId] = useState<string | null>(null)
@@ -25,7 +31,7 @@ export default function StaffAdmin() {
     load()
   }, [])
 
-  async function setRole(p: Profile, role: 'admin' | 'staff') {
+  async function setRole(p: Profile, role: Role) {
     setError(null)
     setBusyId(p.id)
     const { error } = await supabase.rpc('set_role', { target: p.id, new_role: role })
@@ -72,7 +78,6 @@ export default function StaffAdmin() {
         <ul className="space-y-2">
           {people.map((p) => {
             const isMe = p.id === session?.user.id
-            const admin = p.role === 'admin'
             return (
               <li key={p.id} className="flex items-center justify-between gap-2 rounded-xl bg-white p-3 shadow-sm">
                 <div className="min-w-0">
@@ -80,13 +85,8 @@ export default function StaffAdmin() {
                     {p.full_name} {isMe && <span className="text-xs text-slate-400">(you)</span>}
                   </p>
                   <div className="mt-0.5 flex items-center gap-2">
-                    <span
-                      className={
-                        'inline-block rounded px-1.5 py-0.5 text-[10px] font-bold ' +
-                        (admin ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600')
-                      }
-                    >
-                      {admin ? 'ADMIN' : 'STAFF'}
+                    <span className={'inline-block rounded px-1.5 py-0.5 text-[10px] font-bold ' + ROLE_STYLE[p.role]}>
+                      {p.role.toUpperCase()}
                     </span>
                     <button
                       onClick={() => rename(p)}
@@ -97,18 +97,17 @@ export default function StaffAdmin() {
                     </button>
                   </div>
                 </div>
-                <button
-                  onClick={() => setRole(p, admin ? 'staff' : 'admin')}
+                <select
+                  value={p.role}
+                  onChange={(e) => setRole(p, e.target.value as Role)}
                   disabled={busyId === p.id}
-                  className={
-                    'shrink-0 rounded-lg border px-3 py-1.5 text-xs font-medium disabled:opacity-50 ' +
-                    (admin
-                      ? 'border-slate-300 text-slate-600 active:bg-slate-100'
-                      : 'border-emerald-600 text-emerald-700 active:bg-emerald-50')
-                  }
+                  className="shrink-0 rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-xs font-medium text-slate-700 disabled:opacity-50"
                 >
-                  {busyId === p.id ? '…' : admin ? 'Make staff' : 'Make admin'}
-                </button>
+                  <option value="staff">Staff</option>
+                  <option value="admin">Admin</option>
+                  {/* Only a boss can assign the boss role (DB-enforced too) */}
+                  {(isBoss || p.role === 'boss') && <option value="boss">Boss</option>}
+                </select>
               </li>
             )
           })}

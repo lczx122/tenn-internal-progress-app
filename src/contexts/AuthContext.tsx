@@ -12,6 +12,7 @@ interface AuthState {
   session: Session | null
   displayName: string
   isAdmin: boolean
+  isBoss: boolean
   loading: boolean
   signIn: (email: string, password: string) => Promise<{ error: string | null }>
   signOut: () => Promise<void>
@@ -23,6 +24,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
   const [displayName, setDisplayName] = useState('')
   const [isAdmin, setIsAdmin] = useState(false)
+  const [isBoss, setIsBoss] = useState(false)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -42,6 +44,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!session) {
       setDisplayName('')
       setIsAdmin(false)
+      setIsBoss(false)
       if (typeof window !== 'undefined') (window as { tennIsAdmin?: boolean }).tennIsAdmin = false
       return
     }
@@ -56,8 +59,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setDisplayName(
           data?.full_name ?? session.user.email?.split('@')[0] ?? 'Team member'
         )
-        const admin = data?.role === 'admin'
+        const boss = data?.role === 'boss'
+        const admin = data?.role === 'admin' || boss // boss inherits admin powers
         setIsAdmin(admin)
+        setIsBoss(boss)
         if (typeof window !== 'undefined') (window as { tennIsAdmin?: boolean }).tennIsAdmin = admin
       })
     return () => {
@@ -79,7 +84,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ session, displayName, isAdmin, loading, signIn, signOut }}
+      value={{ session, displayName, isAdmin, isBoss, loading, signIn, signOut }}
     >
       {children}
     </AuthContext.Provider>

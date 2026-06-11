@@ -1,9 +1,10 @@
 import { NavLink } from 'react-router-dom'
+import { useAuth } from '../contexts/AuthContext'
 
 // Bottom tab bar for the top-level screens. In-flow (not fixed) so it sits at
 // the bottom of the 100dvh shell consistently, with safe-area padding to clear
 // the home indicator. Monochrome line icons tint with the active state.
-const tabs = [
+const baseTabs = [
   { to: '/', label: 'Dashboard', end: true, icon: 'dashboard' },
   { to: '/units', label: 'Units', end: false, icon: 'home' },
   { to: '/schedule', label: 'Schedule', end: false, icon: 'calendar' },
@@ -61,12 +62,25 @@ function TabIcon({ name }: { name: string }) {
           <path d="M7.2 13h9.6M7.2 16.4h6" />
         </svg>
       )
+    case 'coins':
+      return (
+        <svg {...p}>
+          <ellipse cx="8" cy="6.5" rx="5" ry="2.6" />
+          <path d="M3 6.5v4c0 1.43 2.24 2.6 5 2.6s5-1.17 5-2.6v-4" />
+          <ellipse cx="16" cy="14.5" rx="5" ry="2.6" />
+          <path d="M11 14.5v4c0 1.43 2.24 2.6 5 2.6s5-1.17 5-2.6v-4" />
+        </svg>
+      )
     default:
       return null
   }
 }
 
 export function BottomNav() {
+  const { isBoss } = useAuth()
+  const tabs = isBoss
+    ? [...baseTabs, { to: '/costing', label: 'Costing', end: false, icon: 'coins' } as const]
+    : baseTabs
   return (
     <nav className="shrink-0 border-t border-slate-200 bg-white pb-[env(safe-area-inset-bottom)]">
       <div className="mx-auto flex max-w-lg">

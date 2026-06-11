@@ -38,10 +38,38 @@ export interface JobEvent {
   created_at: string
 }
 
+export type Role = 'admin' | 'staff' | 'boss'
+
 export interface Profile {
   id: string
   full_name: string
-  role: 'admin' | 'staff'
+  role: Role
+}
+
+export interface CostLine {
+  label: string
+  amount: number
+}
+
+export interface PctLine {
+  name: string
+  percent: number
+}
+
+export interface Costing {
+  id: string
+  cash_sale_no: string
+  customer: string
+  costing_date: string | null
+  revenue: number
+  costs: CostLine[]
+  commissions: PctLine[]
+  shares: PctLine[]
+  notes: string
+  status: 'draft' | 'finalized'
+  created_by: string | null
+  created_at: string
+  updated_at: string
 }
 
 export type DocType = 'QT' | 'SO'

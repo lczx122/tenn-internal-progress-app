@@ -156,6 +156,25 @@ create table if not exists public.app_settings (
   updated_at timestamptz not null default now()
 );
 
+-- Costing (Boss-only): one row per cash sale.
+create table if not exists public.costings (
+  id            uuid primary key default gen_random_uuid(),
+  cash_sale_no  text not null default '',
+  customer      text not null default '',
+  costing_date  date,
+  revenue       numeric not null default 0,
+  costs         jsonb not null default '[]'::jsonb,
+  commissions   jsonb not null default '[]'::jsonb,
+  shares        jsonb not null default '[]'::jsonb,
+  notes         text not null default '',
+  status        text not null default 'draft',
+  created_by    uuid references public.profiles (id),
+  created_at    timestamptz not null default now(),
+  updated_at    timestamptz not null default now()
+);
+create index if not exists costings_cash_idx    on public.costings (cash_sale_no);
+create index if not exists costings_created_idx on public.costings (created_at desc);
+
 -- ---------------------------------------------------------------------------
 -- 6. FUNCTIONS & TRIGGERS
 -- ---------------------------------------------------------------------------
@@ -176,11 +195,19 @@ create trigger job_works_touch before update on public.job_works
 drop trigger if exists appointments_touch on public.appointments;
 create trigger appointments_touch before update on public.appointments
   for each row execute function public.touch_updated_at();
+drop trigger if exists costings_touch on public.costings;
+create trigger costings_touch before update on public.costings
+  for each row execute function public.touch_updated_at();
 
--- who is an admin?
+-- who is an admin? (bosses inherit all admin powers)
 create or replace function public.is_admin()
 returns boolean language sql stable security definer set search_path = public
-as $$ select exists (select 1 from public.profiles where id = auth.uid() and role = 'admin'); $$;
+as $$ select exists (select 1 from public.profiles where id = auth.uid() and role in ('admin','boss')); $$;
+
+-- who is a boss? (gates the Costing area)
+create or replace function public.is_boss()
+returns boolean language sql stable security definer set search_path = public
+as $$ select exists (select 1 from public.profiles where id = auth.uid() and role = 'boss'); $$;
 
 -- archive is admin-only (it's a column update, not a delete)
 create or replace function public.guard_job_archive()
@@ -213,13 +240,17 @@ create trigger profiles_guard_role before update on public.profiles
 create or replace function public.set_role(target uuid, new_role text)
 returns void language plpgsql security definer set search_path = public
 as $$
+declare cur text;
 begin
   if not public.is_admin() then raise exception 'Admins only'; end if;
-  if new_role not in ('admin', 'staff') then raise exception 'Invalid role: %', new_role; end if;
-  if new_role <> 'admin'
-     and (select role from public.profiles where id = target) = 'admin'
-     and (select count(*) from public.profiles where role = 'admin') <= 1 then
-    raise exception 'Cannot remove the last admin';
+  if new_role not in ('admin','staff','boss') then raise exception 'Invalid role: %', new_role; end if;
+  select role into cur from public.profiles where id = target;
+  if (new_role = 'boss' or cur = 'boss') and not public.is_boss() then
+    raise exception 'Only a boss can assign or change the boss role';
+  end if;
+  if new_role = 'staff' and cur in ('admin','boss')
+     and (select count(*) from public.profiles where role in ('admin','boss')) <= 1 then
+    raise exception 'Cannot remove the last admin/boss';
   end if;
   update public.profiles set role = new_role where id = target;
 end; $$;
@@ -282,6 +313,11 @@ alter table public.job_events   enable row level security;
 alter table public.job_works    enable row level security;
 alter table public.quotations   enable row level security;
 alter table public.appointments enable row level security;
+alter table public.costings    enable row level security;
+drop policy if exists "boss all costings" on public.costings;
+create policy "boss all costings" on public.costings
+  for all using (public.is_boss()) with check (public.is_boss());
+
 alter table public.app_settings enable row level security;
 
 drop policy if exists "auth read profiles"       on public.profiles;
@@ -328,7 +364,7 @@ create policy "settings update" on public.app_settings for update using (public.
 do $$
 declare t text;
 begin
-  foreach t in array array['jobs','job_events','job_works','appointments','quotations','app_settings'] loop
+  foreach t in array array['jobs','job_events','job_works','appointments','quotations','app_settings','costings'] loop
     if not exists (select 1 from pg_publication_tables
       where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = t) then
       execute format('alter publication supabase_realtime add table public.%I', t);
