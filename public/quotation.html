@@ -345,20 +345,6 @@ const CATALOG = [
     ]
   },
   {
-    id:'painting', name:'Cat (Painting)',
-    note:'Harga bergantung pada keluasan (sqft) & bahan. Jenis rumah: Single / Double / Semi-D / Banglo · Lot: Corner / Intermediate / End',
-    variants:[],
-    items:[
-      {v:0,label:'Cat Dalaman Rumah',sub:'',price:0},
-      {v:0,label:'Cat Dinding Luar',sub:'',price:0},
-      {v:0,label:'Cat Bilik Bedroom 1',sub:'',price:0},
-      {v:0,label:'Cat Bilik Bedroom 2',sub:'',price:0},
-      {v:0,label:'Cat Bilik Bedroom 3',sub:'',price:0},
-      {v:0,label:'Cat Bilik Bedroom 4',sub:'',price:0},
-      {v:0,label:'Cat Seluruh Rumah',sub:'',price:0},
-    ]
-  },
-  {
     id:'other', name:'Perkhidmatan Lain',
     note:'Harga ikut spesifikasi / keluasan.',
     variants:[],
@@ -574,14 +560,14 @@ function tierTableHtml(tiers){
    Item prices and cabinet tier parameters can be overridden by an admin and
    stored in Supabase (app_settings key='pricing'). The overlay is applied over
    the coded defaults on load; everyone reads it, only admins can save it. */
-let priceOverlay = { items:{}, cabinets:{}, grills:{} };
+let priceOverlay = { items:{}, cabinets:{}, grills:{}, paints:{} };
 let isAdminUser = false;
 
 function itemKey(cat, it){ return cat.id+'|'+it.v+'|'+it.label; }
 
 function applyOverrides(ov){
   if(!ov) return;
-  const items=ov.items||{}, cabs=ov.cabinets||{}, grls=ov.grills||{};
+  const items=ov.items||{}, cabs=ov.cabinets||{}, grls=ov.grills||{}, pnts=ov.paints||{};
   CATALOG.forEach(cat=>cat.items.forEach(it=>{
     const v=items[itemKey(cat,it)];
     if(v!=null && !isNaN(+v)) it.price=+v;
@@ -602,6 +588,10 @@ function applyOverrides(ov){
     if(v.rate!=null) o.rate=+v.rate;
     if(o.tier && v.overRate!=null) o.tier.overRate=+v.overRate;
   }));
+  PAINT.forEach(o=>{
+    const v=pnts[o.id];
+    if(v && v.rate!=null) o.rate=+v.rate;
+  });
 }
 
 async function loadPricing(){
@@ -610,7 +600,7 @@ async function loadPricing(){
     await ready(supa);
     const {data}=await supa.from('app_settings').select('value').eq('key','pricing').maybeSingle();
     if(data&&data.value){
-      priceOverlay={items:(data.value.items||{}), cabinets:(data.value.cabinets||{}), grills:(data.value.grills||{})};
+      priceOverlay={items:(data.value.items||{}), cabinets:(data.value.cabinets||{}), grills:(data.value.grills||{}), paints:(data.value.paints||{})};
       applyOverrides(priceOverlay);
     }
   }catch(e){}
@@ -667,10 +657,17 @@ function buildPriceEditorHtml(){
     </div></div>`;
   }));
   h+='</div>';
+  h+=`<div class="pe-cat"><h3>Cat (Painting) — kadar (rate)</h3><p class="pe-note">RM / sqft per kawasan. Rates start at 0.</p>`;
+  PAINT.forEach(o=>{
+    h+=`<div class="pe-cab"><div class="pe-cab-name">${o.name}</div><div class="pe-cab-grid">
+      ${peField('paint',o.id,'rate',o.rate,'RM/sqft')}
+    </div></div>`;
+  });
+  h+='</div>';
   return h;
 }
 async function savePrices(){
-  const overlay={items:{},cabinets:{},grills:{}};
+  const overlay={items:{},cabinets:{},grills:{},paints:{}};
   document.querySelectorAll('#priceBody input[data-kind="item"]').forEach(inp=>{
     const v=parseFloat(inp.value); if(!isNaN(v)) overlay.items[inp.dataset.key]=v;
   });
@@ -681,6 +678,10 @@ async function savePrices(){
   document.querySelectorAll('#priceBody input[data-kind="grill"]').forEach(inp=>{
     const k=inp.dataset.key,f=inp.dataset.field,v=parseFloat(inp.value);
     (overlay.grills[k]=overlay.grills[k]||{})[f]=isNaN(v)?0:v;
+  });
+  document.querySelectorAll('#priceBody input[data-kind="paint"]').forEach(inp=>{
+    const k=inp.dataset.key,f=inp.dataset.field,v=parseFloat(inp.value);
+    (overlay.paints[k]=overlay.paints[k]||{})[f]=isNaN(v)?0:v;
   });
   const supa=getSupa();
   if(!supa){ alert('Not connected — open this inside the app to save prices.'); return; }
@@ -701,8 +702,89 @@ const state = {}; // key `${catId}:${itemIndex}` -> qty
 const activeVariant = {}; // catId -> variant index
 const cabinetLines = []; // [{gid,gname,oid,oname,L,H,D,price}]
 const grillLines = []; // [{gid,gname,oid,oname,unit,W,H,L,price}]
+const paintLines = []; // [{oid,oname,W,H,sqft,price}]
 
 const fmt = n => n.toLocaleString('en-MY',{minimumFractionDigits:2,maximumFractionDigits:2});
+
+
+/* ============================================================
+   PAINT MODULE — measure & auto-price (per sqft)
+   Pick the area, enter sqft (or Width × Height in feet).
+   Rates start at 0 — set them in Edit Prices.
+   ============================================================ */
+const PAINT_CAT='Cat (Painting)';
+const PAINT = [
+  { id:'dalaman', name:'Cat Dalaman Rumah',  rate:0 },
+  { id:'luar',    name:'Cat Dinding Luar',    rate:0 },
+  { id:'bilik1',  name:'Cat Bilik Bedroom 1', rate:0 },
+  { id:'bilik2',  name:'Cat Bilik Bedroom 2', rate:0 },
+  { id:'bilik3',  name:'Cat Bilik Bedroom 3', rate:0 },
+  { id:'bilik4',  name:'Cat Bilik Bedroom 4', rate:0 },
+  { id:'seluruh', name:'Cat Seluruh Rumah',   rate:0 },
+];
+function paintSel(){ return PAINT[+document.getElementById('pnt-option').value]; }
+function paintCalcArea(){
+  const W=parseFloat(document.getElementById('pnt-W').value)||0;
+  const H=parseFloat(document.getElementById('pnt-H').value)||0;
+  if(W>0&&H>0) document.getElementById('pnt-area').value=(W*H).toFixed(2);
+  paintPreview();
+}
+function paintPreview(){
+  const o=paintSel();
+  const area=parseFloat(document.getElementById('pnt-area').value)||0;
+  let html=`<div class="cab-tiers"><b>RM ${fmt(+o.rate||0)}</b> / sqft</div>`;
+  if(area>0) html+=`<div class="cab-calc">${area} sqft → <b>RM ${fmt(area*(+o.rate||0))}</b></div>`;
+  document.getElementById('pnt-preview').innerHTML=html;
+}
+function paintAdd(){
+  const o=paintSel();
+  const W=parseFloat(document.getElementById('pnt-W').value)||0;
+  const H=parseFloat(document.getElementById('pnt-H').value)||0;
+  const area=parseFloat(document.getElementById('pnt-area').value)||0;
+  if(!(area>0)){ alert('Masukkan keluasan (sqft) atau Width × Height (ft).'); return; }
+  paintLines.push({oid:o.id,oname:o.name,W,H,sqft:area,price:area*(+o.rate||0)});
+  document.getElementById('pnt-W').value=''; document.getElementById('pnt-H').value=''; document.getElementById('pnt-area').value='';
+  paintPreview(); renderPaintLines(); recalc();
+}
+function paintRemove(i){ paintLines.splice(i,1); renderPaintLines(); recalc(); }
+function paintDimStr(l){
+  if(l.W>0 && l.H>0) return `${l.W}ft × ${l.H}ft = ${(+l.sqft).toFixed(2)} sqft`;
+  return `${(+l.sqft).toFixed(2)} sqft`;
+}
+function renderPaintLines(){
+  const box=document.getElementById('pnt-lines'); if(!box) return;
+  if(!paintLines.length){ box.innerHTML='<div class="cab-empty">No painting added yet.</div>'; return; }
+  box.innerHTML=paintLines.map((l,i)=>`<div class="cab-line">
+    <div class="cab-line-info"><b>${l.oname}</b><br><span class="cab-dim">${paintDimStr(l)}</span></div>
+    <div class="cab-amt">RM ${fmt(l.price)}</div>
+    <button class="cab-x" title="Remove" onclick="paintRemove(${i})">✕</button>
+  </div>`).join('');
+}
+function paintCardHtml(){
+  const optOpts=PAINT.map((o,i)=>`<option value="${i}">${o.name}</option>`).join('');
+  return `
+  <div class="cat" data-cat="paint">
+    <div class="cat-hd" onclick="this.parentElement.classList.toggle('open')">
+      <span class="chev">▶</span>
+      <span class="cname">Cat (Painting)</span>
+      <span class="count zero" id="cnt-paint">0</span>
+    </div>
+    <div class="cat-bd">
+      <div class="cab-note">Pilih kawasan cat, masukkan keluasan (sqft) atau Width × Height (ft) — harga dikira automatik. Jenis rumah / lot boleh dicatat di Remarks.</div>
+      <div class="cab-grid">
+        <label class="fld">Kawasan Cat <select id="pnt-option" onchange="paintPreview()">${optOpts}</select></label>
+        <label class="fld">Area (sqft) <input id="pnt-area" type="number" min="0" step="0.1" oninput="paintPreview()"></label>
+      </div>
+      <div class="cab-grid">
+        <label class="fld">Width (ft) <input id="pnt-W" type="number" min="0" step="0.1" oninput="paintCalcArea()"></label>
+        <label class="fld">Height (ft) <input id="pnt-H" type="number" min="0" step="0.1" oninput="paintCalcArea()"></label>
+      </div>
+      <div class="cab-preview" id="pnt-preview"></div>
+      <button class="act b-primary" style="padding:11px 16px;font-size:13px" onclick="paintAdd()">+ Add Cat to Quote</button>
+      <div id="pnt-lines" style="margin-top:14px"></div>
+    </div>
+  </div>`;
+}
 
 /* ---------- render catalog ---------- */
 function renderCatalog(){
@@ -714,6 +796,8 @@ function renderCatalog(){
   root.insertAdjacentHTML('beforeend', grillCardHtml());
   grillGroupChange();         // populate grill option select
   renderGrillLines();
+  root.insertAdjacentHTML('beforeend', paintCardHtml());
+  renderPaintLines();
   CATALOG.forEach((cat,ci)=>{
     if(activeVariant[cat.id]===undefined) activeVariant[cat.id]=0;
     const wrap = document.createElement('div');
@@ -881,6 +965,9 @@ function collectLines(){
   grillLines.forEach(l=>{
     lines.push({cat:l.gname,variantName:'',label:l.oname,sub:grillDimStr(l),price:l.price,qty:1,amount:l.price});
   });
+  paintLines.forEach(l=>{
+    lines.push({cat:PAINT_CAT,variantName:'',label:l.oname,sub:paintDimStr(l),price:l.price,qty:1,amount:l.price});
+  });
   CATALOG.forEach(cat=>{
     cat.items.forEach((it,idx)=>{
       const key=`${cat.id}:${idx}`;
@@ -906,6 +993,8 @@ function recalc(){
   if(cabEl){cabEl.textContent=cabinetLines.length;cabEl.classList.toggle('zero',cabinetLines.length===0);}
   const grlEl=document.getElementById('cnt-grill');
   if(grlEl){grlEl.textContent=grillLines.length;grlEl.classList.toggle('zero',grillLines.length===0);}
+  const pntEl=document.getElementById('cnt-paint');
+  if(pntEl){pntEl.textContent=paintLines.length;pntEl.classList.toggle('zero',paintLines.length===0);}
   // summary list
   const box=document.getElementById('sumItems');
   if(!lines.length){box.innerHTML='<div class="empty">No items selected yet.</div>';}
@@ -934,7 +1023,7 @@ function buildDoc(){
 
   // group lines by category (cabinet groups first, then catalog categories)
   let rowsHtml='';
-  const order=[...CABINET.map(gp=>gp.name), ...GRILL.map(gp=>gp.name), ...CATALOG.map(c=>c.name)];
+  const order=[...CABINET.map(gp=>gp.name), ...GRILL.map(gp=>gp.name), PAINT_CAT, ...CATALOG.map(c=>c.name)];
   const seen=new Set();
   order.forEach(cname=>{
     if(seen.has(cname)) return; seen.add(cname);
@@ -1119,6 +1208,7 @@ async function saveQuote(){
     selections:Object.assign({},state),
     cabinets:cabinetLines.map(l=>Object.assign({},l)),
     grills:grillLines.map(l=>Object.assign({},l)),
+    paints:paintLines.map(l=>Object.assign({},l)),
     variants:Object.assign({},activeVariant),
     lines, totals:{sub,deposit:dep,discount:disc,balance:bal}
   };
@@ -1171,13 +1261,15 @@ async function loadDocument(id, asType){
     if(Array.isArray(p.cabinets)) p.cabinets.forEach(l=>cabinetLines.push(Object.assign({},l)));
     grillLines.length=0;
     if(Array.isArray(p.grills)) p.grills.forEach(l=>grillLines.push(Object.assign({},l)));
+    paintLines.length=0;
+    if(Array.isArray(p.paints)) p.paints.forEach(l=>paintLines.push(Object.assign({},l)));
     sourceId=(asType==='SO')?data.id:null;
     sourceNumber=(asType==='SO')?data.number:null;
     applyDocTypeUI(asType||'SO');
     committedNo=null;
     renderCatalog();   // re-renders items using the restored state/variants
     await refreshPendingNumber();
-    if(!p.selections && !(p.cabinets&&p.cabinets.length) && !(p.grills&&p.grills.length))
+    if(!p.selections && !(p.cabinets&&p.cabinets.length) && !(p.grills&&p.grills.length) && !(p.paints&&p.paints.length))
       setQnoStatus('Loaded customer from '+data.number+' — items could not be restored, please re-add');
     else
       setQnoStatus('Converting from '+data.number+' — preview, then Save Sales Order');
@@ -1205,6 +1297,7 @@ function newQuote(){
   for(const k in state) delete state[k];
   cabinetLines.length=0;
   grillLines.length=0;
+  paintLines.length=0;
   ['c_name','c_ic','c_unit','c_phone','c_email','c_remarks'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('t_dep').value=0;
   document.getElementById('t_disc').value=0;
