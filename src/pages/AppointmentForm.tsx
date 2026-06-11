@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
-import type { Appointment, Job } from '../lib/types'
+import type { Appointment, Job, Profile } from '../lib/types'
 import { Layout } from '../components/Layout'
 import { APPT_TYPES, getApptType, toLocalInput } from '../lib/appointments'
 
@@ -21,6 +21,7 @@ export default function AppointmentForm() {
   const isEdit = Boolean(id)
 
   const [jobs, setJobs] = useState<Job[]>([])
+  const [people, setPeople] = useState<Profile[]>([])
   const [loading, setLoading] = useState(isEdit)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -29,7 +30,7 @@ export default function AppointmentForm() {
   const [form, setForm] = useState({
     type: 'site_visit',
     title: '',
-    who: '',
+    assigned_to: '',
     starts_at: defaultStart(),
     ends_at: '',
     job_id: params.get('job_id') ?? '',
@@ -42,7 +43,7 @@ export default function AppointmentForm() {
     setForm((f) => ({ ...f, [k]: v }))
   }
 
-  // Load active units for the link dropdown.
+  // Load active units (for the link dropdown) and everyone (for the PIC list).
   useEffect(() => {
     supabase
       .from('jobs')
@@ -50,7 +51,18 @@ export default function AppointmentForm() {
       .eq('is_archived', false)
       .order('customer_name')
       .then(({ data }) => setJobs((data as Job[]) ?? []))
+    supabase
+      .from('profiles')
+      .select('id, full_name, role')
+      .order('full_name')
+      .then(({ data }) => setPeople((data as Profile[]) ?? []))
   }, [])
+
+  // Default a brand-new appointment's PIC to the signed-in user.
+  useEffect(() => {
+    if (!isEdit && session) setForm((f) => (f.assigned_to ? f : { ...f, assigned_to: session.user.id }))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session])
 
   // Editing: load the appointment. New + ?job_id: prefill from that unit.
   useEffect(() => {
@@ -67,7 +79,7 @@ export default function AppointmentForm() {
             setForm({
               type: a.type,
               title: a.title,
-              who: a.who,
+              assigned_to: a.assigned_to ?? '',
               starts_at: toLocalInput(a.starts_at),
               ends_at: toLocalInput(a.ends_at),
               job_id: a.job_id ?? '',
@@ -113,10 +125,12 @@ export default function AppointmentForm() {
     }
     setBusy(true)
     setError(null)
+    const pic = people.find((p) => p.id === form.assigned_to)
     const row = {
       type: form.type,
       title: form.title.trim(),
-      who: form.who.trim(),
+      assigned_to: form.assigned_to || null,
+      who: pic?.full_name ?? '', // denormalised name for list display
       starts_at: new Date(form.starts_at).toISOString(),
       ends_at: form.ends_at ? new Date(form.ends_at).toISOString() : null,
       job_id: form.job_id || null,
@@ -225,13 +239,19 @@ export default function AppointmentForm() {
             </div>
           </div>
           <div>
-            <label className={labelCls}>Who's going</label>
-            <input
+            <label className={labelCls}>Person in charge</label>
+            <select
               className={field}
-              value={form.who}
-              onChange={(e) => set('who', e.target.value)}
-              placeholder="e.g. Ahmad"
-            />
+              value={form.assigned_to}
+              onChange={(e) => set('assigned_to', e.target.value)}
+            >
+              <option value="">— Unassigned —</option>
+              {people.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.full_name}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
 

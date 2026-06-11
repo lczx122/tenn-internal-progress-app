@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import { useAuth } from '../contexts/AuthContext'
 import type { Appointment } from '../lib/types'
 import { Layout } from '../components/Layout'
 import {
@@ -24,6 +25,9 @@ export default function Schedule() {
   const [showPast, setShowPast] = useState(false)
   const [month, setMonth] = useState(() => startOfDay(new Date()))
   const [selectedDay, setSelectedDay] = useState(() => startOfDay(new Date()))
+  const [scope, setScope] = useState<'mine' | 'all'>('mine')
+  const { session } = useAuth()
+  const myId = session?.user.id
   const navigate = useNavigate()
 
   async function load() {
@@ -50,6 +54,7 @@ export default function Schedule() {
     const q = query.trim().toLowerCase()
     return appts.filter(
       (a) =>
+        (scope === 'all' || a.assigned_to === myId) &&
         (!typeFilter || a.type === typeFilter) &&
         (!q ||
           a.title.toLowerCase().includes(q) ||
@@ -57,7 +62,7 @@ export default function Schedule() {
           a.who.toLowerCase().includes(q) ||
           a.location.toLowerCase().includes(q)),
     )
-  }, [appts, query, typeFilter])
+  }, [appts, query, typeFilter, scope, myId])
 
   return (
     <Layout title="Schedule" bottomNav>
@@ -74,6 +79,21 @@ export default function Schedule() {
         >
           + New
         </button>
+      </div>
+
+      <div className="mb-3 flex rounded-lg border border-slate-300 bg-white p-0.5">
+        {(['mine', 'all'] as const).map((s) => (
+          <button
+            key={s}
+            onClick={() => setScope(s)}
+            className={
+              'flex-1 rounded-md px-2 py-1.5 text-sm font-medium ' +
+              (scope === s ? 'bg-slate-900 text-white' : 'text-slate-600')
+            }
+          >
+            {s === 'mine' ? 'My schedule' : 'Everyone'}
+          </button>
+        ))}
       </div>
 
       <div className="mb-3 flex gap-2">

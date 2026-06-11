@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import { useAuth } from '../contexts/AuthContext'
 import type { Appointment, Job, JobEvent, JobWork } from '../lib/types'
 import { Layout } from '../components/Layout'
 import { STAGES, getStage, overallPercent } from '../lib/stages'
@@ -17,6 +18,8 @@ export default function Dashboard() {
   const [events, setEvents] = useState<JobEvent[]>([])
   const [appts, setAppts] = useState<Appointment[]>([])
   const [loading, setLoading] = useState(true)
+  const { session } = useAuth()
+  const myId = session?.user.id
 
   async function load() {
     const [{ data: j }, { data: w }, { data: e }, { data: ap }] = await Promise.all([
@@ -111,15 +114,16 @@ export default function Dashboard() {
     }).filter((x) => x.count > 0)
   }, [activeWorks])
 
-  // ---- Schedule: overdue + the next few upcoming appointments ----
+  // ---- My schedule: overdue + the next few of MY upcoming appointments ----
   const schedule = useMemo(() => {
     const now = Date.now()
     const horizon = addDays(startOfDay(new Date()), 8).getTime() // through the next week
     return appts
+      .filter((a) => a.assigned_to === myId)
       .filter((a) => new Date(a.starts_at).getTime() < horizon)
       .map((a) => ({ ...a, overdue: new Date(a.starts_at).getTime() < now }))
       .slice(0, 6)
-  }, [appts])
+  }, [appts, myId])
 
   // ---- Key-holder summary: who is holding how many active units ----
   const keyHolders = useMemo(() => {
@@ -157,11 +161,11 @@ export default function Dashboard() {
           {/* Schedule: overdue + upcoming */}
           <section>
             <div className="mb-2 flex items-center justify-between px-1">
-              <h2 className="text-sm font-semibold text-slate-700">Schedule</h2>
+              <h2 className="text-sm font-semibold text-slate-700">My schedule</h2>
               <Link to="/schedule" className="text-xs font-medium text-slate-500">View all ›</Link>
             </div>
             {schedule.length === 0 ? (
-              <Empty>Nothing scheduled in the next week.</Empty>
+              <Empty>Nothing assigned to you in the next week.</Empty>
             ) : (
               <ul className="space-y-2">
                 {schedule.map((a) => (

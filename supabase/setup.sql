@@ -128,6 +128,7 @@ create table if not exists public.appointments (
   customer_name   text not null default '',
   location        text not null default '',
   who             text not null default '',
+  assigned_to     uuid references public.profiles (id),
   starts_at       timestamptz not null,
   ends_at         timestamptz,
   status          text not null default 'scheduled',
@@ -137,8 +138,10 @@ create table if not exists public.appointments (
   created_at      timestamptz not null default now(),
   updated_at      timestamptz not null default now()
 );
-create index if not exists appointments_starts_idx on public.appointments (starts_at);
-create index if not exists appointments_job_idx     on public.appointments (job_id);
+alter table public.appointments add column if not exists assigned_to uuid references public.profiles (id);
+create index if not exists appointments_starts_idx   on public.appointments (starts_at);
+create index if not exists appointments_job_idx      on public.appointments (job_id);
+create index if not exists appointments_assigned_idx on public.appointments (assigned_to);
 
 -- ---------------------------------------------------------------------------
 -- 5. APP SETTINGS (admin-editable price overlay, key = 'pricing')

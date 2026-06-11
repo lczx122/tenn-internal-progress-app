@@ -133,6 +133,13 @@ export default function JobDetail() {
     navigate('/units')
   }
 
+  async function deleteJob() {
+    if (!job) return
+    if (!window.confirm(`Permanently delete “${job.customer_name}” and all its categories, history and appointments? This cannot be undone.`)) return
+    await supabase.from('jobs').delete().eq('id', job.id)
+    navigate('/units')
+  }
+
   if (loading) {
     return (
       <Layout title="Unit">
@@ -316,12 +323,22 @@ export default function JobDetail() {
       </section>
 
       {isAdmin && (
-        <button
-          onClick={toggleArchive}
-          className="my-6 w-full rounded-lg border border-slate-300 py-2.5 text-sm font-medium text-slate-500 active:bg-slate-100"
-        >
-          {job.is_archived ? 'Unarchive unit' : 'Archive unit (mark complete)'}
-        </button>
+        <div className="my-6 space-y-2">
+          <button
+            onClick={toggleArchive}
+            className="w-full rounded-lg border border-slate-300 py-2.5 text-sm font-medium text-slate-500 active:bg-slate-100"
+          >
+            {job.is_archived ? 'Unarchive unit' : 'Archive unit (mark complete)'}
+          </button>
+          {job.is_archived && (
+            <button
+              onClick={deleteJob}
+              className="w-full rounded-lg border border-red-200 py-2.5 text-sm font-medium text-red-600 active:bg-red-50"
+            >
+              Delete unit permanently
+            </button>
+          )}
+        </div>
       )}
     </Layout>
   )
