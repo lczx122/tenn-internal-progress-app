@@ -43,6 +43,50 @@ export function templateFor(category: string): string[] {
   return CATEGORY_TEMPLATES[category] ?? ['Costing']
 }
 
+// ---- colour coding ----
+export const CATEGORY_ACCENT: Record<string, string> = {
+  reno: 'bg-indigo-500',
+  smarthome: 'bg-teal-500',
+  smartlock: 'bg-violet-500',
+  alucab: 'bg-sky-500',
+  ee: 'bg-rose-500',
+  product: 'bg-orange-500',
+}
+
+// Literal classes so Tailwind generates them (no runtime string building).
+export const CATEGORY_BORDER: Record<string, string> = {
+  reno: 'border-indigo-500',
+  smarthome: 'border-teal-500',
+  smartlock: 'border-violet-500',
+  alucab: 'border-sky-500',
+  ee: 'border-rose-500',
+  product: 'border-orange-500',
+}
+
+export function statusStyle(s: string): string {
+  switch (s) {
+    case 'Completed':
+      return 'bg-emerald-100 text-emerald-700'
+    case 'Collecting Money':
+      return 'bg-violet-100 text-violet-700'
+    case 'Installing':
+      return 'bg-sky-100 text-sky-700'
+    case 'In Progress':
+      return 'bg-amber-100 text-amber-700'
+    case 'Chatting':
+      return 'bg-slate-200 text-slate-600'
+    default:
+      return 'bg-slate-100 text-slate-600'
+  }
+}
+
+// Margin colour: <20% poor, 20–40% ok, >40% good.
+export function marginColor(m: number): string {
+  if (m < 20) return 'text-rose-600'
+  if (m < 40) return 'text-amber-600'
+  return 'text-emerald-600'
+}
+
 export interface CostingCalc {
   directCost: number
   commissionAmounts: number[]

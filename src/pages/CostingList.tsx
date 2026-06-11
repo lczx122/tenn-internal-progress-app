@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import type { Costing } from '../lib/types'
 import { Layout } from '../components/Layout'
-import { calcCosting, categoryLabel, money, num, templateFor, COSTING_CATEGORIES } from '../lib/costing'
+import { calcCosting, categoryLabel, money, num, templateFor, statusStyle, marginColor, CATEGORY_ACCENT, CATEGORY_BORDER, COSTING_CATEGORIES } from '../lib/costing'
 
 type View = 'list' | 'sheet'
 
@@ -80,53 +80,55 @@ export default function CostingList() {
   }
 
   return (
-    <Layout title="Costing" bottomNav>
-      <div className="mb-3 flex gap-2">
-        <input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search cash sale no. or customer…"
-          className="flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-slate-900"
-        />
-        <button onClick={() => navigate('/costing/new')} className="shrink-0 rounded-lg bg-slate-900 px-3 py-2 text-sm font-medium text-white active:bg-slate-700">
-          + New
-        </button>
-      </div>
+    <Layout title="Costing" bottomNav wide>
+      <div className="space-y-3 lg:max-w-3xl">
+        <div className="flex gap-2">
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search cash sale no. or customer…"
+            className="flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-slate-900"
+          />
+          <button onClick={() => navigate('/costing/new')} className="shrink-0 rounded-lg bg-slate-900 px-3 py-2 text-sm font-medium text-white active:bg-slate-700">
+            + New
+          </button>
+        </div>
 
-      <div className="mb-3 flex gap-2">
-        <select
-          value={catFilter}
-          onChange={(e) => setCatFilter(e.target.value)}
-          className={`flex-1 rounded-lg border bg-white px-2 py-2 text-sm outline-none focus:border-slate-900 ${catFilter ? 'border-slate-900 font-medium' : 'border-slate-300 text-slate-600'}`}
-        >
-          <option value="">All categories</option>
-          {COSTING_CATEGORIES.map((c) => (
-            <option key={c.key} value={c.key}>{c.label}</option>
-          ))}
-        </select>
-        <div className="flex rounded-lg border border-slate-300 bg-white p-0.5">
-          {(['list', 'sheet'] as View[]).map((v) => (
-            <button
-              key={v}
-              onClick={() => setView(v)}
-              className={'rounded-md px-3 py-1.5 text-sm font-medium ' + (view === v ? 'bg-slate-900 text-white' : 'text-slate-600')}
-            >
-              {v === 'list' ? 'List' : 'Spreadsheet'}
-            </button>
-          ))}
+        <div className="flex gap-2">
+          <select
+            value={catFilter}
+            onChange={(e) => setCatFilter(e.target.value)}
+            className={`flex-1 rounded-lg border bg-white px-2 py-2 text-sm outline-none focus:border-slate-900 ${catFilter ? 'border-slate-900 font-medium' : 'border-slate-300 text-slate-600'}`}
+          >
+            <option value="">All categories</option>
+            {COSTING_CATEGORIES.map((c) => (
+              <option key={c.key} value={c.key}>{c.label}</option>
+            ))}
+          </select>
+          <div className="flex rounded-lg border border-slate-300 bg-white p-0.5">
+            {(['list', 'sheet'] as View[]).map((v) => (
+              <button
+                key={v}
+                onClick={() => setView(v)}
+                className={'rounded-md px-3 py-1.5 text-sm font-medium ' + (view === v ? 'bg-slate-900 text-white' : 'text-slate-600')}
+              >
+                {v === 'list' ? 'List' : 'Spreadsheet'}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
       {loading ? (
         <p className="py-10 text-center text-slate-400">Loading…</p>
       ) : visible.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-slate-300 py-12 text-center text-slate-400">
+        <div className="mt-3 rounded-xl border border-dashed border-slate-300 py-12 text-center text-slate-400">
           {rows.length === 0 ? 'No costings yet. Tap “+ New”.' : 'Nothing matches your filter.'}
         </div>
       ) : (
-        <>
+        <div className="mt-4">
           {/* Summary */}
-          <div className="mb-4 overflow-hidden rounded-xl bg-white shadow-sm">
+          <div className="mb-4 overflow-hidden rounded-xl bg-white shadow-sm lg:max-w-3xl">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-slate-200 text-left text-[11px] uppercase tracking-wide text-slate-400">
@@ -139,7 +141,12 @@ export default function CostingList() {
               <tbody>
                 {summary.groups.map((g) => (
                   <tr key={g.key} className="border-b border-slate-100">
-                    <td className="px-3 py-2 font-medium text-slate-700">{categoryLabel(g.key)}</td>
+                    <td className="px-3 py-2">
+                      <span className="flex items-center gap-2 font-medium text-slate-700">
+                        <span className={`h-2.5 w-2.5 rounded-full ${CATEGORY_ACCENT[g.key] ?? 'bg-slate-400'}`} />
+                        {categoryLabel(g.key)}
+                      </span>
+                    </td>
                     <td className="px-3 py-2 text-right text-slate-500">{g.count}</td>
                     <td className="px-3 py-2 text-right text-slate-700">{money(g.revenue)}</td>
                     <td className={'px-3 py-2 text-right font-medium ' + (g.gp < 0 ? 'text-rose-600' : 'text-emerald-600')}>{money(g.gp)}</td>
@@ -155,8 +162,14 @@ export default function CostingList() {
             </table>
           </div>
 
-          {view === 'sheet' ? <Sheet rows={visible} onOpen={(id) => navigate(`/costing/${id}`)} /> : <Cards rows={visible} onOpen={(id) => navigate(`/costing/${id}`)} />}
-        </>
+          {view === 'sheet' ? (
+            <Sheet rows={visible} onOpen={(id) => navigate(`/costing/${id}`)} />
+          ) : (
+            <div className="lg:max-w-3xl">
+              <Cards rows={visible} onOpen={(id) => navigate(`/costing/${id}`)} />
+            </div>
+          )}
+        </div>
       )}
     </Layout>
   )
@@ -180,13 +193,13 @@ function Cards({ rows, onOpen }: { rows: Costing[]; onOpen: (id: string) => void
               </div>
               <div className="shrink-0 text-right">
                 <div className={'font-semibold ' + (c.grossProfit < 0 ? 'text-rose-600' : 'text-emerald-600')}>{money(c.grossProfit)}</div>
-                <div className="text-xs text-slate-400">{c.margin.toFixed(1)}% margin</div>
+                <div className={'text-xs ' + marginColor(c.margin)}>{c.margin.toFixed(1)}% margin</div>
               </div>
             </div>
-            <p className="mt-1.5 text-xs text-slate-400">
-              Sale {money(num(r.revenue))} · cost {money(c.totalCost)}
-              {r.status ? ` · ${r.status}` : ''}
-            </p>
+            <div className="mt-1.5 flex items-center justify-between gap-2">
+              <p className="text-xs text-slate-400">Sale {money(num(r.revenue))} · cost {money(c.totalCost)}</p>
+              {r.status && <span className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium ${statusStyle(r.status)}`}>{r.status}</span>}
+            </div>
           </li>
         )
       })}
@@ -229,19 +242,21 @@ function CategorySheet({ catKey, rows, onOpen }: { catKey: string; rows: Costing
     },
     { rev: 0, cost: 0, gp: 0, sh: 0 },
   )
-  const minW = (cols.length + 8) * 96
+  const minW = (cols.length + 8) * 116
+  const accent = CATEGORY_ACCENT[catKey] ?? 'bg-slate-400'
   return (
-    <div>
+    <div className="mb-5">
       <h3 className="mb-1.5 flex items-center gap-2 px-1 text-sm font-semibold text-slate-700">
+        <span className={`h-3 w-3 rounded-full ${accent}`} />
         {categoryLabel(catKey)}
         <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[11px] font-semibold text-slate-600">{rows.length}</span>
       </h3>
-      <div className="overflow-x-auto rounded-xl bg-white shadow-sm">
-        <table className="w-full text-xs" style={{ minWidth: minW }}>
+      <div className={`overflow-x-auto rounded-xl border-l-4 bg-white shadow-sm ${CATEGORY_BORDER[catKey] ?? 'border-slate-400'}`}>
+        <table className="w-full text-[13px]" style={{ minWidth: minW }}>
           <thead>
-            <tr className="border-b border-slate-200 text-left text-[10px] uppercase tracking-wide text-slate-400">
-              <th className="px-3 py-2">Cash sale</th>
-              <th className="px-3 py-2">Unit / item</th>
+            <tr className="border-b border-slate-200 bg-slate-50 text-left text-[10px] uppercase tracking-wide text-slate-500">
+              <th className="px-3 py-2.5">Cash sale</th>
+              <th className="px-3 py-2.5">Unit / item</th>
               {cols.map((col) => (
                 <th key={col} className={th}>{col}</th>
               ))}
@@ -250,39 +265,41 @@ function CategorySheet({ catKey, rows, onOpen }: { catKey: string; rows: Costing
               <th className={th}>Gross profit</th>
               <th className={th}>Margin</th>
               <th className={th}>Sharing</th>
-              <th className="px-3 py-2">Status</th>
+              <th className="px-3 py-2.5">Status</th>
             </tr>
           </thead>
           <tbody>
-            {rows.map((r) => {
+            {rows.map((r, ri) => {
               const c = calcCosting(r)
               return (
-                <tr key={r.id} onClick={() => onOpen(r.id)} className="cursor-pointer border-b border-slate-100 hover:bg-slate-50">
-                  <td className="px-3 py-2 font-mono text-slate-700">{r.cash_sale_no || '—'}</td>
-                  <td className="px-3 py-2 text-slate-700">{r.customer || '—'}</td>
+                <tr key={r.id} onClick={() => onOpen(r.id)} className={'cursor-pointer border-b border-slate-100 hover:bg-amber-50 ' + (ri % 2 ? 'bg-slate-50/60' : '')}>
+                  <td className="whitespace-nowrap px-3 py-2.5 font-mono text-xs text-slate-700">{r.cash_sale_no || '—'}</td>
+                  <td className="px-3 py-2.5 text-slate-700">{r.customer || '—'}</td>
                   {cols.map((col) => (
-                    <td key={col} className="px-3 py-2 text-right text-slate-500">{money(costVal(r, col))}</td>
+                    <td key={col} className="px-3 py-2.5 text-right text-slate-500">{money(costVal(r, col))}</td>
                   ))}
-                  <td className="px-3 py-2 text-right text-slate-700">{money(num(r.revenue))}</td>
-                  <td className="px-3 py-2 text-right text-slate-500">{money(c.totalCost)}</td>
-                  <td className={'px-3 py-2 text-right font-medium ' + (c.grossProfit < 0 ? 'text-rose-600' : 'text-emerald-700')}>{money(c.grossProfit)}</td>
-                  <td className="px-3 py-2 text-right text-slate-500">{c.margin.toFixed(1)}%</td>
-                  <td className="px-3 py-2 text-right text-slate-500">{money(c.totalShared)}</td>
-                  <td className="px-3 py-2 text-slate-500">{r.status}</td>
+                  <td className="px-3 py-2.5 text-right font-medium text-slate-800">{money(num(r.revenue))}</td>
+                  <td className="px-3 py-2.5 text-right text-slate-500">{money(c.totalCost)}</td>
+                  <td className={'px-3 py-2.5 text-right font-semibold ' + (c.grossProfit < 0 ? 'text-rose-600' : 'text-emerald-700')}>{money(c.grossProfit)}</td>
+                  <td className={'px-3 py-2.5 text-right font-medium ' + marginColor(c.margin)}>{c.margin.toFixed(1)}%</td>
+                  <td className="px-3 py-2.5 text-right text-slate-500">{money(c.totalShared)}</td>
+                  <td className="px-3 py-2.5">
+                    {r.status && <span className={`whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-medium ${statusStyle(r.status)}`}>{r.status}</span>}
+                  </td>
                 </tr>
               )
             })}
-            <tr className="text-xs font-semibold text-slate-600">
-              <td className="px-3 py-1.5" colSpan={2}>Subtotal</td>
+            <tr className="border-t-2 border-slate-200 bg-slate-50 text-xs font-bold text-slate-700">
+              <td className="px-3 py-2" colSpan={2}>Subtotal</td>
               {colSums.map((s, i) => (
-                <td key={i} className="px-3 py-1.5 text-right">{money(s)}</td>
+                <td key={i} className="px-3 py-2 text-right">{money(s)}</td>
               ))}
-              <td className="px-3 py-1.5 text-right">{money(sub.rev)}</td>
-              <td className="px-3 py-1.5 text-right">{money(sub.cost)}</td>
-              <td className="px-3 py-1.5 text-right text-emerald-700">{money(sub.gp)}</td>
-              <td className="px-3 py-1.5"></td>
-              <td className="px-3 py-1.5 text-right">{money(sub.sh)}</td>
-              <td className="px-3 py-1.5"></td>
+              <td className="px-3 py-2 text-right">{money(sub.rev)}</td>
+              <td className="px-3 py-2 text-right">{money(sub.cost)}</td>
+              <td className="px-3 py-2 text-right text-emerald-700">{money(sub.gp)}</td>
+              <td className="px-3 py-2"></td>
+              <td className="px-3 py-2 text-right">{money(sub.sh)}</td>
+              <td className="px-3 py-2"></td>
             </tr>
           </tbody>
         </table>
