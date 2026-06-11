@@ -53,7 +53,14 @@ export default function CostingList() {
   const editingRef = useRef(false)
 
   async function load() {
-    const { data } = await supabase.from('costings').select('*').order('created_at', { ascending: false })
+    // Secondary sort on id: imported rows share one created_at, and without a
+    // tiebreaker Postgres returns them in arbitrary (changing) order — rows
+    // would visibly rearrange after every edit-triggered reload.
+    const { data } = await supabase
+      .from('costings')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .order('id', { ascending: true })
     setRows((data as Costing[]) ?? [])
     setLoading(false)
   }

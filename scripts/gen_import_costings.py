@@ -156,10 +156,13 @@ for category, rows in SHEETS:
     for cs, customer, revenue, costs, shares, status, notes in rows:
         costs_j = json.dumps([{'label': k, 'amount': v} for k, v in costs.items()], ensure_ascii=False)
         shares_j = json.dumps([{'name': n, 'percent': p} for n, p in shares], ensure_ascii=False)
+        # Staggered created_at keeps a stable workbook order (the app lists
+        # newest first, so the first workbook row gets the latest timestamp).
         lines.append(
-            'insert into public.costings (cash_sale_no, category, customer, revenue, costs, commissions, shares, status, notes) '
+            'insert into public.costings (cash_sale_no, category, customer, revenue, costs, commissions, shares, status, notes, created_at) '
             f"values ('{esc(cs)}','{category}','{esc(customer)}',{revenue},"
-            f"'{esc(costs_j)}'::jsonb,'[]'::jsonb,'{esc(shares_j)}'::jsonb,'{status}','{esc(notes)}');"
+            f"'{esc(costs_j)}'::jsonb,'[]'::jsonb,'{esc(shares_j)}'::jsonb,'{status}','{esc(notes)}',"
+            f"now() - interval '{total} minutes');"
         )
         total += 1
     lines.append('')
