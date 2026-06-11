@@ -8,6 +8,7 @@ import { STAGES, getStage, overallPercent } from '../lib/stages'
 import { CATEGORIES } from '../lib/categories'
 import { getApptType, startOfDay, addDays, dayLabel, timeLabel } from '../lib/appointments'
 import { relativeTime, formatDateTime } from '../lib/format'
+import { useAutoRefresh } from '../lib/useAutoRefresh'
 
 const STALE_DAYS = 7
 const DAY_MS = 86_400_000
@@ -48,6 +49,9 @@ export default function Dashboard() {
       supabase.removeChannel(channel)
     }
   }, [])
+
+  // Refetch after waking from idle (realtime socket may have died).
+  useAutoRefresh(load)
 
   // Active units only, each annotated with its overall progress.
   const active = useMemo(() => {

@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import type { Profile, Role } from '../lib/types'
 import { Layout } from '../components/Layout'
+import { useAutoRefresh } from '../lib/useAutoRefresh'
 
 const ROLE_STYLE: Record<Role, string> = {
   boss: 'bg-amber-100 text-amber-700',
@@ -30,6 +31,9 @@ export default function StaffAdmin() {
   useEffect(() => {
     load()
   }, [])
+
+  // Refetch after waking from idle.
+  useAutoRefresh(load)
 
   async function setRole(p: Profile, role: Role) {
     setError(null)

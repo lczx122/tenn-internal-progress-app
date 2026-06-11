@@ -5,6 +5,7 @@ import { useAuth } from '../contexts/AuthContext'
 import type { DocType, Quotation } from '../lib/types'
 import { Layout } from '../components/Layout'
 import { relativeTime } from '../lib/format'
+import { useAutoRefresh } from '../lib/useAutoRefresh'
 
 const money = (n: number) =>
   'RM ' + n.toLocaleString('en-MY', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
@@ -49,6 +50,9 @@ export default function QuotesRegister() {
       supabase.removeChannel(channel)
     }
   }, [])
+
+  // Refetch after waking from idle (realtime socket may have died).
+  useAutoRefresh(load)
 
   // Map id -> number so a sales order can show the quotation it came from.
   const numberById = useMemo(() => {

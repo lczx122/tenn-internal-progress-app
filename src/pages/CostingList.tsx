@@ -5,6 +5,7 @@ import { useAuth } from '../contexts/AuthContext'
 import type { Costing, JobWork } from '../lib/types'
 import { Layout } from '../components/Layout'
 import { overallPercent } from '../lib/stages'
+import { useAutoRefresh } from '../lib/useAutoRefresh'
 import {
   calcCosting,
   categoryLabel,
@@ -103,6 +104,13 @@ export default function CostingList() {
       supabase.removeChannel(channel)
     }
   }, [isBoss])
+
+  // Refetch after waking from idle — but never clobber an in-progress edit.
+  useAutoRefresh(() => {
+    if (!isBoss || editingRef.current) return
+    load()
+    loadProgress()
+  })
 
   // Effective progress/status: a linked unit's live value wins over the stored
   // status; unlinked costings keep their manual status.

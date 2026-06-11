@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import type { Appointment } from '../lib/types'
 import { Layout } from '../components/Layout'
+import { useAutoRefresh } from '../lib/useAutoRefresh'
 import {
   APPT_TYPES,
   getApptType,
@@ -49,6 +50,9 @@ export default function Schedule() {
       supabase.removeChannel(channel)
     }
   }, [])
+
+  // Refetch after waking from idle (realtime socket may have died).
+  useAutoRefresh(load)
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()

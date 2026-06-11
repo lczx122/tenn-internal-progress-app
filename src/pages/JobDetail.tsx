@@ -9,6 +9,7 @@ import { getApptType } from '../lib/appointments'
 import { Layout } from '../components/Layout'
 import { StageBar } from '../components/StageBar'
 import { formatDate, formatDateTime } from '../lib/format'
+import { useAutoRefresh } from '../lib/useAutoRefresh'
 
 export default function JobDetail() {
   const { id } = useParams<{ id: string }>()
@@ -52,6 +53,9 @@ export default function JobDetail() {
       supabase.removeChannel(channel)
     }
   }, [id, loadAll])
+
+  // Refetch after waking from idle (realtime socket may have died).
+  useAutoRefresh(loadAll)
 
   async function logEvent(type: JobEvent['type'], body: string) {
     if (!id) return

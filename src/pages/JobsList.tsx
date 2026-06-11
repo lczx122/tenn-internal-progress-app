@@ -7,6 +7,7 @@ import { PercentBar } from '../components/StageBar'
 import { getStage, overallPercent, STAGES } from '../lib/stages'
 import { getCategory, CATEGORIES } from '../lib/categories'
 import { relativeTime } from '../lib/format'
+import { useAutoRefresh } from '../lib/useAutoRefresh'
 
 function loadSet(key: string): Set<string> {
   try {
@@ -74,6 +75,9 @@ export default function JobsList() {
       supabase.removeChannel(channel)
     }
   }, [])
+
+  // Refetch after waking from idle (realtime socket may have died).
+  useAutoRefresh(load)
 
   // Group work categories by unit.
   const worksByJob = useMemo(() => {
