@@ -13,7 +13,7 @@ export default function Quotation() {
   const qs = usp.toString()
   const src = `/quotation.html?${qs}`
   return (
-    <div className="flex h-[100dvh] flex-col">
+    <div className="flex h-[var(--app-h,100dvh)] flex-col">
       <AppHeader title="Quote" />
       <div className="min-h-0 flex-1">
         <iframe

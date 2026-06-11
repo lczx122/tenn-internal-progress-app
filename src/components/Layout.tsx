@@ -53,7 +53,7 @@ export function Layout({
   wide?: boolean
 }) {
   return (
-    <div className="flex h-[100dvh] flex-col">
+    <div className="flex h-[var(--app-h,100dvh)] flex-col">
       <AppHeader title={title} back={back} wide={wide} />
       <main className="flex-1 overflow-y-auto">
         <div className={`mx-auto px-4 py-4 ${wide ? 'max-w-lg lg:max-w-screen-2xl' : 'max-w-lg'}`}>{children}</div>
