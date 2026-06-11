@@ -1,12 +1,31 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import type { Costing } from '../lib/types'
 import { Layout } from '../components/Layout'
-import { calcCosting, categoryLabel, money, num, templateFor, statusStyle, marginColor, CATEGORY_ACCENT, CATEGORY_BORDER, COSTING_CATEGORIES } from '../lib/costing'
+import {
+  calcCosting,
+  categoryLabel,
+  money,
+  num,
+  templateFor,
+  statusStyle,
+  marginColor,
+  CATEGORY_ACCENT,
+  CATEGORY_BORDER,
+  COSTING_CATEGORIES,
+  COSTING_STATUSES,
+} from '../lib/costing'
 
 type View = 'list' | 'sheet'
+
+// Plain number (no "RM") for dense spreadsheet cells.
+const nf = (n: number) => n.toLocaleString('en-MY', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+
+function costVal(r: Costing, label: string): number {
+  return num((r.costs ?? []).find((c) => c.label === label)?.amount ?? 0)
+}
 
 export default function CostingList() {
   const { isBoss } = useAuth()
@@ -17,7 +36,12 @@ export default function CostingList() {
   const [view, setView] = useState<View>(() =>
     typeof window !== 'undefined' && window.innerWidth >= 1024 ? 'sheet' : 'list',
   )
+  const [sheetCat, setSheetCat] = useState<string>('')
   const navigate = useNavigate()
+
+  const rowsRef = useRef<Costing[]>([])
+  rowsRef.current = rows
+  const editingRef = useRef(false)
 
   async function load() {
     const { data } = await supabase.from('costings').select('*').order('created_at', { ascending: false })
@@ -33,7 +57,9 @@ export default function CostingList() {
     load()
     const channel = supabase
       .channel('costings')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'costings' }, () => load())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'costings' }, () => {
+        if (!editingRef.current) load() // don't clobber an in-progress edit
+      })
       .subscribe()
     return () => {
       supabase.removeChannel(channel)
@@ -44,32 +70,71 @@ export default function CostingList() {
     const q = query.trim().toLowerCase()
     return rows
       .filter((r) => !catFilter || r.category === catFilter)
-      .filter(
-        (r) => !q || r.cash_sale_no.toLowerCase().includes(q) || r.customer.toLowerCase().includes(q),
-      )
+      .filter((r) => !q || r.cash_sale_no.toLowerCase().includes(q) || r.customer.toLowerCase().includes(q))
   }, [rows, query, catFilter])
 
-  // Per-category summary + grand totals (mirrors the workbook's Summary sheet).
-  const summary = useMemo(() => {
+  // category groups present in the data (for tabs + summary)
+  const groups = useMemo(() => {
     const order = [...COSTING_CATEGORIES.map((c) => c.key), '']
-    const map = new Map<string, { count: number; revenue: number; cost: number; gp: number }>()
+    const present = new Set(visible.map((r) => r.category || ''))
+    return order.filter((k) => present.has(k))
+  }, [visible])
+
+  // keep the selected sheet tab valid
+  useEffect(() => {
+    if (groups.length && !groups.includes(sheetCat)) setSheetCat(groups[0])
+  }, [groups, sheetCat])
+
+  const summary = useMemo(() => {
+    const map = new Map<string, { count: number; revenue: number; gp: number }>()
     for (const r of visible) {
       const k = r.category || ''
-      const cur = map.get(k) ?? { count: 0, revenue: 0, cost: 0, gp: 0 }
-      const c = calcCosting(r)
+      const cur = map.get(k) ?? { count: 0, revenue: 0, gp: 0 }
       cur.count++
       cur.revenue += num(r.revenue)
-      cur.cost += c.totalCost
-      cur.gp += c.grossProfit
+      cur.gp += calcCosting(r).grossProfit
       map.set(k, cur)
     }
-    const groups = order.filter((k) => map.has(k)).map((k) => ({ key: k, ...map.get(k)! }))
-    const grand = groups.reduce(
-      (a, g) => ({ count: a.count + g.count, revenue: a.revenue + g.revenue, cost: a.cost + g.cost, gp: a.gp + g.gp }),
-      { count: 0, revenue: 0, cost: 0, gp: 0 },
+    const list = groups.map((k) => ({ key: k, ...map.get(k)! }))
+    const grand = list.reduce((a, g) => ({ count: a.count + g.count, revenue: a.revenue + g.revenue, gp: a.gp + g.gp }), { count: 0, revenue: 0, gp: 0 })
+    return { list, grand }
+  }, [visible, groups])
+
+  // ---- inline editing ----
+  function patchRow(id: string, patch: Record<string, unknown>) {
+    setRows((prev) => prev.map((r) => (r.id === id ? ({ ...r, ...patch } as Costing) : r)))
+  }
+  function setCostCol(id: string, label: string, value: string) {
+    setRows((prev) =>
+      prev.map((r) => {
+        if (r.id !== id) return r
+        const costs = [...(r.costs ?? [])]
+        const i = costs.findIndex((c) => c.label === label)
+        const amt = num(value)
+        if (i >= 0) costs[i] = { ...costs[i], amount: amt }
+        else costs.push({ label, amount: amt })
+        return { ...r, costs }
+      }),
     )
-    return { groups, grand }
-  }, [visible])
+  }
+  async function saveRow(id: string) {
+    const r = rowsRef.current.find((x) => x.id === id)
+    if (!r) return
+    await supabase
+      .from('costings')
+      .update({
+        cash_sale_no: r.cash_sale_no,
+        customer: r.customer,
+        category: r.category,
+        revenue: num(r.revenue),
+        costs: r.costs,
+        commissions: r.commissions,
+        shares: r.shares,
+        status: r.status,
+        costing_date: r.costing_date,
+      })
+      .eq('id', r.id)
+  }
 
   if (!isBoss) {
     return (
@@ -78,6 +143,8 @@ export default function CostingList() {
       </Layout>
     )
   }
+
+  const sheetRows = visible.filter((r) => (r.category || '') === sheetCat)
 
   return (
     <Layout title="Costing" bottomNav wide>
@@ -93,7 +160,6 @@ export default function CostingList() {
             + New
           </button>
         </div>
-
         <div className="flex gap-2">
           <select
             value={catFilter}
@@ -107,11 +173,7 @@ export default function CostingList() {
           </select>
           <div className="flex rounded-lg border border-slate-300 bg-white p-0.5">
             {(['list', 'sheet'] as View[]).map((v) => (
-              <button
-                key={v}
-                onClick={() => setView(v)}
-                className={'rounded-md px-3 py-1.5 text-sm font-medium ' + (view === v ? 'bg-slate-900 text-white' : 'text-slate-600')}
-              >
+              <button key={v} onClick={() => setView(v)} className={'rounded-md px-3 py-1.5 text-sm font-medium ' + (view === v ? 'bg-slate-900 text-white' : 'text-slate-600')}>
                 {v === 'list' ? 'List' : 'Spreadsheet'}
               </button>
             ))}
@@ -139,7 +201,7 @@ export default function CostingList() {
                 </tr>
               </thead>
               <tbody>
-                {summary.groups.map((g) => (
+                {summary.list.map((g) => (
                   <tr key={g.key} className="border-b border-slate-100">
                     <td className="px-3 py-2">
                       <span className="flex items-center gap-2 font-medium text-slate-700">
@@ -163,7 +225,43 @@ export default function CostingList() {
           </div>
 
           {view === 'sheet' ? (
-            <Sheet rows={visible} onOpen={(id) => navigate(`/costing/${id}`)} />
+            <>
+              {/* category tabs */}
+              <div className="mb-3 flex flex-wrap gap-2">
+                {groups.map((k) => {
+                  const active = k === sheetCat
+                  return (
+                    <button
+                      key={k}
+                      onClick={() => setSheetCat(k)}
+                      className={
+                        'flex items-center gap-2 rounded-lg border px-3 py-1.5 text-sm font-medium ' +
+                        (active ? 'border-slate-900 bg-slate-900 text-white' : 'border-slate-300 bg-white text-slate-600')
+                      }
+                    >
+                      <span className={`h-2.5 w-2.5 rounded-full ${CATEGORY_ACCENT[k] ?? 'bg-slate-400'}`} />
+                      {categoryLabel(k)}
+                      <span className={'rounded-full px-1.5 text-[11px] ' + (active ? 'bg-white/20' : 'bg-slate-200 text-slate-600')}>
+                        {visible.filter((r) => (r.category || '') === k).length}
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
+              <EditableSheet
+                catKey={sheetCat}
+                rows={sheetRows}
+                onPatch={patchRow}
+                onSetCost={setCostCol}
+                onSave={saveRow}
+                onFocus={() => (editingRef.current = true)}
+                onBlurSave={(id) => {
+                  editingRef.current = false
+                  saveRow(id)
+                }}
+                onOpen={(id) => navigate(`/costing/${id}`)}
+              />
+            </>
           ) : (
             <div className="lg:max-w-3xl">
               <Cards rows={visible} onOpen={(id) => navigate(`/costing/${id}`)} />
@@ -175,7 +273,124 @@ export default function CostingList() {
   )
 }
 
-// ---------- mobile card list ----------
+// ---------- editable per-category spreadsheet ----------
+function EditableSheet({
+  catKey,
+  rows,
+  onPatch,
+  onSetCost,
+  onSave,
+  onFocus,
+  onBlurSave,
+  onOpen,
+}: {
+  catKey: string
+  rows: Costing[]
+  onPatch: (id: string, patch: Record<string, unknown>) => void
+  onSetCost: (id: string, label: string, value: string) => void
+  onSave: (id: string) => void
+  onFocus: () => void
+  onBlurSave: (id: string) => void
+  onOpen: (id: string) => void
+}) {
+  const cols = templateFor(catKey)
+  const colSums = cols.map((col) => rows.reduce((s, r) => s + costVal(r, col), 0))
+  const sub = rows.reduce(
+    (a, r) => {
+      const c = calcCosting(r)
+      return { rev: a.rev + num(r.revenue), cost: a.cost + c.totalCost, gp: a.gp + c.grossProfit, sh: a.sh + c.totalShared }
+    },
+    { rev: 0, cost: 0, gp: 0, sh: 0 },
+  )
+  const th = 'px-2 py-2.5 text-right'
+  const editCls = 'w-full rounded bg-transparent px-1 py-0.5 text-right outline-none hover:bg-slate-100 focus:bg-amber-50'
+
+  return (
+    <div className={`overflow-x-auto rounded-xl border-l-4 bg-white shadow-sm ${CATEGORY_BORDER[catKey] ?? 'border-slate-400'}`}>
+      <table className="w-full whitespace-nowrap text-[13px]">
+        <thead>
+          <tr className="border-b border-slate-200 bg-slate-50 text-left text-[10px] uppercase tracking-wide text-slate-500">
+            <th className="px-2 py-2.5">Cash sale</th>
+            <th className="px-2 py-2.5">Unit / item</th>
+            {cols.map((col) => (
+              <th key={col} className={th}>{col}</th>
+            ))}
+            <th className={th}>Selling</th>
+            <th className={th}>Total cost</th>
+            <th className={th}>Gross profit</th>
+            <th className={th}>Margin</th>
+            <th className={th}>Sharing</th>
+            <th className="px-2 py-2.5">Status</th>
+            <th className="px-2 py-2.5"></th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r, ri) => {
+            const c = calcCosting(r)
+            const focus = { onFocus, onBlur: () => onBlurSave(r.id) }
+            return (
+              <tr key={r.id} className={'border-b border-slate-100 ' + (ri % 2 ? 'bg-slate-50/60' : '')}>
+                <td className="px-2 py-1">
+                  <input className={editCls + ' text-left font-mono text-xs'} value={r.cash_sale_no} {...focus} onChange={(e) => onPatch(r.id, { cash_sale_no: e.target.value })} />
+                </td>
+                <td className="min-w-[160px] px-2 py-1">
+                  <input className={editCls + ' text-left'} value={r.customer} {...focus} onChange={(e) => onPatch(r.id, { customer: e.target.value })} />
+                </td>
+                {cols.map((col) => {
+                  const v = costVal(r, col)
+                  return (
+                    <td key={col} className="px-2 py-1">
+                      <input type="number" step="0.01" className={editCls + ' text-slate-600'} value={v === 0 ? '' : v} {...focus} onChange={(e) => onSetCost(r.id, col, e.target.value)} />
+                    </td>
+                  )
+                })}
+                <td className="px-2 py-1">
+                  <input type="number" step="0.01" className={editCls + ' font-medium text-slate-800'} value={num(r.revenue) === 0 ? '' : (r.revenue as number) ?? ''} {...focus} onChange={(e) => onPatch(r.id, { revenue: e.target.value })} />
+                </td>
+                <td className="px-2 py-2.5 text-right text-slate-500">{nf(c.totalCost)}</td>
+                <td className={'px-2 py-2.5 text-right font-semibold ' + (c.grossProfit < 0 ? 'text-rose-600' : 'text-emerald-700')}>{nf(c.grossProfit)}</td>
+                <td className={'px-2 py-2.5 text-right font-medium ' + marginColor(c.margin)}>{c.margin.toFixed(1)}%</td>
+                <td className="px-2 py-2.5 text-right text-slate-500">{nf(c.totalShared)}</td>
+                <td className="px-2 py-1">
+                  <select
+                    className={'rounded-full border-0 px-2 py-0.5 text-[11px] font-medium outline-none ' + statusStyle(r.status)}
+                    value={r.status}
+                    {...focus}
+                    onChange={(e) => {
+                      onPatch(r.id, { status: e.target.value })
+                      setTimeout(() => onSave(r.id), 0)
+                    }}
+                  >
+                    {COSTING_STATUSES.map((s) => (
+                      <option key={s} value={s}>{s}</option>
+                    ))}
+                  </select>
+                </td>
+                <td className="px-2 py-1 text-right">
+                  <button onClick={() => onOpen(r.id)} className="rounded px-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700" title="Open full form (costs breakdown, commissions, sharing)">⋯</button>
+                </td>
+              </tr>
+            )
+          })}
+          <tr className="border-t-2 border-slate-200 bg-slate-50 text-xs font-bold text-slate-700">
+            <td className="px-2 py-2" colSpan={2}>Subtotal</td>
+            {colSums.map((s, i) => (
+              <td key={i} className="px-2 py-2 text-right">{nf(s)}</td>
+            ))}
+            <td className="px-2 py-2 text-right">{nf(sub.rev)}</td>
+            <td className="px-2 py-2 text-right">{nf(sub.cost)}</td>
+            <td className="px-2 py-2 text-right text-emerald-700">{nf(sub.gp)}</td>
+            <td></td>
+            <td className="px-2 py-2 text-right">{nf(sub.sh)}</td>
+            <td colSpan={2}></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
+// ---------- mobile card list (read-only) ----------
 function Cards({ rows, onOpen }: { rows: Costing[]; onOpen: (id: string) => void }) {
   return (
     <ul className="space-y-3">
@@ -187,7 +402,10 @@ function Cards({ rows, onOpen }: { rows: Costing[]; onOpen: (id: string) => void
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
                   <span className="font-mono text-sm font-semibold text-slate-900">{r.cash_sale_no || '(no CS no.)'}</span>
-                  <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-600">{categoryLabel(r.category)}</span>
+                  <span className="flex items-center gap-1 rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-600">
+                    <span className={`h-1.5 w-1.5 rounded-full ${CATEGORY_ACCENT[r.category] ?? 'bg-slate-400'}`} />
+                    {categoryLabel(r.category)}
+                  </span>
                 </div>
                 <p className="mt-0.5 truncate font-medium text-slate-800">{r.customer || '—'}</p>
               </div>
@@ -204,106 +422,5 @@ function Cards({ rows, onOpen }: { rows: Costing[]; onOpen: (id: string) => void
         )
       })}
     </ul>
-  )
-}
-
-// ---------- desktop spreadsheet: one table per category, its own columns ----------
-function costVal(r: Costing, label: string): number {
-  return num((r.costs ?? []).find((c) => c.label === label)?.amount ?? 0)
-}
-
-function Sheet({ rows, onOpen }: { rows: Costing[]; onOpen: (id: string) => void }) {
-  const order = [...COSTING_CATEGORIES.map((c) => c.key), '']
-  const byCat = new Map()
-  for (const r of rows) {
-    const k = r.category || ''
-    if (!byCat.has(k)) byCat.set(k, [])
-    byCat.get(k).push(r)
-  }
-  const groups = order.filter((k) => byCat.has(k)).map((k) => ({ key: k, rows: byCat.get(k) }))
-  return (
-    <div className="space-y-5">
-      {groups.map((g) => (
-        <CategorySheet key={g.key} catKey={g.key} rows={g.rows} onOpen={onOpen} />
-      ))}
-    </div>
-  )
-}
-
-function CategorySheet({ catKey, rows, onOpen }: { catKey: string; rows: Costing[]; onOpen: (id: string) => void }) {
-  const cols = templateFor(catKey)
-  const th = 'px-3 py-2 text-right'
-  // subtotals
-  const colSums = cols.map((col) => rows.reduce((s, r) => s + costVal(r, col), 0))
-  const sub = rows.reduce(
-    (a, r) => {
-      const c = calcCosting(r)
-      return { rev: a.rev + num(r.revenue), cost: a.cost + c.totalCost, gp: a.gp + c.grossProfit, sh: a.sh + c.totalShared }
-    },
-    { rev: 0, cost: 0, gp: 0, sh: 0 },
-  )
-  const minW = (cols.length + 8) * 116
-  const accent = CATEGORY_ACCENT[catKey] ?? 'bg-slate-400'
-  return (
-    <div className="mb-5">
-      <h3 className="mb-1.5 flex items-center gap-2 px-1 text-sm font-semibold text-slate-700">
-        <span className={`h-3 w-3 rounded-full ${accent}`} />
-        {categoryLabel(catKey)}
-        <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[11px] font-semibold text-slate-600">{rows.length}</span>
-      </h3>
-      <div className={`overflow-x-auto rounded-xl border-l-4 bg-white shadow-sm ${CATEGORY_BORDER[catKey] ?? 'border-slate-400'}`}>
-        <table className="w-full text-[13px]" style={{ minWidth: minW }}>
-          <thead>
-            <tr className="border-b border-slate-200 bg-slate-50 text-left text-[10px] uppercase tracking-wide text-slate-500">
-              <th className="px-3 py-2.5">Cash sale</th>
-              <th className="px-3 py-2.5">Unit / item</th>
-              {cols.map((col) => (
-                <th key={col} className={th}>{col}</th>
-              ))}
-              <th className={th}>Selling</th>
-              <th className={th}>Total cost</th>
-              <th className={th}>Gross profit</th>
-              <th className={th}>Margin</th>
-              <th className={th}>Sharing</th>
-              <th className="px-3 py-2.5">Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((r, ri) => {
-              const c = calcCosting(r)
-              return (
-                <tr key={r.id} onClick={() => onOpen(r.id)} className={'cursor-pointer border-b border-slate-100 hover:bg-amber-50 ' + (ri % 2 ? 'bg-slate-50/60' : '')}>
-                  <td className="whitespace-nowrap px-3 py-2.5 font-mono text-xs text-slate-700">{r.cash_sale_no || '—'}</td>
-                  <td className="px-3 py-2.5 text-slate-700">{r.customer || '—'}</td>
-                  {cols.map((col) => (
-                    <td key={col} className="px-3 py-2.5 text-right text-slate-500">{money(costVal(r, col))}</td>
-                  ))}
-                  <td className="px-3 py-2.5 text-right font-medium text-slate-800">{money(num(r.revenue))}</td>
-                  <td className="px-3 py-2.5 text-right text-slate-500">{money(c.totalCost)}</td>
-                  <td className={'px-3 py-2.5 text-right font-semibold ' + (c.grossProfit < 0 ? 'text-rose-600' : 'text-emerald-700')}>{money(c.grossProfit)}</td>
-                  <td className={'px-3 py-2.5 text-right font-medium ' + marginColor(c.margin)}>{c.margin.toFixed(1)}%</td>
-                  <td className="px-3 py-2.5 text-right text-slate-500">{money(c.totalShared)}</td>
-                  <td className="px-3 py-2.5">
-                    {r.status && <span className={`whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-medium ${statusStyle(r.status)}`}>{r.status}</span>}
-                  </td>
-                </tr>
-              )
-            })}
-            <tr className="border-t-2 border-slate-200 bg-slate-50 text-xs font-bold text-slate-700">
-              <td className="px-3 py-2" colSpan={2}>Subtotal</td>
-              {colSums.map((s, i) => (
-                <td key={i} className="px-3 py-2 text-right">{money(s)}</td>
-              ))}
-              <td className="px-3 py-2 text-right">{money(sub.rev)}</td>
-              <td className="px-3 py-2 text-right">{money(sub.cost)}</td>
-              <td className="px-3 py-2 text-right text-emerald-700">{money(sub.gp)}</td>
-              <td className="px-3 py-2"></td>
-              <td className="px-3 py-2 text-right">{money(sub.sh)}</td>
-              <td className="px-3 py-2"></td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
   )
 }
