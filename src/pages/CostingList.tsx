@@ -140,7 +140,7 @@ export default function CostingList() {
 
   function exportCsv() {
     const cols = templateFor(sheetCat)
-    const header = ['Cash sale', 'Unit / item', ...cols, 'Selling', 'Total cost', 'Gross profit', 'Margin %', 'Sharing', 'Status']
+    const header = ['Unit / item', ...cols, 'Total cost', 'Selling', 'Gross profit', 'Margin %', 'Sharing', 'Status', 'Cash sale']
     const esc = (v: unknown) => {
       const s = String(v ?? '')
       return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s
@@ -149,15 +149,15 @@ export default function CostingList() {
     for (const r of sheetRows) {
       const c = calcCosting(r)
       const cells = [
-        r.cash_sale_no,
         r.customer,
         ...cols.map((col) => costVal(r, col).toFixed(2)),
-        num(r.revenue).toFixed(2),
         c.totalCost.toFixed(2),
+        num(r.revenue).toFixed(2),
         c.grossProfit.toFixed(2),
         c.margin.toFixed(2),
         c.totalShared.toFixed(2),
         r.status,
+        r.cash_sale_no,
       ]
       lines.push(cells.map(esc).join(','))
     }
@@ -340,26 +340,30 @@ function EditableSheet({
     },
     { rev: 0, cost: 0, gp: 0, sh: 0 },
   )
+  // Column order matches the workbook: Unit → costs → Total → Selling → Gross
+  // profit → Margin → Sharing → Status → Cash sale. Only the Unit column is
+  // frozen (a single sticky column avoids the offset-overlap problem).
   const thBase = 'sticky top-0 z-10 border-b border-slate-200 bg-slate-50 px-2 py-2.5'
   const thNum = thBase + ' text-right'
   const editCls = 'w-full rounded bg-transparent px-1 py-0.5 text-right outline-none hover:bg-slate-100 focus:bg-amber-50'
+  const unitTd = 'sticky left-0 z-[1] w-[210px] min-w-[210px] max-w-[210px] border-r border-slate-200 bg-white px-2 py-1'
 
   return (
     <div className={`max-h-[75vh] overflow-auto rounded-xl border-l-4 bg-white shadow-sm ${CATEGORY_BORDER[catKey] ?? 'border-slate-400'}`}>
       <table className="w-full whitespace-nowrap text-[13px]">
         <thead>
           <tr className="text-left text-[10px] uppercase tracking-wide text-slate-500">
-            <th className={thBase + ' left-0 z-20 w-[112px] border-r'}>Cash sale</th>
-            <th className={thBase + ' left-[112px] z-20 border-r'}>Unit / item</th>
+            <th className={thBase + ' left-0 z-30 w-[210px] min-w-[210px] max-w-[210px] border-r'}>Unit / item</th>
             {cols.map((col) => (
               <th key={col} className={thNum}>{col}</th>
             ))}
-            <th className={thNum}>Selling</th>
             <th className={thNum}>Total cost</th>
+            <th className={thNum}>Selling</th>
             <th className={thNum}>Gross profit</th>
             <th className={thNum}>Margin</th>
             <th className={thNum}>Sharing</th>
             <th className={thBase}>Status</th>
+            <th className={thBase}>Cash sale</th>
             <th className={thBase}></th>
           </tr>
         </thead>
@@ -368,11 +372,8 @@ function EditableSheet({
             const c = calcCosting(r)
             const focus = { onFocus, onBlur: () => onBlurSave(r.id) }
             return (
-              <tr key={r.id} className={'border-b border-slate-100 ' + (ri % 2 ? 'bg-slate-50/60' : '')}>
-                <td className="sticky left-0 z-[1] w-[112px] border-r border-slate-100 bg-white px-2 py-1">
-                  <input className={editCls + ' text-left font-mono text-xs'} value={r.cash_sale_no} {...focus} onChange={(e) => onPatch(r.id, { cash_sale_no: e.target.value })} />
-                </td>
-                <td className="sticky left-[112px] z-[1] min-w-[160px] border-r border-slate-100 bg-white px-2 py-1">
+              <tr key={r.id} className={'border-b border-slate-100 ' + (ri % 2 ? 'bg-slate-50' : 'bg-white')}>
+                <td className={unitTd + (ri % 2 ? ' !bg-slate-50' : '')}>
                   <input className={editCls + ' text-left'} value={r.customer} {...focus} onChange={(e) => onPatch(r.id, { customer: e.target.value })} />
                 </td>
                 {cols.map((col) => {
@@ -383,10 +384,10 @@ function EditableSheet({
                     </td>
                   )
                 })}
+                <td className="px-2 py-2.5 text-right text-slate-500">{nf(c.totalCost)}</td>
                 <td className="px-2 py-1">
                   <input type="number" step="0.01" className={editCls + ' font-medium text-slate-800'} value={num(r.revenue) === 0 ? '' : (r.revenue as number) ?? ''} {...focus} onChange={(e) => onPatch(r.id, { revenue: e.target.value })} />
                 </td>
-                <td className="px-2 py-2.5 text-right text-slate-500">{nf(c.totalCost)}</td>
                 <td className={'px-2 py-2.5 text-right font-semibold ' + (c.grossProfit < 0 ? 'text-rose-600' : 'text-emerald-700')}>{nf(c.grossProfit)}</td>
                 <td className={'px-2 py-2.5 text-right font-medium ' + marginColor(c.margin)}>{c.margin.toFixed(1)}%</td>
                 <td className="px-2 py-2.5 text-right text-slate-500">{nf(c.totalShared)}</td>
@@ -405,23 +406,26 @@ function EditableSheet({
                     ))}
                   </select>
                 </td>
+                <td className="px-2 py-1">
+                  <input className={editCls + ' text-left font-mono text-xs'} value={r.cash_sale_no} {...focus} onChange={(e) => onPatch(r.id, { cash_sale_no: e.target.value })} />
+                </td>
                 <td className="px-2 py-1 text-right">
-                  <button onClick={() => onOpen(r.id)} className="rounded px-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700" title="Open full form (costs breakdown, commissions, sharing)">⋯</button>
+                  <button onClick={() => onOpen(r.id)} className="rounded px-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700" title="Open full form (cost breakdown, commissions, sharing)">⋯</button>
                 </td>
               </tr>
             )
           })}
-          <tr className="border-t-2 border-slate-200 bg-slate-50 text-xs font-bold text-slate-700">
-            <td className="sticky left-0 z-[1] border-r border-slate-200 bg-slate-50 px-2 py-2" colSpan={2}>Subtotal</td>
+          <tr className="border-t-2 border-slate-200 bg-slate-100 text-xs font-bold text-slate-700">
+            <td className="sticky left-0 z-[1] border-r border-slate-200 bg-slate-100 px-2 py-2">Subtotal</td>
             {colSums.map((s, i) => (
               <td key={i} className="px-2 py-2 text-right">{nf(s)}</td>
             ))}
-            <td className="px-2 py-2 text-right">{nf(sub.rev)}</td>
             <td className="px-2 py-2 text-right">{nf(sub.cost)}</td>
+            <td className="px-2 py-2 text-right">{nf(sub.rev)}</td>
             <td className="px-2 py-2 text-right text-emerald-700">{nf(sub.gp)}</td>
             <td></td>
             <td className="px-2 py-2 text-right">{nf(sub.sh)}</td>
-            <td colSpan={2}></td>
+            <td colSpan={3}></td>
           </tr>
         </tbody>
       </table>
