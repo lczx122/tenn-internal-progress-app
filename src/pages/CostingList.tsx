@@ -2,14 +2,16 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
-import type { Costing } from '../lib/types'
+import type { Costing, JobWork } from '../lib/types'
 import { Layout } from '../components/Layout'
+import { overallPercent } from '../lib/stages'
 import {
   calcCosting,
   categoryLabel,
   money,
   num,
   templateFor,
+  progressToStatus,
   statusStyle,
   marginColor,
   CATEGORY_ACCENT,
@@ -17,6 +19,12 @@ import {
   COSTING_CATEGORIES,
   COSTING_STATUSES,
 } from '../lib/costing'
+
+// Live progress derived from a linked unit's work cards.
+export interface UnitProgress {
+  percent: number
+  status: string
+}
 
 type View = 'list' | 'sheet'
 
@@ -30,6 +38,7 @@ function costVal(r: Costing, label: string): number {
 export default function CostingList() {
   const { isBoss } = useAuth()
   const [rows, setRows] = useState<Costing[]>([])
+  const [jobProg, setJobProg] = useState<Map<string, UnitProgress>>(new Map())
   const [loading, setLoading] = useState(true)
   const [query, setQuery] = useState('')
   const [catFilter, setCatFilter] = useState('')
@@ -49,22 +58,53 @@ export default function CostingList() {
     setLoading(false)
   }
 
+  // Build the live progress map from units (work cards) so linked costings
+  // reflect on-site progress instead of a hand-set status.
+  async function loadProgress() {
+    const { data } = await supabase.from('job_works').select('job_id,stage')
+    const stagesByJob = new Map<string, string[]>()
+    for (const x of (data as Pick<JobWork, 'job_id' | 'stage'>[]) ?? []) {
+      const arr = stagesByJob.get(x.job_id) ?? []
+      arr.push(x.stage)
+      stagesByJob.set(x.job_id, arr)
+    }
+    const m = new Map<string, UnitProgress>()
+    for (const [id, st] of stagesByJob) {
+      const percent = overallPercent(st)
+      m.set(id, { percent, status: progressToStatus(percent) })
+    }
+    setJobProg(m)
+  }
+
   useEffect(() => {
     if (!isBoss) {
       setLoading(false)
       return
     }
     load()
+    loadProgress()
     const channel = supabase
       .channel('costings')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'costings' }, () => {
         if (!editingRef.current) load() // don't clobber an in-progress edit
       })
+      // Linked costings track unit progress — refresh when work cards move.
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'job_works' }, () => loadProgress())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'jobs' }, () => loadProgress())
       .subscribe()
     return () => {
       supabase.removeChannel(channel)
     }
   }, [isBoss])
+
+  // Effective progress/status: a linked unit's live value wins over the stored
+  // status; unlinked costings keep their manual status.
+  function unitProgress(r: Costing): UnitProgress | null {
+    return r.job_id ? jobProg.get(r.job_id) ?? null : null
+  }
+  function effectiveStatus(r: Costing): string {
+    return unitProgress(r)?.status ?? r.status
+  }
 
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -156,7 +196,7 @@ export default function CostingList() {
         c.grossProfit.toFixed(2),
         c.margin.toFixed(2),
         c.totalShared.toFixed(2),
-        r.status,
+        effectiveStatus(r),
         r.cash_sale_no,
       ]
       lines.push(cells.map(esc).join(','))
@@ -289,6 +329,7 @@ export default function CostingList() {
               <EditableSheet
                 catKey={sheetCat}
                 rows={sheetRows}
+                progressOf={unitProgress}
                 onPatch={patchRow}
                 onSetCost={setCostCol}
                 onSave={saveRow}
@@ -298,11 +339,12 @@ export default function CostingList() {
                   saveRow(id)
                 }}
                 onOpen={(id) => navigate(`/costing/${id}`)}
+                onOpenUnit={(jobId) => navigate(`/job/${jobId}`)}
               />
             </>
           ) : (
             <div className="lg:max-w-3xl">
-              <Cards rows={visible} onOpen={(id) => navigate(`/costing/${id}`)} />
+              <Cards rows={visible} progressOf={unitProgress} onOpen={(id) => navigate(`/costing/${id}`)} />
             </div>
           )}
         </div>
@@ -315,21 +357,25 @@ export default function CostingList() {
 function EditableSheet({
   catKey,
   rows,
+  progressOf,
   onPatch,
   onSetCost,
   onSave,
   onFocus,
   onBlurSave,
   onOpen,
+  onOpenUnit,
 }: {
   catKey: string
   rows: Costing[]
+  progressOf: (r: Costing) => UnitProgress | null
   onPatch: (id: string, patch: Record<string, unknown>) => void
   onSetCost: (id: string, label: string, value: string) => void
   onSave: (id: string) => void
   onFocus: () => void
   onBlurSave: (id: string) => void
   onOpen: (id: string) => void
+  onOpenUnit: (jobId: string) => void
 }) {
   const cols = templateFor(catKey)
   const colSums = cols.map((col) => rows.reduce((s, r) => s + costVal(r, col), 0))
@@ -370,6 +416,7 @@ function EditableSheet({
         <tbody>
           {rows.map((r, ri) => {
             const c = calcCosting(r)
+            const prog = progressOf(r)
             const focus = { onFocus, onBlur: () => onBlurSave(r.id) }
             return (
               <tr key={r.id} className={'border-b border-slate-100 ' + (ri % 2 ? 'bg-slate-50' : 'bg-white')}>
@@ -392,19 +439,32 @@ function EditableSheet({
                 <td className={'px-2 py-2.5 text-right font-medium ' + marginColor(c.margin)}>{c.margin.toFixed(1)}%</td>
                 <td className="px-2 py-2.5 text-right text-slate-500">{nf(c.totalShared)}</td>
                 <td className="px-2 py-1">
-                  <select
-                    className={'rounded-full border-0 px-2 py-0.5 text-[11px] font-medium outline-none ' + statusStyle(r.status)}
-                    value={r.status}
-                    {...focus}
-                    onChange={(e) => {
-                      onPatch(r.id, { status: e.target.value })
-                      setTimeout(() => onSave(r.id), 0)
-                    }}
-                  >
-                    {COSTING_STATUSES.map((s) => (
-                      <option key={s} value={s}>{s}</option>
-                    ))}
-                  </select>
+                  {prog ? (
+                    // Linked to a unit — status is derived from its work cards.
+                    <button
+                      type="button"
+                      onClick={() => r.job_id && onOpenUnit(r.job_id)}
+                      title="Synced from linked unit — open unit"
+                      className="flex items-center gap-1.5"
+                    >
+                      <span className={'rounded-full px-2 py-0.5 text-[11px] font-medium ' + statusStyle(prog.status)}>{prog.status}</span>
+                      <span className="text-[11px] text-slate-400">🔗 {prog.percent}%</span>
+                    </button>
+                  ) : (
+                    <select
+                      className={'rounded-full border-0 px-2 py-0.5 text-[11px] font-medium outline-none ' + statusStyle(r.status)}
+                      value={r.status}
+                      {...focus}
+                      onChange={(e) => {
+                        onPatch(r.id, { status: e.target.value })
+                        setTimeout(() => onSave(r.id), 0)
+                      }}
+                    >
+                      {COSTING_STATUSES.map((s) => (
+                        <option key={s} value={s}>{s}</option>
+                      ))}
+                    </select>
+                  )}
                 </td>
                 <td className="px-2 py-1">
                   <input className={editCls + ' text-left font-mono text-xs'} value={r.cash_sale_no} {...focus} onChange={(e) => onPatch(r.id, { cash_sale_no: e.target.value })} />
@@ -434,11 +494,13 @@ function EditableSheet({
 }
 
 // ---------- mobile card list (read-only) ----------
-function Cards({ rows, onOpen }: { rows: Costing[]; onOpen: (id: string) => void }) {
+function Cards({ rows, progressOf, onOpen }: { rows: Costing[]; progressOf: (r: Costing) => UnitProgress | null; onOpen: (id: string) => void }) {
   return (
     <ul className="space-y-3">
       {rows.map((r) => {
         const c = calcCosting(r)
+        const prog = progressOf(r)
+        const status = prog?.status ?? r.status
         return (
           <li key={r.id} onClick={() => onOpen(r.id)} className="cursor-pointer rounded-xl bg-white p-4 shadow-sm active:bg-slate-50">
             <div className="flex items-start justify-between gap-2">
@@ -459,7 +521,13 @@ function Cards({ rows, onOpen }: { rows: Costing[]; onOpen: (id: string) => void
             </div>
             <div className="mt-1.5 flex items-center justify-between gap-2">
               <p className="text-xs text-slate-400">Sale {money(num(r.revenue))} · cost {money(c.totalCost)}</p>
-              {r.status && <span className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium ${statusStyle(r.status)}`}>{r.status}</span>}
+              {status && (
+                <span className={`flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ${statusStyle(status)}`}>
+                  {prog && <span title="Synced from linked unit">🔗</span>}
+                  {status}
+                  {prog && <span className="opacity-60">{prog.percent}%</span>}
+                </span>
+              )}
             </div>
           </li>
         )

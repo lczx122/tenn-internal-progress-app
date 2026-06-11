@@ -68,6 +68,9 @@ export interface Costing {
   id: string
   cash_sale_no: string
   category: string
+  // Optional link to a Unit (work card). When set, the costing's progress /
+  // status is derived live from that unit's work-card stages.
+  job_id: string | null
   customer: string
   costing_date: string | null
   revenue: number // selling price

@@ -161,6 +161,7 @@ create table if not exists public.costings (
   id            uuid primary key default gen_random_uuid(),
   cash_sale_no  text not null default '',
   category      text not null default '',
+  job_id        uuid references public.jobs (id) on delete set null,
   customer      text not null default '',
   costing_date  date,
   revenue       numeric not null default 0,
@@ -174,9 +175,11 @@ create table if not exists public.costings (
   updated_at    timestamptz not null default now()
 );
 alter table public.costings add column if not exists category text not null default '';
+alter table public.costings add column if not exists job_id uuid references public.jobs (id) on delete set null;
 create index if not exists costings_cash_idx     on public.costings (cash_sale_no);
 create index if not exists costings_created_idx  on public.costings (created_at desc);
 create index if not exists costings_category_idx on public.costings (category);
+create index if not exists costings_job_idx      on public.costings (job_id);
 
 -- ---------------------------------------------------------------------------
 -- 6. FUNCTIONS & TRIGGERS

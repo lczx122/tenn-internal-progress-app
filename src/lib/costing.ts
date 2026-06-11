@@ -88,6 +88,18 @@ export function statusStyle(s: string): string {
   }
 }
 
+// Map a unit's overall progress (0–100, averaged across its work-card stages)
+// onto a costing status. Thresholds sit at the midpoints between the unit
+// stages (booked 0, in-progress 30, installing 60, collecting 85, completed
+// 100), so a linked costing tracks the actual on-site progress.
+export function progressToStatus(percent: number): string {
+  if (percent >= 100) return 'Completed'
+  if (percent >= 73) return 'Collecting Money'
+  if (percent >= 45) return 'Installing'
+  if (percent >= 15) return 'In Progress'
+  return 'Chatting'
+}
+
 // Margin colour: <20% poor, 20–40% ok, >40% good.
 export function marginColor(m: number): string {
   if (m < 20) return 'text-rose-600'
