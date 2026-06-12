@@ -162,8 +162,9 @@ export default function Dashboard() {
             <StatTile label="Open work items" value={openItems} />
           </div>
 
-          {/* Desktop: lay the sections out as a masonry across the width */}
-          <div className="space-y-5 lg:columns-2 lg:gap-5 lg:space-y-0 xl:columns-3 lg:[&>section]:mb-5 lg:[&>section]:break-inside-avoid">
+          {/* Desktop: two columns — primary lists left; summaries + activity right */}
+          <div className="space-y-5 lg:grid lg:grid-cols-3 lg:items-start lg:gap-5 lg:space-y-0">
+          <div className="space-y-5 lg:col-span-2">
           {/* Schedule: overdue + upcoming */}
           <section>
             <div className="mb-2 flex items-center justify-between px-1">
@@ -273,7 +274,9 @@ export default function Dashboard() {
               </ul>
             )}
           </Section>
+          </div>
 
+          <div className="space-y-5">
           {/* Category breakdown */}
           <Section title="By category">
             {categoryStats.length === 0 ? (
@@ -327,7 +330,7 @@ export default function Dashboard() {
             {events.length === 0 ? (
               <Empty>No activity yet.</Empty>
             ) : (
-              <ul className="space-y-3 rounded-xl bg-white p-4 shadow-sm">
+              <ul className="max-h-[26rem] space-y-3 overflow-y-auto rounded-xl bg-white p-4 shadow-sm">
                 {events.map((ev) => (
                   <li key={ev.id} className="flex gap-3">
                     <div className="mt-0.5 text-base leading-none">{iconFor(ev.type)}</div>
@@ -349,6 +352,7 @@ export default function Dashboard() {
               </ul>
             )}
           </Section>
+          </div>
           </div>
         </div>
       )}
