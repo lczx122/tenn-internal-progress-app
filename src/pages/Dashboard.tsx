@@ -155,13 +155,15 @@ export default function Dashboard() {
       ) : (
         <div className="space-y-5">
           {/* KPI tiles */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:gap-4">
             <StatTile label="Active units" value={active.length} />
             <StatTile label="Done · ready to archive" value={doneCount} accent="text-emerald-600" />
             <StatTile label="Needs attention" value={attention.length} accent={attention.length ? 'text-rose-600' : 'text-slate-900'} />
             <StatTile label="Open work items" value={openItems} />
           </div>
 
+          {/* Desktop: lay the sections out as a masonry across the width */}
+          <div className="space-y-5 lg:columns-2 lg:gap-5 lg:space-y-0 xl:columns-3 lg:[&>section]:mb-5 lg:[&>section]:break-inside-avoid">
           {/* Schedule: overdue + upcoming */}
           <section>
             <div className="mb-2 flex items-center justify-between px-1">
@@ -347,6 +349,7 @@ export default function Dashboard() {
               </ul>
             )}
           </Section>
+          </div>
         </div>
       )}
     </Layout>

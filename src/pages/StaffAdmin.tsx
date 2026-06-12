@@ -79,7 +79,7 @@ export default function StaffAdmin() {
       {loading ? (
         <p className="py-10 text-center text-slate-400">Loading…</p>
       ) : (
-        <ul className="space-y-2">
+        <ul className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
           {people.map((p) => {
             const isMe = p.id === session?.user.id
             return (

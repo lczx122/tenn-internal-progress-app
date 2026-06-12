@@ -175,7 +175,7 @@ export default function CostingForm() {
 
   return (
     <Layout title={isEdit ? 'Edit costing' : 'New costing'} back={<BackLink />}>
-      <form onSubmit={onSubmit} className="space-y-4">
+      <form onSubmit={onSubmit} className="mx-auto max-w-3xl space-y-4">
         {/* Sale */}
         <div className="space-y-4 rounded-xl bg-white p-4 shadow-sm">
           <div className="grid grid-cols-2 gap-3">
@@ -306,7 +306,7 @@ export default function CostingForm() {
       </form>
 
       {isEdit && (
-        <button onClick={remove} disabled={busy} className="my-5 w-full rounded-lg border border-red-200 py-2.5 text-sm font-medium text-red-600 active:bg-red-50 disabled:opacity-60">
+        <button onClick={remove} disabled={busy} className="mx-auto my-5 block w-full max-w-3xl rounded-lg border border-red-200 py-2.5 text-sm font-medium text-red-600 active:bg-red-50 disabled:opacity-60">
           Delete costing
         </button>
       )}

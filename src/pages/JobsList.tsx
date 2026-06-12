@@ -276,7 +276,7 @@ export default function JobsList() {
                 </button>
               </div>
               {!isCollapsed && (
-              <ul className="space-y-3">
+              <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
                 {g.items.map((job) => {
                   const w = worksByJob.get(job.id) ?? []
                   const pct = overallPercent(w.map((x) => x.stage))

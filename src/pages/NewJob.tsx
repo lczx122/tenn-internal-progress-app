@@ -98,7 +98,7 @@ export default function NewJob() {
         </Link>
       }
     >
-      <form onSubmit={onSubmit} className="space-y-4">
+      <form onSubmit={onSubmit} className="mx-auto max-w-2xl space-y-4">
         <div className="rounded-xl bg-white p-4 shadow-sm space-y-4">
           <div>
             <label className={labelCls}>Project</label>

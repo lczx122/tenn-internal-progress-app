@@ -180,7 +180,7 @@ function Agenda({
           No appointments. Tap “+ New” to schedule one.
         </div>
       ) : (
-        <div className="space-y-5">
+        <div className="space-y-5 lg:columns-2 lg:gap-5 lg:space-y-0 2xl:columns-3 lg:[&>div]:mb-5 lg:[&>div]:break-inside-avoid">
           {groups.map((g) => (
             <div key={g.key}>
               <h2 className="mb-2 px-1 text-sm font-semibold text-slate-700">{dayLabel(g.date)}</h2>
@@ -230,7 +230,8 @@ function CalendarView({
     .sort((a, b) => +new Date(a.starts_at) - +new Date(b.starts_at))
 
   return (
-    <>
+    <div className="lg:grid lg:grid-cols-2 lg:items-start lg:gap-6">
+      <div>
       <div className="mb-2 flex items-center justify-between">
         <button
           onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1))}
@@ -285,7 +286,10 @@ function CalendarView({
         </div>
       </div>
 
-      <h2 className="mb-2 mt-4 px-1 text-sm font-semibold text-slate-700">{dayLabel(selectedDay)}</h2>
+      </div>
+
+      <div className="lg:min-w-0">
+      <h2 className="mb-2 mt-4 px-1 text-sm font-semibold text-slate-700 lg:mt-0">{dayLabel(selectedDay)}</h2>
       {dayItems.length === 0 ? (
         <p className="rounded-xl border border-dashed border-slate-300 py-8 text-center text-sm text-slate-400">
           Nothing scheduled.
@@ -297,7 +301,8 @@ function CalendarView({
           ))}
         </ul>
       )}
-    </>
+      </div>
+    </div>
   )
 }
 

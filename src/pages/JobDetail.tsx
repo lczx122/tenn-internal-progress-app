@@ -164,6 +164,7 @@ export default function JobDetail() {
 
   return (
     <Layout title={job.customer_name} back={<BackLink />} onRefresh={loadAll}>
+      <div className="xl:columns-2 xl:gap-6 xl:[&>div]:break-inside-avoid xl:[&>section]:mb-4 xl:[&>section]:mt-0 xl:[&>section]:break-inside-avoid">
       {/* Summary card */}
       <section className="rounded-xl bg-white p-4 shadow-sm">
         {job.project && (
@@ -344,6 +345,7 @@ export default function JobDetail() {
           )}
         </div>
       )}
+      </div>
     </Layout>
   )
 }

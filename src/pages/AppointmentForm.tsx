@@ -214,7 +214,7 @@ export default function AppointmentForm() {
 
   return (
     <Layout title={isEdit ? 'Edit appointment' : 'New appointment'} back={<BackLink />}>
-      <form onSubmit={onSubmit} className="space-y-4">
+      <form onSubmit={onSubmit} className="mx-auto max-w-2xl space-y-4">
         <div className="space-y-4 rounded-xl bg-white p-4 shadow-sm">
           <div>
             <label className={labelCls}>Type</label>

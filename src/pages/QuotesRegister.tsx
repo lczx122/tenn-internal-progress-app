@@ -124,7 +124,7 @@ export default function QuotesRegister() {
           <p className="mb-2 px-1 text-xs text-slate-400">
             {visible.length} {visible.length === 1 ? 'document' : 'documents'} · {money(total)} total
           </p>
-          <ul className="space-y-3">
+          <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {visible.map((r) => {
               const isSO = r.doc_type === 'SO'
               return (

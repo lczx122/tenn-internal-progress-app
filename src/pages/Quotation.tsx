@@ -1,6 +1,7 @@
 import { useSearchParams } from 'react-router-dom'
 import { AppHeader } from '../components/Layout'
 import { BottomNav } from '../components/BottomNav'
+import { Sidebar } from '../components/Sidebar'
 
 // The quotation / sales-order generator is a self-contained static tool at
 // public/quotation.html. It's embedded full-width here under the app's standard
@@ -13,17 +14,20 @@ export default function Quotation() {
   const qs = usp.toString()
   const src = `/quotation.html?${qs}`
   return (
-    <div className="flex h-[var(--app-h,100dvh)] flex-col">
-      <AppHeader title="Quote" />
-      <div className="min-h-0 flex-1">
-        <iframe
-          key={qs}
-          src={src}
-          title="Tenn Fasteners — Quotation Generator"
-          className="h-full w-full border-0"
-        />
+    <div className="flex h-[var(--app-h,100dvh)] flex-col lg:flex-row">
+      <Sidebar />
+      <div className="flex min-w-0 flex-1 flex-col">
+        <AppHeader title="Quote" />
+        <div className="min-h-0 flex-1">
+          <iframe
+            key={qs}
+            src={src}
+            title="Tenn Fasteners — Quotation Generator"
+            className="h-full w-full border-0"
+          />
+        </div>
+        <BottomNav />
       </div>
-      <BottomNav />
     </div>
   )
 }
