@@ -14,9 +14,9 @@ export default function Quotation() {
   const qs = usp.toString()
   const src = `/quotation.html?${qs}`
   return (
-    <div className="flex h-[var(--app-h,100dvh)] flex-col lg:flex-row">
+    <div className="flex h-[var(--app-h,100dvh)] flex-col overflow-hidden lg:flex-row">
       <Sidebar />
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         <AppHeader title="Quote" />
         <div className="min-h-0 flex-1">
           <iframe
