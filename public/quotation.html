@@ -67,20 +67,76 @@
   /* ---------- admin: edit prices ---------- */
   .edit-prices-btn{background:var(--navy);color:#fff;border:none;border-radius:8px;font-family:'Archivo';font-weight:700;font-size:11.5px;padding:6px 11px;cursor:pointer;white-space:nowrap}
   .edit-prices-btn:hover{background:var(--navy-2)}
+  #priceModal .modal-inner{max-width:900px}
+  #priceModal .doc-pad{padding:0 26px 18px}
+  #priceModal .doc-pad>h2{padding-top:22px}
+  /* sticky tabs + search */
+  .pe-head{position:sticky;top:0;z-index:4;background:var(--card);border-bottom:1px solid var(--line);padding:12px 0 11px;margin-bottom:14px}
+  .pe-tabs{display:flex;gap:6px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+  .pe-tabs::-webkit-scrollbar{display:none}
+  .pe-tab{flex:0 0 auto;display:flex;align-items:center;gap:7px;font-family:'Archivo';font-weight:700;font-size:13px;color:var(--muted);background:#f0f3fb;border:1px solid var(--line);border-radius:9px;padding:8px 13px;cursor:pointer;transition:.15s}
+  .pe-tab:hover{background:#e7ecf8}
+  .pe-tab.active{background:var(--navy);color:#fff;border-color:var(--navy)}
+  .pe-pill{font-size:10.5px;font-weight:700;min-width:18px;text-align:center;border-radius:20px;padding:1px 6px;background:rgba(21,36,83,.1);color:var(--navy)}
+  .pe-tab.active .pe-pill{background:rgba(255,255,255,.22);color:#fff}
+  .pe-pill.hot{background:var(--accent)!important;color:#fff!important}
+  .pe-search-wrap{position:relative;margin-top:10px}
+  .pe-search{width:100%;padding:10px 32px}
+  .pe-search-wrap .pe-ico{position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:13px;opacity:.6;pointer-events:none}
+  .pe-search-clear{position:absolute;right:7px;top:50%;transform:translateY(-50%);border:none;background:#eef0f6;color:var(--muted);width:22px;height:22px;border-radius:50%;cursor:pointer;font-size:12px;line-height:1;display:none}
+  .pe-search-clear.show{display:block}
+  /* panels (hidden ones stay in the DOM so save still serializes them) */
+  .pe-panel{display:none}
+  .pe-panel.active{display:block}
+  .pe-noresults{display:none;color:var(--muted);font-size:13px;text-align:center;padding:26px 6px}
+  .pe-noresults.show{display:block}
   .pe-cat{margin-bottom:18px}
-  .pe-cat h3{font-family:'Archivo';font-size:13px;text-transform:uppercase;letter-spacing:.6px;color:var(--navy);border-bottom:1px solid var(--line);padding-bottom:6px;margin-bottom:8px}
-  .pe-note{font-size:11.5px;color:var(--muted);margin-bottom:10px}
-  .pe-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:5px 0;border-bottom:1px dashed #eef0f6}
-  .pe-row:last-child{border-bottom:none}
-  .pe-lbl{font-size:13px;color:var(--ink)}
+  .pe-cat-hd{display:flex;align-items:center;justify-content:space-between;gap:10px;border-bottom:1px solid var(--line);padding-bottom:6px;margin-bottom:8px}
+  .pe-cat-hd h3{font-family:'Archivo';font-size:13px;text-transform:uppercase;letter-spacing:.6px;color:var(--navy)}
+  .pe-note{font-size:11.5px;color:var(--muted);margin:-2px 0 12px}
+  .pe-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:7px 9px;border:1px solid transparent;border-bottom:1px dashed #eef0f6;border-radius:8px}
+  .pe-row.changed{background:var(--accent-soft);border-color:#f6d6dc}
+  .pe-lbl{font-size:13px;color:var(--ink);flex:1;min-width:0}
   .pe-lbl small{color:var(--muted);font-size:11px;margin-left:4px}
-  .pe-row input{width:110px;text-align:right}
-  .pe-cab{border:1px solid var(--line);border-radius:9px;padding:10px 12px;margin-bottom:10px}
-  .pe-cab-name{font-size:13px;font-weight:600;color:var(--navy);margin-bottom:8px}
-  .pe-cab-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+  .pe-ctrl{display:flex;align-items:center;gap:8px;flex:none}
+  .pe-badge{font-size:9px;font-weight:800;background:var(--accent);color:#fff;border-radius:20px;padding:2px 7px;text-transform:uppercase;letter-spacing:.4px}
+  .pe-badge[hidden]{display:none}
+  .pe-reset{border:1px solid var(--line);background:#fff;color:var(--muted);font-size:14px;line-height:1;width:27px;height:27px;border-radius:7px;cursor:pointer;flex:none;transition:.15s}
+  .pe-reset:hover{background:#f0f3fb;color:var(--navy)}
+  .pe-reset:disabled{opacity:.3;cursor:default}
+  .pe-reset-section{border:1px solid var(--line);background:#fff;color:var(--muted);font-family:'Archivo';font-weight:700;font-size:11px;border-radius:7px;padding:5px 10px;cursor:pointer;white-space:nowrap}
+  .pe-reset-section:hover:not(:disabled){background:#f0f3fb;color:var(--navy)}
+  .pe-reset-section:disabled{opacity:.35;cursor:default}
+  .pe-money{position:relative;display:inline-flex;align-items:center}
+  .pe-money .pe-rm{position:absolute;left:9px;font-size:11px;font-weight:700;color:var(--muted);pointer-events:none}
+  .pe-money input{padding-left:30px!important;text-align:right}
+  .pe-row .pe-money input{width:122px}
+  .pe-cab{border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:12px}
+  .pe-cab.changed{border-color:#f0c8cf;box-shadow:inset 3px 0 0 var(--accent)}
+  .pe-cab-hd{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:10px}
+  .pe-cab-name{font-size:13.5px;font-weight:600;color:var(--navy)}
+  .pe-cab-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:9px}
   @media(max-width:560px){.pe-cab-grid{grid-template-columns:repeat(2,1fr)}}
-  .pe-f{display:flex;flex-direction:column;gap:3px;font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
-  .pe-f input{width:100%;text-align:right;padding:7px 8px}
+  .pe-f{display:flex;flex-direction:column;gap:4px;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
+  .pe-f .pe-money{display:flex}
+  .pe-f input{width:100%;text-align:right;padding:8px}
+  .pe-f .pe-money input{width:100%}
+  input.pe-invalid{border-color:var(--accent)!important;box-shadow:0 0 0 3px rgba(200,16,46,.13)!important}
+  .pe-tier-preview{margin-top:10px;background:#f7fbff;border:1px solid var(--line);border-radius:9px;padding:9px 11px;display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:12px;color:var(--muted)}
+  .pe-tier-lbl{font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-right:2px}
+  .pe-chip{font-size:11.5px;color:var(--navy);background:#eaf2ff;border:1px solid #d6e4fb;border-radius:6px;padding:2px 8px;white-space:nowrap}
+  /* sticky save bar */
+  .pe-actionbar{position:sticky;bottom:0;z-index:4;display:flex;gap:9px;align-items:center;background:var(--card);border-top:1px solid var(--line);padding:12px 0 6px;margin-top:18px;box-shadow:0 -6px 14px rgba(21,36,83,.05)}
+  .pe-actionbar .act{flex:0 1 150px;padding:12px}
+  .pe-dirty{font-size:11.5px;font-weight:700;color:var(--accent);margin-right:auto;display:none}
+  .pe-actionbar.dirty .pe-dirty{display:inline}
+  @media(max-width:560px){.pe-actionbar .act{flex:1 1 96px}.pe-dirty{flex-basis:100%;margin-bottom:2px}}
+  /* light polish */
+  button.act:hover{transform:translateY(-1px)}
+  button.act:active{transform:translateY(0)}
+  .dt.active{box-shadow:0 2px 8px rgba(21,36,83,.25)}
+  .card .hd h2{position:relative;padding-left:11px}
+  .card .hd h2::before{content:"";position:absolute;left:0;top:1px;bottom:1px;width:3px;border-radius:3px;background:var(--accent)}
 
   .card{background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow)}
   .card .hd{padding:15px 18px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px}
@@ -307,13 +363,18 @@
 <div class="modal" id="priceModal">
   <div class="modal-inner">
     <div class="modal-bar">
-      <button class="act b-save" id="savePricesBtn" onclick="savePrices()">Save prices</button>
-      <button class="act b-ghost" onclick="closePriceEditor()">Cancel</button>
+      <button class="act b-save js-save-prices" onclick="savePrices()">Save prices</button>
+      <button class="act b-ghost" onclick="closePriceEditorGuarded()">Cancel</button>
     </div>
     <div class="doc"><div class="doc-pad">
       <h2 style="font-family:'Archivo';color:var(--navy);margin-bottom:4px">Edit Prices</h2>
-      <p style="color:var(--muted);font-size:12.5px;margin-bottom:16px">Saved for the whole team. Applies to new quotations &amp; sales orders.</p>
+      <p style="color:var(--muted);font-size:12.5px;margin-bottom:6px">Saved for the whole team. Applies to new quotations &amp; sales orders.</p>
       <div id="priceBody"></div>
+      <div class="pe-actionbar" id="peActionbar">
+        <span class="pe-dirty">● Unsaved changes</span>
+        <button class="act b-ghost" onclick="closePriceEditorGuarded()">Cancel</button>
+        <button class="act b-save js-save-prices" onclick="savePrices()">Save prices</button>
+      </div>
     </div></div>
   </div>
 </div>
@@ -611,62 +672,264 @@ async function checkAdmin(){
   try{ await ready(supa); const {data}=await supa.rpc('is_admin'); return !!data; }catch(e){ return false; }
 }
 
+/* ---- price editor: snapshot of coded defaults (filled in init, before any
+   overrides are applied — applyOverrides mutates the data arrays in place) ---- */
+const PRICE_DEFAULTS = { items:{}, cabinets:{}, grills:{}, paints:{} };
+function capturePriceDefaults(){
+  PRICE_DEFAULTS.items={}; PRICE_DEFAULTS.cabinets={}; PRICE_DEFAULTS.grills={}; PRICE_DEFAULTS.paints={};
+  CATALOG.forEach(cat=>cat.items.forEach(it=>{ PRICE_DEFAULTS.items[itemKey(cat,it)]=it.price; }));
+  CABINET.forEach(g=>g.options.forEach(o=>{ PRICE_DEFAULTS.cabinets[g.id+':'+o.id]={basePrice:o.basePrice,priceInc:o.priceInc,defaultMm:o.defaultMm,stepMm:o.stepMm,steps:o.steps}; }));
+  GRILL.forEach(g=>g.options.forEach(o=>{ PRICE_DEFAULTS.grills[g.id+':'+o.id]={rate:o.rate,overRate:(o.tier?o.tier.overRate:null)}; }));
+  PAINT.forEach(o=>{ PRICE_DEFAULTS.paints[o.id]={rate:o.rate}; });
+}
+
+let peDirty=false;
+const peNum=v=>{ const n=parseFloat(v); return isNaN(n)?null:n; };
+const peEq=(a,b)=>{ const x=peNum(a),y=peNum(b); return x!==null&&y!==null&&Math.abs(x-y)<1e-9; };
+const peSafe=s=>String(s==null?'':s).replace(/"/g,'&quot;').toLowerCase();
+
 /* ---- price editor modal ---- */
 function openPriceEditor(){
   document.getElementById('priceBody').innerHTML=buildPriceEditorHtml();
   document.getElementById('priceModal').classList.add('show');
   document.body.style.overflow='hidden';
+  peInitEditor();
 }
 function closePriceEditor(){
   document.getElementById('priceModal').classList.remove('show');
   document.body.style.overflow='';
 }
-function peField(kind,key,field,val,label){
-  return `<label class="pe-f"><span>${label}</span><input type="number" step="1" min="0" data-kind="${kind}" data-key="${key}" data-field="${field}" value="${val}"></label>`;
+function closePriceEditorGuarded(){
+  if(peDirty && !confirm('Discard unsaved price changes?')) return;
+  closePriceEditor();
+}
+
+function peField(kind,key,field,val,label,opts){
+  opts=opts||{};
+  const def=(opts.def!=null?opts.def:val);
+  const inp=`<input type="number" step="${opts.step||1}" min="0" data-kind="${kind}" data-key="${key}" data-field="${field}" data-default="${def}" value="${val}">`;
+  const wrapped=opts.money?`<span class="pe-money"><span class="pe-rm">RM</span>${inp}</span>`:inp;
+  return `<label class="pe-f"><span>${label}</span>${wrapped}</label>`;
+}
+function peItemRowHtml(cat,it){
+  const vlabel = cat.variants.length?` · ${cat.variants[it.v].split('—').pop().trim()}`:'';
+  const def=PRICE_DEFAULTS.items[itemKey(cat,it)];
+  return `<label class="pe-row" data-search="${peSafe(it.label+' '+cat.name)}">
+    <span class="pe-lbl">${it.label}${vlabel?`<small>${vlabel}</small>`:''}</span>
+    <span class="pe-ctrl"><span class="pe-badge" hidden>changed</span>
+      <span class="pe-money"><span class="pe-rm">RM</span><input type="number" step="0.01" min="0" data-kind="item" data-key="${itemKey(cat,it)}" data-default="${def}" value="${it.price}"></span>
+      <button type="button" class="pe-reset" title="Reset to default" onclick="peResetOne(this)">↺</button></span></label>`;
+}
+function peCardHead(name){
+  return `<div class="pe-cab-hd"><div class="pe-cab-name">${name}</div>
+    <span class="pe-ctrl"><span class="pe-badge" hidden>changed</span>
+      <button type="button" class="pe-reset" title="Reset to default" onclick="peResetOne(this)">↺</button></span></div>`;
+}
+function peSectionHead(title){
+  return `<div class="pe-cat-hd"><h3>${title}</h3><button type="button" class="pe-reset-section" onclick="peResetSection(this)">Reset section</button></div>`;
 }
 function buildPriceEditorHtml(){
-  let h='';
+  const itemCount=CATALOG.reduce((n,c)=>n+c.items.length,0);
+  const cabCount=CABINET.reduce((n,g)=>n+g.options.length,0);
+  const grillCount=GRILL.reduce((n,g)=>n+g.options.length,0);
+  const paintCount=PAINT.length;
+  let h=`<div class="pe-head">
+    <div class="pe-tabs">
+      <button type="button" class="pe-tab active" data-panel="items" onclick="peSwitchTab('items')">Items <span class="pe-pill" data-count>${itemCount}</span></button>
+      <button type="button" class="pe-tab" data-panel="cab" onclick="peSwitchTab('cab')">Cabinet <span class="pe-pill" data-count>${cabCount}</span></button>
+      <button type="button" class="pe-tab" data-panel="grill" onclick="peSwitchTab('grill')">Grill <span class="pe-pill" data-count>${grillCount}</span></button>
+      <button type="button" class="pe-tab" data-panel="paint" onclick="peSwitchTab('paint')">Paint <span class="pe-pill" data-count>${paintCount}</span></button>
+    </div>
+    <div class="pe-search-wrap"><span class="pe-ico">🔍</span>
+      <input class="pe-search" id="peSearch" placeholder="Search by name…" oninput="peFilter()">
+      <button type="button" class="pe-search-clear" id="peSearchClear" onclick="peClearSearch()">✕</button>
+    </div></div>`;
+
+  // Items
+  h+=`<div class="pe-panel active" data-panel="items"><div class="pe-noresults">No matching items.</div>`;
   CATALOG.forEach(cat=>{
-    h+=`<div class="pe-cat"><h3>${cat.name}</h3>`;
-    cat.items.forEach(it=>{
-      const vlabel = cat.variants.length?` · ${cat.variants[it.v].split('—').pop().trim()}`:'';
-      h+=`<label class="pe-row"><span class="pe-lbl">${it.label}${vlabel?`<small>${vlabel}</small>`:''}</span>
-        <input type="number" step="0.01" min="0" data-kind="item" data-key="${itemKey(cat,it)}" value="${it.price}"></label>`;
-    });
+    h+=`<div class="pe-cat" data-search="${peSafe(cat.name)}">${peSectionHead(cat.name)}`;
+    cat.items.forEach(it=>{ h+=peItemRowHtml(cat,it); });
     h+='</div>';
   });
-  h+=`<div class="pe-cat"><h3>Cabinet — tier pricing</h3><p class="pe-note">Base = price at the default length; +RM/step is added per tier as the length grows.</p>`;
+  h+='</div>';
+
+  // Cabinet
+  h+=`<div class="pe-panel" data-panel="cab"><div class="pe-noresults">No matching cabinets.</div>
+    <div class="pe-cat">${peSectionHead('Cabinet — tier pricing')}<p class="pe-note">Base = price at the default length; +RM/step is added per tier as the length grows.</p>`;
   CABINET.forEach(g=>g.options.forEach(o=>{
-    const k=g.id+':'+o.id;
-    h+=`<div class="pe-cab"><div class="pe-cab-name">${g.name} · ${o.name}</div><div class="pe-cab-grid">
-      ${peField('cab',k,'basePrice',o.basePrice,'Base RM')}
-      ${peField('cab',k,'priceInc',o.priceInc,'+RM/step')}
-      ${peField('cab',k,'defaultMm',o.defaultMm,'Default mm')}
-      ${peField('cab',k,'stepMm',o.stepMm,'Step mm')}
-      ${peField('cab',k,'steps',o.steps,'Tiers')}
-    </div></div>`;
+    const k=g.id+':'+o.id, d=PRICE_DEFAULTS.cabinets[k]||{};
+    h+=`<div class="pe-cab" data-search="${peSafe(g.name+' '+o.name)}">${peCardHead(g.name+' · '+o.name)}
+      <div class="pe-cab-grid">
+        ${peField('cab',k,'basePrice',o.basePrice,'Base RM',{money:true,def:d.basePrice})}
+        ${peField('cab',k,'priceInc',o.priceInc,'+RM/step',{money:true,def:d.priceInc})}
+        ${peField('cab',k,'defaultMm',o.defaultMm,'Default mm',{def:d.defaultMm})}
+        ${peField('cab',k,'stepMm',o.stepMm,'Step mm',{def:d.stepMm})}
+        ${peField('cab',k,'steps',o.steps,'Tiers',{def:d.steps})}
+      </div>
+      <div class="pe-tier-preview" data-cab="${k}"></div></div>`;
   }));
-  h+='</div>';
-  h+=`<div class="pe-cat"><h3>Gril — kadar (rate)</h3><p class="pe-note">Area items: RM / sqft · Pintu (run): RM / ft. Aluminium rates start at 0.</p>`;
+  h+='</div></div>';
+
+  // Grill
+  h+=`<div class="pe-panel" data-panel="grill"><div class="pe-noresults">No matching grill items.</div>
+    <div class="pe-cat">${peSectionHead('Gril — kadar (rate)')}<p class="pe-note">Area items: RM / sqft · Pintu (run): RM / ft. Aluminium rates start at 0.</p>`;
   GRILL.forEach(g=>g.options.forEach(o=>{
-    const k=g.id+':'+o.id;
+    const k=g.id+':'+o.id, d=PRICE_DEFAULTS.grills[k]||{};
     const ul=o.unit==='sqft'?'RM/sqft':(o.unit==='ftrun'?'RM/ft':'RM');
-    h+=`<div class="pe-cab"><div class="pe-cab-name">${g.name} · ${o.name}</div><div class="pe-cab-grid">
-      ${peField('grill',k,'rate',o.rate,ul)}
-      ${o.unit==='ftrun'?peField('grill',k,'overRate',(o.tier?o.tier.overRate:0),'RM/ft >12ft'):''}
-    </div></div>`;
+    h+=`<div class="pe-cab" data-search="${peSafe(g.name+' '+o.name)}">${peCardHead(g.name+' · '+o.name)}
+      <div class="pe-cab-grid">
+        ${peField('grill',k,'rate',o.rate,ul,{money:true,def:d.rate})}
+        ${o.unit==='ftrun'?peField('grill',k,'overRate',(o.tier?o.tier.overRate:0),'RM/ft >12ft',{money:true,def:(d.overRate!=null?d.overRate:0)}):''}
+      </div></div>`;
   }));
-  h+='</div>';
-  h+=`<div class="pe-cat"><h3>Cat (Painting) — kadar (rate)</h3><p class="pe-note">RM / sqft per kawasan. Rates start at 0.</p>`;
+  h+='</div></div>';
+
+  // Paint
+  h+=`<div class="pe-panel" data-panel="paint"><div class="pe-noresults">No matching paint items.</div>
+    <div class="pe-cat">${peSectionHead('Cat (Painting) — kadar (rate)')}<p class="pe-note">RM / sqft per kawasan. Rates start at 0.</p>`;
   PAINT.forEach(o=>{
-    h+=`<div class="pe-cab"><div class="pe-cab-name">${o.name}</div><div class="pe-cab-grid">
-      ${peField('paint',o.id,'rate',o.rate,'RM/sqft')}
-    </div></div>`;
+    const d=PRICE_DEFAULTS.paints[o.id]||{};
+    h+=`<div class="pe-cab" data-search="${peSafe(o.name)}">${peCardHead(o.name)}
+      <div class="pe-cab-grid">${peField('paint',o.id,'rate',o.rate,'RM/sqft',{money:true,def:d.rate})}</div></div>`;
   });
-  h+='</div>';
+  h+='</div></div>';
   return h;
 }
+
+/* ---- editor behavior ---- */
+function peInitEditor(){
+  peDirty=false;
+  document.getElementById('peActionbar').classList.remove('dirty');
+  const body=document.getElementById('priceBody');
+  body.querySelectorAll('input[data-kind]').forEach(inp=>inp.classList.remove('pe-invalid'));
+  body.querySelectorAll('.pe-row, .pe-cab').forEach(c=>{ const i=c.querySelector('input[data-kind]'); if(i) peApplyChanged(i); });
+  body.querySelectorAll('.pe-tier-preview').forEach(p=>peRenderCabPreview(p.closest('.pe-cab')));
+  peRecount();
+}
+function onPeInput(e){
+  const inp=e.target;
+  if(!inp.matches || !inp.matches('#priceBody input[data-kind]')) return;
+  inp.classList.remove('pe-invalid');
+  peApplyChanged(inp);
+  if(inp.dataset.kind==='cab'){ const card=inp.closest('.pe-cab'); if(card) peRenderCabPreview(card); }
+  peSetDirty(); peRecount();
+}
+function peApplyChanged(inp){
+  const cont=inp.closest('.pe-row')||inp.closest('.pe-cab'); if(!cont) return;
+  let changed=false;
+  cont.querySelectorAll('input[data-kind]').forEach(i=>{ if(!peEq(i.value,i.dataset.default)) changed=true; });
+  cont.classList.toggle('changed',changed);
+  const badge=cont.querySelector('.pe-badge'); if(badge) badge.hidden=!changed;
+  const reset=cont.querySelector('.pe-reset'); if(reset) reset.disabled=!changed;
+}
+function peRecount(){
+  const searching=(document.getElementById('peSearch')||{}).value;
+  ['items','cab','grill','paint'].forEach(name=>{
+    const panel=document.querySelector(`.pe-panel[data-panel="${name}"]`);
+    const tab=document.querySelector(`.pe-tab[data-panel="${name}"]`);
+    if(!panel||!tab) return;
+    let changed=0,total=0;
+    panel.querySelectorAll('.pe-row, .pe-cab').forEach(c=>{ total++; if(c.classList.contains('changed')) changed++; });
+    if(!searching){
+      const pill=tab.querySelector('[data-count]');
+      if(pill){ pill.textContent = changed>0?changed:total; pill.classList.toggle('hot',changed>0); }
+    }
+    panel.querySelectorAll('.pe-reset-section').forEach(btn=>{
+      const sec=btn.closest('.pe-cat'); let any=false;
+      sec.querySelectorAll('.pe-row, .pe-cab').forEach(c=>{ if(c.classList.contains('changed')) any=true; });
+      btn.disabled=!any;
+    });
+  });
+}
+function peResetOne(btn){
+  const cont=btn.closest('.pe-row')||btn.closest('.pe-cab'); if(!cont) return;
+  cont.querySelectorAll('input[data-kind]').forEach(i=>{ i.value=i.dataset.default; i.classList.remove('pe-invalid'); });
+  peApplyChanged(cont.querySelector('input[data-kind]'));
+  if(cont.classList.contains('pe-cab') && cont.querySelector('.pe-tier-preview')) peRenderCabPreview(cont);
+  peSetDirty(); peRecount();
+}
+function peResetSection(btn){
+  const sec=btn.closest('.pe-cat'); if(!sec) return;
+  if(!confirm('Reset all prices in this section to the built-in defaults?')) return;
+  sec.querySelectorAll('input[data-kind]').forEach(i=>{ i.value=i.dataset.default; i.classList.remove('pe-invalid'); });
+  sec.querySelectorAll('.pe-row, .pe-cab').forEach(c=>{ const i=c.querySelector('input[data-kind]'); if(i) peApplyChanged(i); });
+  sec.querySelectorAll('.pe-tier-preview').forEach(p=>peRenderCabPreview(p.closest('.pe-cab')));
+  peSetDirty(); peRecount();
+}
+function peSwitchTab(name){
+  document.querySelectorAll('.pe-tab').forEach(t=>t.classList.toggle('active',t.dataset.panel===name));
+  document.querySelectorAll('.pe-panel').forEach(p=>p.classList.toggle('active',p.dataset.panel===name));
+  peFilter();
+  const m=document.getElementById('priceModal'); if(m) m.scrollTop=0;
+}
+function peFilter(){
+  const q=((document.getElementById('peSearch')||{}).value||'').trim().toLowerCase();
+  const clr=document.getElementById('peSearchClear'); if(clr) clr.classList.toggle('show',q.length>0);
+  ['items','cab','grill','paint'].forEach(name=>{
+    const panel=document.querySelector(`.pe-panel[data-panel="${name}"]`);
+    const tab=document.querySelector(`.pe-tab[data-panel="${name}"]`);
+    if(!panel) return;
+    let matches=0;
+    panel.querySelectorAll('.pe-row, .pe-cab').forEach(el=>{
+      const txt=el.dataset.search||el.textContent.toLowerCase();
+      const show=!q||txt.indexOf(q)>=0;
+      el.style.display=show?'':'none';
+      if(show) matches++;
+    });
+    panel.querySelectorAll('.pe-cat').forEach(cat=>{
+      if(!cat.querySelector('.pe-row, .pe-cab')) return;
+      const vis=[...cat.querySelectorAll('.pe-row, .pe-cab')].some(e=>e.style.display!=='none');
+      cat.style.display=(q&&!vis)?'none':'';
+    });
+    const nr=panel.querySelector('.pe-noresults'); if(nr) nr.classList.toggle('show', q.length>0 && matches===0);
+    if(q && tab){ const pill=tab.querySelector('[data-count]'); if(pill){ pill.textContent=matches; pill.classList.toggle('hot',matches>0); } }
+  });
+  if(!q) peRecount();
+}
+function peClearSearch(){ const s=document.getElementById('peSearch'); if(!s) return; s.value=''; peFilter(); s.focus(); }
+function peRenderCabPreview(card){
+  if(!card) return;
+  const prev=card.querySelector('.pe-tier-preview'); if(!prev) return;
+  const get=f=>peNum((card.querySelector(`input[data-field="${f}"]`)||{}).value);
+  const basePrice=get('basePrice'), priceInc=get('priceInc'), defaultMm=get('defaultMm'), stepMm=get('stepMm');
+  let steps=get('steps');
+  if(basePrice===null||priceInc===null||defaultMm===null||stepMm===null||steps===null){
+    prev.innerHTML='<span class="pe-tier-lbl">Tier preview</span> Fill all tier fields to preview.'; return;
+  }
+  steps=Math.max(1,Math.round(steps));
+  const tiers=cab(defaultMm,basePrice,stepMm,priceInc,steps).tiers;
+  let html='<span class="pe-tier-lbl">Tier preview</span>', prevMax=0;
+  tiers.forEach((t,i)=>{
+    let range;
+    if(t.maxMm===Infinity) range=`&gt;${prevMax}mm`;
+    else if(i===0) range=`≤${t.maxMm}mm`;
+    else range=`${prevMax+1}–${t.maxMm}mm`;
+    html+=`<span class="pe-chip">${range} → RM${fmt(t.price)}</span>`;
+    if(t.maxMm!==Infinity) prevMax=t.maxMm;
+  });
+  prev.innerHTML=html;
+}
+function peValidate(){
+  const bad=[];
+  document.querySelectorAll('#priceBody input[data-kind]').forEach(inp=>{
+    const v=parseFloat(inp.value);
+    let invalid=(inp.value===''||isNaN(v)||v<0);
+    if(!invalid && inp.dataset.field==='steps' && v<1) invalid=true;
+    inp.classList.toggle('pe-invalid',invalid);
+    if(invalid) bad.push(inp);
+  });
+  return {ok:bad.length===0, first:bad[0]||null, count:bad.length};
+}
+function peSetDirty(){ peDirty=true; const a=document.getElementById('peActionbar'); if(a) a.classList.add('dirty'); }
+
 async function savePrices(){
+  const val=peValidate();
+  if(!val.ok){
+    if(val.first){ const panel=val.first.closest('.pe-panel'); if(panel) peSwitchTab(panel.dataset.panel); val.first.focus(); }
+    alert('Please fix '+val.count+' highlighted field'+(val.count>1?'s':'')+' (blank or negative) before saving.');
+    return;
+  }
   const overlay={items:{},cabinets:{},grills:{},paints:{}};
   document.querySelectorAll('#priceBody input[data-kind="item"]').forEach(inp=>{
     const v=parseFloat(inp.value); if(!isNaN(v)) overlay.items[inp.dataset.key]=v;
@@ -685,16 +948,17 @@ async function savePrices(){
   });
   const supa=getSupa();
   if(!supa){ alert('Not connected — open this inside the app to save prices.'); return; }
-  const btn=document.getElementById('savePricesBtn'); if(btn){btn.disabled=true;btn.textContent='Saving…';}
+  const btns=[...document.querySelectorAll('.js-save-prices')]; btns.forEach(b=>{b.disabled=true;b.textContent='Saving…';});
   try{
     let uid=null; try{ uid=(await supa.auth.getUser()).data.user.id; }catch(e){}
     const {error}=await supa.from('app_settings').upsert({key:'pricing',value:overlay,updated_by:uid,updated_at:new Date().toISOString()});
     if(error) throw error;
     priceOverlay=overlay; applyOverrides(priceOverlay); renderCatalog();
+    peDirty=false;
     closePriceEditor();
   }catch(e){
     alert('Could not save prices: '+((e&&e.message)||e));
-  }finally{ if(btn){btn.disabled=false;btn.textContent='Save prices';} }
+  }finally{ btns.forEach(b=>{b.disabled=false;b.textContent='Save prices';}); }
 }
 
 /* ---------- state ---------- */
@@ -1311,6 +1575,13 @@ function newQuote(){
 
 /* ---------- init ---------- */
 (function init(){
+  // Snapshot coded defaults BEFORE loadPricing()/applyOverrides() mutate the
+  // price arrays — powers the editor's "changed" badges and reset-to-default.
+  capturePriceDefaults();
+  // One-time delegated input listener for the price editor (its inner HTML is
+  // rebuilt on every open, but #priceBody itself persists).
+  document.getElementById('priceBody').addEventListener('input', onPeInput);
+
   document.getElementById('c_date').value=new Date().toISOString().slice(0,10);
   const staff=loadJSON(SK_STAFF);
   if(staff.name) document.getElementById('c_pic').value=staff.name;
