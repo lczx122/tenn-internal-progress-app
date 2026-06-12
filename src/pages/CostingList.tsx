@@ -145,21 +145,6 @@ export default function CostingList() {
     if (groups.length && !groups.includes(sheetCat)) setSheetCat(groups[0])
   }, [groups, sheetCat])
 
-  const summary = useMemo(() => {
-    const map = new Map<string, { count: number; revenue: number; gp: number }>()
-    for (const r of visible) {
-      const k = r.category || ''
-      const cur = map.get(k) ?? { count: 0, revenue: 0, gp: 0 }
-      cur.count++
-      cur.revenue += num(r.revenue)
-      cur.gp += calcCosting(r).grossProfit
-      map.set(k, cur)
-    }
-    const list = groups.map((k) => ({ key: k, ...map.get(k)! }))
-    const grand = list.reduce((a, g) => ({ count: a.count + g.count, revenue: a.revenue + g.revenue, gp: a.gp + g.gp }), { count: 0, revenue: 0, gp: 0 })
-    return { list, grand }
-  }, [visible, groups])
-
   // ---- inline editing ----
   function patchRow(id: string, patch: Record<string, unknown>) {
     setRows((prev) => prev.map((r) => (r.id === id ? ({ ...r, ...patch } as Costing) : r)))
@@ -281,41 +266,6 @@ export default function CostingList() {
         </div>
       ) : (
         <div className="mt-4">
-          {/* Summary */}
-          <div className="mb-4 overflow-hidden rounded-xl bg-white shadow-sm lg:max-w-3xl">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-slate-200 text-left text-[11px] uppercase tracking-wide text-slate-400">
-                  <th className="px-3 py-2">Category</th>
-                  <th className="px-3 py-2 text-right">Units</th>
-                  <th className="px-3 py-2 text-right">Sales</th>
-                  <th className="px-3 py-2 text-right">Gross profit</th>
-                </tr>
-              </thead>
-              <tbody>
-                {summary.list.map((g) => (
-                  <tr key={g.key} className="border-b border-slate-100">
-                    <td className="px-3 py-2">
-                      <span className="flex items-center gap-2 font-medium text-slate-700">
-                        <span className={`h-2.5 w-2.5 rounded-full ${CATEGORY_ACCENT[g.key] ?? 'bg-slate-400'}`} />
-                        {categoryLabel(g.key)}
-                      </span>
-                    </td>
-                    <td className="px-3 py-2 text-right text-slate-500">{g.count}</td>
-                    <td className="px-3 py-2 text-right text-slate-700">{money(g.revenue)}</td>
-                    <td className={'px-3 py-2 text-right font-medium ' + (g.gp < 0 ? 'text-rose-600' : 'text-emerald-600')}>{money(g.gp)}</td>
-                  </tr>
-                ))}
-                <tr className="bg-slate-900 font-semibold text-white">
-                  <td className="px-3 py-2">Total</td>
-                  <td className="px-3 py-2 text-right">{summary.grand.count}</td>
-                  <td className="px-3 py-2 text-right">{money(summary.grand.revenue)}</td>
-                  <td className="px-3 py-2 text-right">{money(summary.grand.gp)}</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-
           {view === 'sheet' ? (
             <>
               {/* category tabs */}
