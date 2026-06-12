@@ -390,11 +390,11 @@ const CATALOG = [
     id:'smarthome', name:'Smart Home & Plug Point',
     variants:[],
     items:[
-      {v:0,label:'Smart Home (Ansuran)',sub:'RM99.00/bulan × 60 bulan',price:5940},
-      {v:0,label:'Smart Home (Full Pay)',sub:'Bayaran penuh',price:0},
-      {v:0,label:'ADDON CCTV',sub:'Harga ikut spesifikasi',price:0},
-      {v:0,label:'ADDON Plug Point Biasa',sub:'Termasuk wayar & casing',price:200},
-      {v:0,label:'ADDON Plug Aircond & Pemanas Air',sub:'Termasuk wayar & casing',price:450},
+      {v:0,label:'Smart Home (Installment)',sub:'RM99.00/month × 60 months',price:5940},
+      {v:0,label:'Smart Home (Full Pay)',sub:'Full payment',price:0},
+      {v:0,label:'ADDON CCTV',sub:'Price by specification',price:0},
+      {v:0,label:'ADDON Standard Plug Point',sub:'Includes wiring & casing',price:200},
+      {v:0,label:'ADDON Air-Cond & Water Heater Plug',sub:'Includes wiring & casing',price:450},
     ]
   },
   {
@@ -406,13 +406,13 @@ const CATALOG = [
     ]
   },
   {
-    id:'other', name:'Perkhidmatan Lain',
-    note:'Harga ikut spesifikasi / keluasan.',
+    id:'other', name:'Other Services',
+    note:'Price by specification / area.',
     variants:[],
     items:[
-      {v:0,label:'Aluminium Louvered',sub:'Harga ikut spesifikasi',price:0},
-      {v:0,label:'Invisible Grill',sub:'Harga ikut spesifikasi',price:0},
-      {v:0,label:'Moru Acrylic',sub:'Harga ikut spesifikasi',price:0},
+      {v:0,label:'Aluminium Louvered',sub:'Price by specification',price:0},
+      {v:0,label:'Invisible Grill',sub:'Price by specification',price:0},
+      {v:0,label:'Moru Acrylic',sub:'Price by specification',price:0},
     ]
   },
 ];
@@ -453,27 +453,27 @@ function cab(defaultMm, basePrice, stepMm, priceInc, steps=3){
 }
 
 const CABINET = [
-  { id:'dapur', name:'Kabinet Dapur', options:[
-      { id:'atas',      name:'Kabinet Dapur Atas',            ...cab(1200, 1200, 600, 500) },
-      { id:'bawah',     name:'Kabinet Dapur Bawah',           ...cab(1200, 1500, 600, 700) },
-      { id:'atas_alu',  name:'Kabinet Dapur Atas Aluminium',  ...cab(1200, 1400, 600, 550) },
-      { id:'bawah_alu', name:'Kabinet Dapur Bawah Aluminium', ...cab(1200, 1700, 600, 700) },
+  { id:'dapur', name:'Kitchen Cabinet', options:[
+      { id:'atas',      name:'Upper Kitchen Cabinet',              ...cab(1200, 1200, 600, 500) },
+      { id:'bawah',     name:'Lower Kitchen Cabinet',              ...cab(1200, 1500, 600, 700) },
+      { id:'atas_alu',  name:'Upper Kitchen Cabinet (Aluminium)',  ...cab(1200, 1400, 600, 550) },
+      { id:'bawah_alu', name:'Lower Kitchen Cabinet (Aluminium)',  ...cab(1200, 1700, 600, 700) },
   ]},
-  { id:'tv', name:'Kabinet TV', options:[
-      { id:'standard', name:'Kabinet TV',                  ...cab(2400, 1000, 600, 450) },
-      { id:'backdrop', name:'Kabinet TV bersama Backdrop', ...cab(2400, 1600, 600, 600) },
+  { id:'tv', name:'TV Cabinet', options:[
+      { id:'standard', name:'TV Cabinet',              ...cab(2400, 1000, 600, 450) },
+      { id:'backdrop', name:'TV Cabinet with Backdrop', ...cab(2400, 1600, 600, 600) },
   ]},
-  { id:'almari', name:'Almari Pakaian', options:[
-      { id:'standard', name:'Almari Pakaian',                        ...cab(1800, 1800, 600, 700) },
-      { id:'tatami',   name:'Almari Pakaian Tatami',                 ...cab(1800, 2500, 600, 900) },
-      { id:'meja',     name:'Almari Pakaian bersama Meja',           ...cab(1800, 2200, 600, 800) },
-      { id:'terbuka',  name:'Almari Pakaian dengan Kabinet Terbuka', ...cab(1800, 2000, 600, 750) },
+  { id:'almari', name:'Wardrobe', options:[
+      { id:'standard', name:'Wardrobe',                    ...cab(1800, 1800, 600, 700) },
+      { id:'tatami',   name:'Tatami Wardrobe',             ...cab(1800, 2500, 600, 900) },
+      { id:'meja',     name:'Wardrobe with Table',         ...cab(1800, 2200, 600, 800) },
+      { id:'terbuka',  name:'Wardrobe with Open Shelving', ...cab(1800, 2000, 600, 750) },
   ]},
-  { id:'dining', name:'Kabinet Dining', options:[
-      { id:'standard', name:'Kabinet Dining', ...cab(1200, 1200, 600, 550) },
+  { id:'dining', name:'Dining Cabinet', options:[
+      { id:'standard', name:'Dining Cabinet', ...cab(1200, 1200, 600, 550) },
   ]},
-  { id:'kasut', name:'Kabinet Kasut', options:[
-      { id:'alu', name:'Kabinet Kasut Aluminium', ...cab(900, 900, 600, 450) },
+  { id:'kasut', name:'Shoe Cabinet', options:[
+      { id:'alu', name:'Aluminium Shoe Cabinet', ...cab(900, 900, 600, 450) },
   ]},
 ];
 
@@ -484,31 +484,31 @@ const CABINET = [
    Aluminium rates are 0 until set in Edit Prices.
    ============================================================ */
 const GRILL = [
-  { id:'iron', name:'Gril Besi (Iron)', options:[
-      { id:'pagar',    name:'Pintu Pagar Utama',             unit:'sqft',  rate:45 },
-      { id:'automoto', name:'ADDON Pintu Pagar — Auto Moto', unit:'flat',  rate:0 },
-      { id:'depan',    name:'Pintu Depan',                   unit:'ftrun', rate:525, tier:{overFt:12, overRate:480} },
-      { id:'balkoni',  name:'Balkoni',                       unit:'sqft',  rate:45 },
-      { id:'tutama',   name:'Tingkap Bilik Utama',           unit:'sqft',  rate:45 },
-      { id:'t1',       name:'Tingkap Bilik 1',               unit:'sqft',  rate:45 },
-      { id:'t2',       name:'Tingkap Bilik 2',               unit:'sqft',  rate:45 },
-      { id:'t3',       name:'Tingkap Bilik 3',               unit:'sqft',  rate:45 },
-      { id:'belakang', name:'Pintu Belakang',                unit:'sqft',  rate:45 },
-      { id:'awnpu',    name:'Awning — PU Metal Roofing',     unit:'sqft',  rate:49 },
-      { id:'awnstd',   name:'Awning Standard',               unit:'sqft',  rate:17 },
+  { id:'iron', name:'Iron Grill', options:[
+      { id:'pagar',    name:'Main Gate',                  unit:'sqft',  rate:45 },
+      { id:'automoto', name:'ADDON Gate — Auto Motor',    unit:'flat',  rate:0 },
+      { id:'depan',    name:'Front Door',                 unit:'ftrun', rate:525, tier:{overFt:12, overRate:480} },
+      { id:'balkoni',  name:'Balcony',                    unit:'sqft',  rate:45 },
+      { id:'tutama',   name:'Master Bedroom Window',      unit:'sqft',  rate:45 },
+      { id:'t1',       name:'Bedroom 1 Window',           unit:'sqft',  rate:45 },
+      { id:'t2',       name:'Bedroom 2 Window',           unit:'sqft',  rate:45 },
+      { id:'t3',       name:'Bedroom 3 Window',           unit:'sqft',  rate:45 },
+      { id:'belakang', name:'Back Door',                  unit:'sqft',  rate:45 },
+      { id:'awnpu',    name:'Awning — PU Metal Roofing',  unit:'sqft',  rate:49 },
+      { id:'awnstd',   name:'Awning Standard',            unit:'sqft',  rate:17 },
   ]},
-  { id:'alu', name:'Gril Hollow Aluminium', options:[
-      { id:'pagar',    name:'Pintu Pagar Utama',             unit:'sqft',  rate:0 },
-      { id:'automoto', name:'ADDON Pintu Pagar — Auto Moto', unit:'flat',  rate:0 },
-      { id:'depan',    name:'Pintu Depan',                   unit:'ftrun', rate:0, tier:{overFt:12, overRate:0} },
-      { id:'balkoni',  name:'Balkoni',                       unit:'sqft',  rate:0 },
-      { id:'tutama',   name:'Tingkap Bilik Utama',           unit:'sqft',  rate:0 },
-      { id:'t1',       name:'Tingkap Bilik 1',               unit:'sqft',  rate:0 },
-      { id:'t2',       name:'Tingkap Bilik 2',               unit:'sqft',  rate:0 },
-      { id:'t3',       name:'Tingkap Bilik 3',               unit:'sqft',  rate:0 },
-      { id:'belakang', name:'Pintu Belakang',                unit:'sqft',  rate:0 },
-      { id:'awnpu',    name:'Awning — PU Metal Roofing',     unit:'sqft',  rate:0 },
-      { id:'awnstd',   name:'Awning Standard',               unit:'sqft',  rate:0 },
+  { id:'alu', name:'Aluminium Hollow Grill', options:[
+      { id:'pagar',    name:'Main Gate',                  unit:'sqft',  rate:0 },
+      { id:'automoto', name:'ADDON Gate — Auto Motor',    unit:'flat',  rate:0 },
+      { id:'depan',    name:'Front Door',                 unit:'ftrun', rate:0, tier:{overFt:12, overRate:0} },
+      { id:'balkoni',  name:'Balcony',                    unit:'sqft',  rate:0 },
+      { id:'tutama',   name:'Master Bedroom Window',      unit:'sqft',  rate:0 },
+      { id:'t1',       name:'Bedroom 1 Window',           unit:'sqft',  rate:0 },
+      { id:'t2',       name:'Bedroom 2 Window',           unit:'sqft',  rate:0 },
+      { id:'t3',       name:'Bedroom 3 Window',           unit:'sqft',  rate:0 },
+      { id:'belakang', name:'Back Door',                  unit:'sqft',  rate:0 },
+      { id:'awnpu',    name:'Awning — PU Metal Roofing',  unit:'sqft',  rate:0 },
+      { id:'awnstd',   name:'Awning Standard',            unit:'sqft',  rate:0 },
   ]},
 ];
 
@@ -548,7 +548,7 @@ function grillPreview(){
   const L=parseFloat(document.getElementById('grl-L').value)||0;
   const c=grillCompute(o,W,H,L);
   let html='';
-  if(o.unit==='flat'){ html=`<div class="cab-calc">Harga tetap → <b>RM ${fmt(+o.rate||0)}</b></div>`; }
+  if(o.unit==='flat'){ html=`<div class="cab-calc">Flat price → <b>RM ${fmt(+o.rate||0)}</b></div>`; }
   else if(o.unit==='sqft'){ html=`<div class="cab-tiers"><b>RM ${fmt(+o.rate||0)}</b> / sqft</div>`; if(W>0&&H>0) html+=`<div class="cab-calc">${W}\" × ${H}\" = ${((W*H)/144).toFixed(2)} sqft → <b>RM ${fmt(c.amount)}</b></div>`; }
   else { const tn=o.tier?` · >${o.tier.overFt}ft: RM ${fmt(+o.tier.overRate||0)}/ft`:''; html=`<div class="cab-tiers"><b>RM ${fmt(+o.rate||0)}</b> / ft run${tn}</div>`; if(L>0) html+=`<div class="cab-calc">${L} ft → <b>RM ${fmt(c.amount)}</b></div>`; }
   document.getElementById('grl-preview').innerHTML=html;
@@ -558,8 +558,8 @@ function grillAdd(){
   const W=parseFloat(document.getElementById('grl-W').value)||0;
   const H=parseFloat(document.getElementById('grl-H').value)||0;
   const L=parseFloat(document.getElementById('grl-L').value)||0;
-  if(o.unit==='sqft' && !(W>0 && H>0)){ alert('Masukkan Width & Height (inci).'); return; }
-  if(o.unit==='ftrun' && !(L>0)){ alert('Masukkan Run (ft).'); return; }
+  if(o.unit==='sqft' && !(W>0 && H>0)){ alert('Enter Width & Height (in).'); return; }
+  if(o.unit==='ftrun' && !(L>0)){ alert('Enter Run (ft).'); return; }
   const c=grillCompute(o,W,H,L);
   grillLines.push({gid:g.id,gname:g.name,oid:o.id,oname:o.name,unit:o.unit,W,H,L,price:c.amount});
   document.getElementById('grl-W').value=''; document.getElementById('grl-H').value=''; document.getElementById('grl-L').value='';
@@ -568,7 +568,7 @@ function grillAdd(){
 function grillRemove(i){ grillLines.splice(i,1); renderGrillLines(); recalc(); }
 function renderGrillLines(){
   const box=document.getElementById('grl-lines'); if(!box) return;
-  if(!grillLines.length){ box.innerHTML='<div class="cab-empty">No gril added yet.</div>'; return; }
+  if(!grillLines.length){ box.innerHTML='<div class="cab-empty">No grill added yet.</div>'; return; }
   box.innerHTML=grillLines.map((l,i)=>`<div class="cab-line">
     <div class="cab-line-info"><b>${l.oname}</b> <span class="muted">· ${l.gname}</span><br><span class="cab-dim">${grillDimStr(l)}</span></div>
     <div class="cab-amt">RM ${fmt(l.price)}</div>
@@ -582,13 +582,13 @@ function grillCardHtml(){
   <div class="cat" data-cat="grill">
     <div class="cat-hd" onclick="this.parentElement.classList.toggle('open')">
       <span class="chev">▶</span>
-      <span class="cname">Gril (Iron / Aluminium)</span>
+      <span class="cname">Grill (Iron / Aluminium)</span>
       <span class="count zero" id="cnt-grill">0</span>
     </div>
     <div class="cat-bd">
-      <div class="cab-note">Pilih jenis gril & item, masukkan ukuran, harga dikira automatik. Luas dalam <b>inci</b> (W × H → sqft); pintu mengikut <b>ft run</b>.</div>
+      <div class="cab-note">Pick a grill type & item, enter the measurements, the price is auto-calculated. Area in <b>inches</b> (W × H → sqft); doors by <b>ft run</b>.</div>
       <div class="cab-grid">
-        <label class="fld">Jenis Gril <select id="grl-group" onchange="grillGroupChange()">${groupOpts}</select></label>
+        <label class="fld">Grill Type <select id="grl-group" onchange="grillGroupChange()">${groupOpts}</select></label>
         <label class="fld">Item <select id="grl-option" onchange="grillOptionChange()">${optOpts}</select></label>
       </div>
       <div class="cab-grid3">
@@ -597,7 +597,7 @@ function grillCardHtml(){
         <label class="fld" id="grl-wrap-L">Run (ft) <input id="grl-L" type="number" min="0" step="0.1" oninput="grillPreview()"></label>
       </div>
       <div class="cab-preview" id="grl-preview"></div>
-      <button class="act b-primary" style="padding:11px 16px;font-size:13px" onclick="grillAdd()">+ Add Gril to Quote</button>
+      <button class="act b-primary" style="padding:11px 16px;font-size:13px" onclick="grillAdd()">+ Add Grill to Quote</button>
       <div id="grl-lines" style="margin-top:14px"></div>
     </div>
   </div>`;
@@ -773,7 +773,7 @@ function buildPriceEditorHtml(){
 
   // Grill
   h+=`<div class="pe-panel" data-panel="grill"><div class="pe-noresults">No matching grill items.</div>
-    <div class="pe-cat">${peSectionHead('Gril — kadar (rate)')}<p class="pe-note">Area items: RM / sqft · Pintu (run): RM / ft. Aluminium rates start at 0.</p>`;
+    <div class="pe-cat">${peSectionHead('Grill — rate')}<p class="pe-note">Area items: RM / sqft · Run items: RM / ft. Aluminium rates start at 0.</p>`;
   GRILL.forEach(g=>g.options.forEach(o=>{
     const k=g.id+':'+o.id, d=PRICE_DEFAULTS.grills[k]||{};
     const ul=o.unit==='sqft'?'RM/sqft':(o.unit==='ftrun'?'RM/ft':'RM');
@@ -787,7 +787,7 @@ function buildPriceEditorHtml(){
 
   // Paint
   h+=`<div class="pe-panel" data-panel="paint"><div class="pe-noresults">No matching paint items.</div>
-    <div class="pe-cat">${peSectionHead('Cat (Painting) — kadar (rate)')}<p class="pe-note">RM / sqft per kawasan. Rates start at 0.</p>`;
+    <div class="pe-cat">${peSectionHead('Painting — rate')}<p class="pe-note">RM / sqft per area. Rates start at 0.</p>`;
   PAINT.forEach(o=>{
     const d=PRICE_DEFAULTS.paints[o.id]||{};
     h+=`<div class="pe-cab" data-search="${peSafe(o.name)}">${peCardHead(o.name)}
@@ -978,13 +978,13 @@ const fmt = n => n.toLocaleString('en-MY',{minimumFractionDigits:2,maximumFracti
    ============================================================ */
 const PAINT_CAT='Cat (Painting)';
 const PAINT = [
-  { id:'dalaman', name:'Cat Dalaman Rumah',  rate:0 },
-  { id:'luar',    name:'Cat Dinding Luar',    rate:0 },
-  { id:'bilik1',  name:'Cat Bilik Bedroom 1', rate:0 },
-  { id:'bilik2',  name:'Cat Bilik Bedroom 2', rate:0 },
-  { id:'bilik3',  name:'Cat Bilik Bedroom 3', rate:0 },
-  { id:'bilik4',  name:'Cat Bilik Bedroom 4', rate:0 },
-  { id:'seluruh', name:'Cat Seluruh Rumah',   rate:0 },
+  { id:'dalaman', name:'Interior House Painting', rate:0 },
+  { id:'luar',    name:'Exterior Wall Painting',  rate:0 },
+  { id:'bilik1',  name:'Bedroom 1 Painting',      rate:0 },
+  { id:'bilik2',  name:'Bedroom 2 Painting',      rate:0 },
+  { id:'bilik3',  name:'Bedroom 3 Painting',      rate:0 },
+  { id:'bilik4',  name:'Bedroom 4 Painting',      rate:0 },
+  { id:'seluruh', name:'Whole House Painting',    rate:0 },
 ];
 function paintSel(){ return PAINT[+document.getElementById('pnt-option').value]; }
 function paintCalcArea(){
@@ -1005,7 +1005,7 @@ function paintAdd(){
   const W=parseFloat(document.getElementById('pnt-W').value)||0;
   const H=parseFloat(document.getElementById('pnt-H').value)||0;
   const area=parseFloat(document.getElementById('pnt-area').value)||0;
-  if(!(area>0)){ alert('Masukkan keluasan (sqft) atau Width × Height (ft).'); return; }
+  if(!(area>0)){ alert('Enter area (sqft) or Width × Height (ft).'); return; }
   paintLines.push({oid:o.id,oname:o.name,W,H,sqft:area,price:area*(+o.rate||0)});
   document.getElementById('pnt-W').value=''; document.getElementById('pnt-H').value=''; document.getElementById('pnt-area').value='';
   paintPreview(); renderPaintLines(); recalc();
@@ -1030,13 +1030,13 @@ function paintCardHtml(){
   <div class="cat" data-cat="paint">
     <div class="cat-hd" onclick="this.parentElement.classList.toggle('open')">
       <span class="chev">▶</span>
-      <span class="cname">Cat (Painting)</span>
+      <span class="cname">Painting</span>
       <span class="count zero" id="cnt-paint">0</span>
     </div>
     <div class="cat-bd">
-      <div class="cab-note">Pilih kawasan cat, masukkan keluasan (sqft) atau Width × Height (ft) — harga dikira automatik. Jenis rumah / lot boleh dicatat di Remarks.</div>
+      <div class="cab-note">Pick a paint area, enter the area (sqft) or Width × Height (ft) — the price is auto-calculated. House type / lot can be noted in Remarks.</div>
       <div class="cab-grid">
-        <label class="fld">Kawasan Cat <select id="pnt-option" onchange="paintPreview()">${optOpts}</select></label>
+        <label class="fld">Paint Area <select id="pnt-option" onchange="paintPreview()">${optOpts}</select></label>
         <label class="fld">Area (sqft) <input id="pnt-area" type="number" min="0" step="0.1" oninput="paintPreview()"></label>
       </div>
       <div class="cab-grid">
