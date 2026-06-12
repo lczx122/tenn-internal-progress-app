@@ -125,6 +125,11 @@
   .pe-tier-preview{margin-top:10px;background:#f7fbff;border:1px solid var(--line);border-radius:9px;padding:9px 11px;display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:12px;color:var(--muted)}
   .pe-tier-lbl{font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-right:2px}
   .pe-chip{font-size:11.5px;color:var(--navy);background:#eaf2ff;border:1px solid #d6e4fb;border-radius:6px;padding:2px 8px;white-space:nowrap}
+  /* cabinet area tiers */
+  .pe-areatiers{display:flex;flex-direction:column;gap:6px}
+  .pe-areatier-hd,.pe-areatier-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;max-width:320px}
+  .pe-areatier-hd span{font-size:10px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted)}
+  .pe-areatier-row input{width:100%;text-align:right;padding:7px 8px}
   /* sticky save bar */
   .pe-actionbar{position:sticky;bottom:0;z-index:4;display:flex;gap:9px;align-items:center;background:var(--card);border-top:1px solid var(--line);padding:12px 0 6px;margin-top:18px;box-shadow:0 -6px 14px rgba(21,36,83,.05)}
   .pe-actionbar .act{flex:0 1 150px;padding:12px}
@@ -425,55 +430,73 @@ const TERMS = [
 ];
 
 /* ============================================================
-   CABINET MODULE — measurement-based, tiered LENGTH pricing
+   CABINET MODULE — measurement-based, AREA pricing
    All cabinets record Length / Height / Depth in MILLIMETRES (mm).
-   ONLY LENGTH sets the price.
-   • defaultMm = the length pre-filled in the form. At this length
-     the cabinet is charged its BASE price (first tier).
-   • As the length increases past each step, the price steps up.
+   PRICE depends on AREA = Length × Height (in m²). The Depth (width)
+   does NOT affect the price. Each dimension is clamped to a 1 m
+   minimum: anything shorter than 1 m is priced as 1 m.
 
-   Each option is defined with cab(defaultMm, basePrice, stepMm, priceInc, steps):
-     - defaultMm  : pre-filled length & the base-price band ceiling
-     - basePrice  : price at the default length
-     - stepMm     : how many mm each higher tier spans
-     - priceInc   : how much RM is added per step
-     - steps      : number of step-up tiers (default 3)
+   Price = basePrice × (1 + uplift), where the uplift comes from the
+   global AREA_TIERS — the highest tier whose minimum area ≤ the
+   cabinet's area. basePrice is the price at the 1 m² minimum.
+   Example tiers: ≤1.3 m² = base · ≥1.3 m² = +20% · ≥1.4 m² = +50%.
 
-   ⚠️ THE NUMBERS BELOW ARE EXAMPLES — replace with your real rates.
-   Set CABINET_PRICES_SET to true once done to hide the warning.
+   Each option is defined with cabOpt(basePrice, defL, defH):
+     - basePrice : price at the 1 m² minimum
+     - defL/defH : length & height pre-filled in the form (mm)
+
+   ⚠️ THE BASE PRICES BELOW ARE EXAMPLES — replace with your real
+   rates. Set CABINET_PRICES_SET to true once done to hide the warning.
    ============================================================ */
 const CABINET_PRICES_SET = false;
 
-function cab(defaultMm, basePrice, stepMm, priceInc, steps=3){
-  const tiers=[{maxMm:defaultMm, price:basePrice}];
-  for(let i=1;i<steps;i++) tiers.push({maxMm:defaultMm+stepMm*i, price:basePrice+priceInc*i});
-  tiers.push({maxMm:Infinity, price:basePrice+priceInc*steps});
-  // keep the raw parameters so admins can edit them and the tiers can be rebuilt
-  return {defaultMm, basePrice, stepMm, priceInc, steps, tiers};
+// Global area-pricing tiers (admin-editable, shared by all cabinets).
+const DEFAULT_AREA_TIERS = [
+  { minM2: 1.0, pct: 0 },
+  { minM2: 1.3, pct: 20 },
+  { minM2: 1.4, pct: 50 },
+];
+let AREA_TIERS = DEFAULT_AREA_TIERS.map((t) => ({ ...t }));
+
+// Area in m² from mm dimensions, each clamped to a 1 m minimum.
+function cabArea(Lmm, Hmm){
+  const L = Math.max(1000, +Lmm || 0) / 1000;
+  const H = Math.max(1000, +Hmm || 0) / 1000;
+  return L * H;
+}
+// % uplift for an area: the highest tier whose minimum area ≤ the area.
+function areaUplift(m2, tiers){
+  const list = tiers || AREA_TIERS;
+  let pct = 0;
+  for(const t of list){ if(m2 + 1e-9 >= +t.minM2) pct = +t.pct || 0; }
+  return pct;
+}
+function cabOpt(basePrice, defL, defH){
+  return { basePrice: +basePrice || 0, defL: +defL || 1000, defH: +defH || 1000 };
 }
 
 const CABINET = [
   { id:'dapur', name:'Kitchen Cabinet', options:[
-      { id:'atas',      name:'Upper Kitchen Cabinet',              ...cab(1200, 1200, 600, 500) },
-      { id:'bawah',     name:'Lower Kitchen Cabinet',              ...cab(1200, 1500, 600, 700) },
-      { id:'atas_alu',  name:'Upper Kitchen Cabinet (Aluminium)',  ...cab(1200, 1400, 600, 550) },
-      { id:'bawah_alu', name:'Lower Kitchen Cabinet (Aluminium)',  ...cab(1200, 1700, 600, 700) },
+      { id:'atas',      name:'Upper Kitchen Cabinet',              ...cabOpt(1200, 1200, 1000) },
+      { id:'bawah',     name:'Lower Kitchen Cabinet',              ...cabOpt(1500, 1200, 1000) },
+      { id:'atas_alu',  name:'Upper Kitchen Cabinet (Aluminium)',  ...cabOpt(1400, 1200, 1000) },
+      { id:'bawah_alu', name:'Lower Kitchen Cabinet (Aluminium)',  ...cabOpt(1700, 1200, 1000) },
   ]},
   { id:'tv', name:'TV Cabinet', options:[
-      { id:'standard', name:'TV Cabinet',              ...cab(2400, 1000, 600, 450) },
-      { id:'backdrop', name:'TV Cabinet with Backdrop', ...cab(2400, 1600, 600, 600) },
+      { id:'standard', name:'TV Cabinet',              ...cabOpt(1000, 2400, 1000) },
+      { id:'backdrop', name:'TV Cabinet with Backdrop', ...cabOpt(1600, 2400, 1000) },
   ]},
   { id:'almari', name:'Wardrobe', options:[
-      { id:'standard', name:'Wardrobe',                    ...cab(1800, 1800, 600, 700) },
-      { id:'tatami',   name:'Tatami Wardrobe',             ...cab(1800, 2500, 600, 900) },
-      { id:'meja',     name:'Wardrobe with Table',         ...cab(1800, 2200, 600, 800) },
-      { id:'terbuka',  name:'Wardrobe with Open Shelving', ...cab(1800, 2000, 600, 750) },
+      { id:'standard', name:'Wardrobe',                    ...cabOpt(1800, 1800, 1000) },
+      { id:'tatami',   name:'Tatami Wardrobe',             ...cabOpt(2500, 1800, 1000) },
+      { id:'meja',     name:'Wardrobe with Table',         ...cabOpt(2200, 1800, 1000) },
+      { id:'terbuka',  name:'Wardrobe with Open Shelving', ...cabOpt(2000, 1800, 1000) },
   ]},
   { id:'dining', name:'Dining Cabinet', options:[
-      { id:'standard', name:'Dining Cabinet', ...cab(1200, 1200, 600, 550) },
+      { id:'standard', name:'Dining Cabinet', ...cabOpt(1200, 1200, 1000) },
   ]},
   { id:'kasut', name:'Shoe Cabinet', options:[
-      { id:'alu', name:'Aluminium Shoe Cabinet', ...cab(900, 900, 600, 450) },
+      { id:'alu', name:'Aluminium Shoe Cabinet', ...cabOpt(900, 900, 1000) },
   ]},
 ];
 
@@ -604,16 +627,18 @@ function grillCardHtml(){
 }
 
 
-function cabinetPrice(tiers, lengthMm){
-  for(const t of tiers){ if(lengthMm <= t.maxMm) return t.price; }
-  return tiers.length ? tiers[tiers.length-1].price : 0;
+function cabinetPrice(o, Lmm, Hmm, tiers){
+  const m2 = cabArea(Lmm, Hmm);
+  return (+o.basePrice || 0) * (1 + areaUplift(m2, tiers) / 100);
 }
-function tierTableHtml(tiers){
-  let prev=0;
-  return tiers.map((t,i)=>{
-    const range = t.maxMm===Infinity ? `over ${prev} mm` : (prev===0?`up to ${t.maxMm} mm`:`${prev}–${t.maxMm} mm`);
-    prev = t.maxMm===Infinity?prev:t.maxMm;
-    return `${range} → RM ${fmt(t.price)}${i===0?' <em>(base)</em>':''}`;
+// Human-readable area-tier table (uses the live/admin tiers when given).
+function areaTierTableHtml(tiers){
+  const list = (tiers || AREA_TIERS).slice().sort((a, b) => +a.minM2 - +b.minM2);
+  return list.map((t, i) => {
+    const next = list[i + 1];
+    const range = next ? `${(+t.minM2).toFixed(2)}–${(+next.minM2).toFixed(2)} m²` : `≥ ${(+t.minM2).toFixed(2)} m²`;
+    const lbl = (+t.pct === 0) ? 'base' : `+${+t.pct}%`;
+    return `${range} → ${lbl}`;
   }).join('  ·  ');
 }
 
@@ -621,7 +646,7 @@ function tierTableHtml(tiers){
    Item prices and cabinet tier parameters can be overridden by an admin and
    stored in Supabase (app_settings key='pricing'). The overlay is applied over
    the coded defaults on load; everyone reads it, only admins can save it. */
-let priceOverlay = { items:{}, cabinets:{}, grills:{}, paints:{} };
+let priceOverlay = { items:{}, cabinets:{}, grills:{}, paints:{}, areaTiers:[] };
 let isAdminUser = false;
 
 function itemKey(cat, it){ return cat.id+'|'+it.v+'|'+it.label; }
@@ -635,14 +660,15 @@ function applyOverrides(ov){
   }));
   CABINET.forEach(g=>g.options.forEach(o=>{
     const v=cabs[g.id+':'+o.id];
-    if(!v) return;
-    if(v.defaultMm!=null) o.defaultMm=+v.defaultMm;
-    if(v.basePrice!=null) o.basePrice=+v.basePrice;
-    if(v.stepMm!=null)    o.stepMm=+v.stepMm;
-    if(v.priceInc!=null)  o.priceInc=+v.priceInc;
-    if(v.steps!=null)     o.steps=Math.max(1,+v.steps);
-    o.tiers=cab(o.defaultMm,o.basePrice,o.stepMm,o.priceInc,o.steps).tiers;
+    if(v && v.basePrice!=null && !isNaN(+v.basePrice)) o.basePrice=+v.basePrice;
   }));
+  // Global area tiers (shared by all cabinets).
+  if(Array.isArray(ov.areaTiers) && ov.areaTiers.length){
+    const t=ov.areaTiers.map(x=>({minM2:+x.minM2, pct:+x.pct}))
+      .filter(x=>!isNaN(x.minM2)&&!isNaN(x.pct))
+      .sort((a,b)=>a.minM2-b.minM2);
+    if(t.length) AREA_TIERS=t;
+  }
   GRILL.forEach(g=>g.options.forEach(o=>{
     const v=grls[g.id+':'+o.id];
     if(!v) return;
@@ -661,7 +687,7 @@ async function loadPricing(){
     await ready(supa);
     const {data}=await supa.from('app_settings').select('value').eq('key','pricing').maybeSingle();
     if(data&&data.value){
-      priceOverlay={items:(data.value.items||{}), cabinets:(data.value.cabinets||{}), grills:(data.value.grills||{}), paints:(data.value.paints||{})};
+      priceOverlay={items:(data.value.items||{}), cabinets:(data.value.cabinets||{}), grills:(data.value.grills||{}), paints:(data.value.paints||{}), areaTiers:(data.value.areaTiers||[])};
       applyOverrides(priceOverlay);
     }
   }catch(e){}
@@ -674,13 +700,14 @@ async function checkAdmin(){
 
 /* ---- price editor: snapshot of coded defaults (filled in init, before any
    overrides are applied — applyOverrides mutates the data arrays in place) ---- */
-const PRICE_DEFAULTS = { items:{}, cabinets:{}, grills:{}, paints:{} };
+const PRICE_DEFAULTS = { items:{}, cabinets:{}, grills:{}, paints:{}, areaTiers:[] };
 function capturePriceDefaults(){
   PRICE_DEFAULTS.items={}; PRICE_DEFAULTS.cabinets={}; PRICE_DEFAULTS.grills={}; PRICE_DEFAULTS.paints={};
   CATALOG.forEach(cat=>cat.items.forEach(it=>{ PRICE_DEFAULTS.items[itemKey(cat,it)]=it.price; }));
-  CABINET.forEach(g=>g.options.forEach(o=>{ PRICE_DEFAULTS.cabinets[g.id+':'+o.id]={basePrice:o.basePrice,priceInc:o.priceInc,defaultMm:o.defaultMm,stepMm:o.stepMm,steps:o.steps}; }));
+  CABINET.forEach(g=>g.options.forEach(o=>{ PRICE_DEFAULTS.cabinets[g.id+':'+o.id]={basePrice:o.basePrice}; }));
   GRILL.forEach(g=>g.options.forEach(o=>{ PRICE_DEFAULTS.grills[g.id+':'+o.id]={rate:o.rate,overRate:(o.tier?o.tier.overRate:null)}; }));
   PAINT.forEach(o=>{ PRICE_DEFAULTS.paints[o.id]={rate:o.rate}; });
+  PRICE_DEFAULTS.areaTiers=DEFAULT_AREA_TIERS.map(t=>({minM2:t.minM2,pct:t.pct}));
 }
 
 let peDirty=false;
@@ -725,6 +752,15 @@ function peCardHead(name){
     <span class="pe-ctrl"><span class="pe-badge" hidden>changed</span>
       <button type="button" class="pe-reset" title="Reset to default" onclick="peResetOne(this)">↺</button></span></div>`;
 }
+// One editable global area-tier row (min area m² + uplift %).
+function peTierRow(i, minM2, pct, defMin, defPct){
+  const mv=(minM2==null?'':minM2), pv=(pct==null?'':pct);
+  const dm=(defMin==null?'':defMin), dp=(defPct==null?'':defPct);
+  return `<div class="pe-areatier-row">
+    <input type="number" step="0.01" min="0" data-kind="areatier" data-index="${i}" data-field="minM2" data-default="${dm}" value="${mv}" placeholder="—">
+    <input type="number" step="1" min="0" data-kind="areatier" data-index="${i}" data-field="pct" data-default="${dp}" value="${pv}" placeholder="0">
+  </div>`;
+}
 function peSectionHead(title){
   return `<div class="pe-cat-hd"><h3>${title}</h3><button type="button" class="pe-reset-section" onclick="peResetSection(this)">Reset section</button></div>`;
 }
@@ -754,18 +790,23 @@ function buildPriceEditorHtml(){
   });
   h+='</div>';
 
-  // Cabinet
+  // Cabinet — global area tiers + per-cabinet base price (price at 1 m²)
   h+=`<div class="pe-panel" data-panel="cab"><div class="pe-noresults">No matching cabinets.</div>
-    <div class="pe-cat">${peSectionHead('Cabinet — tier pricing')}<p class="pe-note">Base = price at the default length; +RM/step is added per tier as the length grows.</p>`;
+    <div class="pe-cat">${peSectionHead('Cabinet — area pricing')}`;
+  let tierRows='';
+  const tierN=Math.max(AREA_TIERS.length, PRICE_DEFAULTS.areaTiers.length)+2;
+  for(let i=0;i<tierN;i++){
+    const cur=AREA_TIERS[i]||{}, def=PRICE_DEFAULTS.areaTiers[i]||{};
+    tierRows+=peTierRow(i, cur.minM2, cur.pct, def.minM2, def.pct);
+  }
+  h+=`<div class="pe-cab" data-search="area tiers uplift cabinet pricing">${peCardHead('Area tiers (m²) — shared by all cabinets')}
+      <p class="pe-note">Price = base × (1 + uplift). Uplift = the highest tier whose min area ≤ the cabinet's area (length × height, each min 1 m). Leave a row blank to remove it.</p>
+      <div class="pe-areatiers"><div class="pe-areatier-hd"><span>Min area (m²)</span><span>Uplift %</span></div>${tierRows}</div></div>`;
   CABINET.forEach(g=>g.options.forEach(o=>{
     const k=g.id+':'+o.id, d=PRICE_DEFAULTS.cabinets[k]||{};
     h+=`<div class="pe-cab" data-search="${peSafe(g.name+' '+o.name)}">${peCardHead(g.name+' · '+o.name)}
-      <div class="pe-cab-grid">
-        ${peField('cab',k,'basePrice',o.basePrice,'Base RM',{money:true,def:d.basePrice})}
-        ${peField('cab',k,'priceInc',o.priceInc,'+RM/step',{money:true,def:d.priceInc})}
-        ${peField('cab',k,'defaultMm',o.defaultMm,'Default mm',{def:d.defaultMm})}
-        ${peField('cab',k,'stepMm',o.stepMm,'Step mm',{def:d.stepMm})}
-        ${peField('cab',k,'steps',o.steps,'Tiers',{def:d.steps})}
+      <div class="pe-cab-grid" style="grid-template-columns:minmax(0,200px)">
+        ${peField('cab',k,'basePrice',o.basePrice,'Base RM (at 1 m²)',{money:true,def:d.basePrice})}
       </div>
       <div class="pe-tier-preview" data-cab="${k}"></div></div>`;
   }));
@@ -813,6 +854,8 @@ function onPeInput(e){
   inp.classList.remove('pe-invalid');
   peApplyChanged(inp);
   if(inp.dataset.kind==='cab'){ const card=inp.closest('.pe-cab'); if(card) peRenderCabPreview(card); }
+  // Global area tiers affect every cabinet's preview.
+  if(inp.dataset.kind==='areatier') peRenderAllCabPreviews();
   peSetDirty(); peRecount();
 }
 function peApplyChanged(inp){
@@ -844,9 +887,11 @@ function peRecount(){
 }
 function peResetOne(btn){
   const cont=btn.closest('.pe-row')||btn.closest('.pe-cab'); if(!cont) return;
+  const hasTiers=!!cont.querySelector('input[data-kind="areatier"]');
   cont.querySelectorAll('input[data-kind]').forEach(i=>{ i.value=i.dataset.default; i.classList.remove('pe-invalid'); });
   peApplyChanged(cont.querySelector('input[data-kind]'));
   if(cont.classList.contains('pe-cab') && cont.querySelector('.pe-tier-preview')) peRenderCabPreview(cont);
+  if(hasTiers) peRenderAllCabPreviews(); // global tiers changed
   peSetDirty(); peRecount();
 }
 function peResetSection(btn){
@@ -888,25 +933,35 @@ function peFilter(){
   if(!q) peRecount();
 }
 function peClearSearch(){ const s=document.getElementById('peSearch'); if(!s) return; s.value=''; peFilter(); s.focus(); }
+// Read the live (possibly unsaved) global area tiers from the editor DOM.
+function peCurrentAreaTiers(){
+  const byIdx={};
+  document.querySelectorAll('#priceBody input[data-kind="areatier"]').forEach(inp=>{
+    const i=inp.dataset.index, f=inp.dataset.field, v=peNum(inp.value);
+    (byIdx[i]=byIdx[i]||{})[f]=v;
+  });
+  return Object.values(byIdx)
+    .filter(t=>t.minM2!=null)
+    .map(t=>({minM2:t.minM2, pct:t.pct==null?0:t.pct}))
+    .sort((a,b)=>a.minM2-b.minM2);
+}
+function peRenderAllCabPreviews(){
+  document.querySelectorAll('#priceBody .pe-cab .pe-tier-preview').forEach(p=>peRenderCabPreview(p.closest('.pe-cab')));
+}
+// Preview a cabinet's price at each area tier, applied to its base price.
 function peRenderCabPreview(card){
   if(!card) return;
   const prev=card.querySelector('.pe-tier-preview'); if(!prev) return;
-  const get=f=>peNum((card.querySelector(`input[data-field="${f}"]`)||{}).value);
-  const basePrice=get('basePrice'), priceInc=get('priceInc'), defaultMm=get('defaultMm'), stepMm=get('stepMm');
-  let steps=get('steps');
-  if(basePrice===null||priceInc===null||defaultMm===null||stepMm===null||steps===null){
-    prev.innerHTML='<span class="pe-tier-lbl">Tier preview</span> Fill all tier fields to preview.'; return;
-  }
-  steps=Math.max(1,Math.round(steps));
-  const tiers=cab(defaultMm,basePrice,stepMm,priceInc,steps).tiers;
-  let html='<span class="pe-tier-lbl">Tier preview</span>', prevMax=0;
+  const base=peNum((card.querySelector('input[data-field="basePrice"]')||{}).value);
+  if(base===null){ prev.innerHTML='<span class="pe-tier-lbl">Preview</span> Enter a base price.'; return; }
+  const tiers=peCurrentAreaTiers();
+  if(!tiers.length){ prev.innerHTML='<span class="pe-tier-lbl">Preview</span> Add an area tier.'; return; }
+  let html='<span class="pe-tier-lbl">Per area</span>';
   tiers.forEach((t,i)=>{
-    let range;
-    if(t.maxMm===Infinity) range=`&gt;${prevMax}mm`;
-    else if(i===0) range=`≤${t.maxMm}mm`;
-    else range=`${prevMax+1}–${t.maxMm}mm`;
-    html+=`<span class="pe-chip">${range} → RM${fmt(t.price)}</span>`;
-    if(t.maxMm!==Infinity) prevMax=t.maxMm;
+    const next=tiers[i+1];
+    const range=next?`${(+t.minM2).toFixed(2)}–${(+next.minM2).toFixed(2)}m²`:`≥${(+t.minM2).toFixed(2)}m²`;
+    const price=base*(1+(+t.pct||0)/100);
+    html+=`<span class="pe-chip">${range} → RM${fmt(price)}${t.pct?` (+${+t.pct}%)`:''}</span>`;
   });
   prev.innerHTML=html;
 }
@@ -914,8 +969,13 @@ function peValidate(){
   const bad=[];
   document.querySelectorAll('#priceBody input[data-kind]').forEach(inp=>{
     const v=parseFloat(inp.value);
-    let invalid=(inp.value===''||isNaN(v)||v<0);
-    if(!invalid && inp.dataset.field==='steps' && v<1) invalid=true;
+    let invalid;
+    if(inp.dataset.kind==='areatier'){
+      // Tier rows may be left blank (= unused); only non-blank negatives are bad.
+      invalid = inp.value!=='' && (isNaN(v)||v<0);
+    } else {
+      invalid = (inp.value===''||isNaN(v)||v<0);
+    }
     inp.classList.toggle('pe-invalid',invalid);
     if(invalid) bad.push(inp);
   });
@@ -930,7 +990,7 @@ async function savePrices(){
     alert('Please fix '+val.count+' highlighted field'+(val.count>1?'s':'')+' (blank or negative) before saving.');
     return;
   }
-  const overlay={items:{},cabinets:{},grills:{},paints:{}};
+  const overlay={items:{},cabinets:{},grills:{},paints:{},areaTiers:[]};
   document.querySelectorAll('#priceBody input[data-kind="item"]').forEach(inp=>{
     const v=parseFloat(inp.value); if(!isNaN(v)) overlay.items[inp.dataset.key]=v;
   });
@@ -938,6 +998,16 @@ async function savePrices(){
     const k=inp.dataset.key,f=inp.dataset.field,v=parseFloat(inp.value);
     (overlay.cabinets[k]=overlay.cabinets[k]||{})[f]=isNaN(v)?0:v;
   });
+  // Global cabinet area tiers (skip blank rows).
+  const tierByIdx={};
+  document.querySelectorAll('#priceBody input[data-kind="areatier"]').forEach(inp=>{
+    const i=inp.dataset.index,f=inp.dataset.field,v=parseFloat(inp.value);
+    (tierByIdx[i]=tierByIdx[i]||{})[f]=isNaN(v)?null:v;
+  });
+  overlay.areaTiers=Object.values(tierByIdx)
+    .filter(t=>t.minM2!=null)
+    .map(t=>({minM2:t.minM2, pct:t.pct==null?0:t.pct}))
+    .sort((a,b)=>a.minM2-b.minM2);
   document.querySelectorAll('#priceBody input[data-kind="grill"]').forEach(inp=>{
     const k=inp.dataset.key,f=inp.dataset.field,v=parseFloat(inp.value);
     (overlay.grills[k]=overlay.grills[k]||{})[f]=isNaN(v)?0:v;
@@ -1125,7 +1195,7 @@ function cabinetCardHtml(){
     </div>
     <div class="cat-bd">
       ${warn}
-      <div class="cab-note">All cabinets record Length × Height × Depth in <b>mm</b>. The length is pre-filled to the default (= base price); <b>only length affects the price</b> — increasing it steps the price up.</div>
+      <div class="cab-note">Enter Length × Height × Depth in <b>mm</b>. Price is by <b>area = Length × Height</b> (depth does not affect price); each side is treated as at least <b>1 m</b>.</div>
       <div class="cab-grid">
         <label class="fld">Cabinet Type
           <select id="cab-group" onchange="cabGroupChange()">${groupOpts}</select></label>
@@ -1134,8 +1204,8 @@ function cabinetCardHtml(){
       </div>
       <div class="cab-grid3">
         <label class="fld">Length (mm) <input id="cab-L" type="number" min="1" step="1" oninput="cabPreview()"></label>
-        <label class="fld">Height (mm) <input id="cab-H" type="number" min="1" step="1"></label>
-        <label class="fld">Depth (mm) <input id="cab-D" type="number" min="1" step="1"></label>
+        <label class="fld">Height (mm) <input id="cab-H" type="number" min="1" step="1" oninput="cabPreview()"></label>
+        <label class="fld">Depth (mm) <input id="cab-D" type="number" min="1" step="1" placeholder="optional"></label>
       </div>
       <div class="cab-preview" id="cab-preview"></div>
       <button class="act b-primary" style="padding:11px 16px;font-size:13px" onclick="cabAdd()">+ Add Cabinet to Quote</button>
@@ -1152,7 +1222,8 @@ function cabGroupChange(){
 }
 function cabOptionChange(){
   const {o}=cabSel();
-  document.getElementById('cab-L').value=o.defaultMm; // pre-fill default length
+  document.getElementById('cab-L').value=o.defL; // pre-fill default length
+  document.getElementById('cab-H').value=o.defH; // pre-fill default height
   cabPreview();
 }
 function cabSel(){
@@ -1163,10 +1234,12 @@ function cabSel(){
 function cabPreview(){
   const {o}=cabSel();
   const L=parseFloat(document.getElementById('cab-L').value)||0;
-  let html=`<div class="cab-tiers"><b>Price tiers:</b> ${tierTableHtml(o.tiers)}</div>`;
-  if(L>0){
-    const atBase = L<=o.defaultMm;
-    html+=`<div class="cab-calc">Length ${L} mm → <b>RM ${fmt(cabinetPrice(o.tiers,L))}</b>${atBase?' <span style="font-weight:400;color:#6b7280">(base price)</span>':''}</div>`;
+  const H=parseFloat(document.getElementById('cab-H').value)||0;
+  let html=`<div class="cab-tiers"><b>Area tiers:</b> ${areaTierTableHtml()} <span style="color:#6b7280">· base RM ${fmt(+o.basePrice||0)}</span></div>`;
+  if(L>0 && H>0){
+    const m2=cabArea(L,H);
+    const up=areaUplift(m2);
+    html+=`<div class="cab-calc">${L} × ${H} mm = ${m2.toFixed(2)} m² → <b>RM ${fmt(cabinetPrice(o,L,H))}</b> <span style="font-weight:400;color:#6b7280">(${up>0?'+'+up+'%':'base'})</span></div>`;
   }
   document.getElementById('cab-preview').innerHTML=html;
 }
@@ -1177,11 +1250,9 @@ function cabAdd(){
   const D=parseFloat(document.getElementById('cab-D').value)||0;
   if(!(L>0)){ alert('Please enter a Length (mm).'); return; }
   if(!(H>0)){ alert('Height (mm) is required.'); document.getElementById('cab-H').focus(); return; }
-  if(!(D>0)){ alert('Depth (mm) is required.'); document.getElementById('cab-D').focus(); return; }
-  cabinetLines.push({gid:g.id,gname:g.name,oid:o.id,oname:o.name,L,H,D,price:cabinetPrice(o.tiers,L)});
-  document.getElementById('cab-H').value='';
+  cabinetLines.push({gid:g.id,gname:g.name,oid:o.id,oname:o.name,L,H,D,price:cabinetPrice(o,L,H)});
   document.getElementById('cab-D').value='';
-  cabOptionChange(); // reset length back to the option's default
+  cabOptionChange(); // reset measurements back to the option's defaults
   renderCabLines(); recalc();
 }
 function cabRemove(i){ cabinetLines.splice(i,1); renderCabLines(); recalc(); }
