@@ -23,6 +23,7 @@ const SUPABASE_URL = 'https://YOUR-PROJECT.supabase.co'; // Supabase → Setting
 const SUPABASE_ANON_KEY = 'YOUR-ANON-PUBLIC-KEY';        // Supabase → Settings → API → anon public key
 const SYNC_SECRET = 'your-long-random-secret';           // must match sync_config.costings_secret
 const SYNC_TAB = 'Sync';                                 // the flat tab to read
+const TRIGGER_TOKEN = 'set-a-trigger-token';             // only needed for the in-app "Sync sheet" button
 // ============================================================================
 
 function onOpen() {
@@ -117,9 +118,10 @@ function buildRows_() {
   return rows;
 }
 
-function syncCostings() {
+// Read the Sync tab and push it to Supabase; returns the imported row count.
+function pushRows_() {
   const rows = buildRows_();
-  if (!rows.length) { toast_('Nothing to sync — the "Sync" tab has no data rows.'); return; }
+  if (!rows.length) throw new Error('The "' + SYNC_TAB + '" tab has no data rows.');
 
   const res = UrlFetchApp.fetch(SUPABASE_URL + '/rest/v1/rpc/sync_costings', {
     method: 'post',
@@ -130,13 +132,43 @@ function syncCostings() {
   });
   const code = res.getResponseCode();
   const body = res.getContentText();
-  if (code >= 200 && code < 300) {
-    let n = rows.length;
-    try { n = JSON.parse(body).imported || n; } catch (e) {}
+  if (code < 200 || code >= 300) throw new Error('Sync failed (' + code + '): ' + body);
+  let n = rows.length;
+  try { n = JSON.parse(body).imported || n; } catch (e) {}
+  return n;
+}
+
+// Menu / scheduled-trigger entry point.
+function syncCostings() {
+  try {
+    const n = pushRows_();
     toast_('Synced ' + n + ' costing rows to the app.');
-  } else {
-    throw new Error('Sync failed (' + code + '): ' + body);
+  } catch (e) {
+    toast_('Sync failed: ' + e.message);
+    throw e;
   }
+}
+
+// ---- In-app "Sync sheet" button endpoint (needs Deploy → Web app) ----
+// The app calls  <web-app-url>?token=<TRIGGER_TOKEN>  to run a sync and read
+// back { ok, imported }.
+function doGet(e) {
+  return triggerSync_(e && e.parameter ? e.parameter.token : '');
+}
+function doPost(e) {
+  let token = '';
+  try { token = (e && e.parameter && e.parameter.token) || (e && e.postData ? e.postData.contents : ''); } catch (_) {}
+  return triggerSync_(token);
+}
+function triggerSync_(token) {
+  let out;
+  try {
+    if (!TRIGGER_TOKEN || token !== TRIGGER_TOKEN) out = { ok: false, error: 'unauthorized' };
+    else out = { ok: true, imported: pushRows_() };
+  } catch (err) {
+    out = { ok: false, error: String(err && err.message || err) };
+  }
+  return ContentService.createTextOutput(JSON.stringify(out)).setMimeType(ContentService.MimeType.JSON);
 }
 
 function enableAutoSync() {

@@ -41,6 +41,8 @@ export default function CostingList() {
   const [rows, setRows] = useState<Costing[]>([])
   const [jobProg, setJobProg] = useState<Map<string, UnitProgress>>(new Map())
   const [loading, setLoading] = useState(true)
+  const [syncing, setSyncing] = useState(false)
+  const [syncMsg, setSyncMsg] = useState('')
   const [query, setQuery] = useState('')
   const [catFilter, setCatFilter] = useState('')
   const [view, setView] = useState<View>(() =>
@@ -115,6 +117,35 @@ export default function CostingList() {
   async function refreshAll() {
     if (editingRef.current) return
     await Promise.all([load(), loadProgress()])
+  }
+
+  // Trigger the Google-Sheet → app sync (Apps Script Web App). Boss-only;
+  // get_sheet_sync() returns the deployed URL + token, or null if unconfigured.
+  async function syncFromSheet() {
+    setSyncing(true)
+    setSyncMsg('')
+    try {
+      const { data } = await supabase.rpc('get_sheet_sync')
+      const cfg = data as { url?: string; token?: string } | null
+      if (!cfg?.url) {
+        setSyncMsg('Sheet sync isn’t set up yet — deploy the Apps Script and set its URL.')
+        return
+      }
+      const res = await fetch(`${cfg.url}?token=${encodeURIComponent(cfg.token ?? '')}`)
+      const out = (await res.json()) as { ok?: boolean; imported?: number; error?: string }
+      if (out.ok) {
+        setSyncMsg(`Synced ${out.imported ?? 0} rows from the sheet.`)
+        await refreshAll()
+      } else {
+        setSyncMsg('Sync failed: ' + (out.error ?? 'unknown'))
+      }
+    } catch {
+      // Apps Script CORS can hide the response even when the sync ran; the
+      // realtime channel will still refresh the list if it succeeded.
+      setSyncMsg('Sync triggered — the list will update if it succeeded.')
+    } finally {
+      setSyncing(false)
+    }
   }
 
   // Effective progress/status: a linked unit's live value wins over the stored
@@ -233,10 +264,14 @@ export default function CostingList() {
             placeholder="Search cash sale no. or customer…"
             className="flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-slate-900"
           />
+          <button onClick={syncFromSheet} disabled={syncing} title="Pull the latest from the Google Sheet" className="shrink-0 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 active:bg-slate-50 disabled:opacity-50">
+            {syncing ? 'Syncing…' : '⟳ Sync sheet'}
+          </button>
           <button onClick={() => navigate('/costing/new')} className="shrink-0 rounded-lg bg-slate-900 px-3 py-2 text-sm font-medium text-white active:bg-slate-700">
             + New
           </button>
         </div>
+        {syncMsg && <p className="px-1 text-xs text-slate-500">{syncMsg}</p>}
         <div className="flex gap-2">
           <select
             value={catFilter}

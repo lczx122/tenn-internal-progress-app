@@ -144,6 +144,36 @@ $$;
 -- needs EXECUTE. The secret (not the key) is the real gate.
 grant execute on function public.sync_costings(text, jsonb) to anon, authenticated;
 
--- 4) >>> SET YOUR SECRET <<<  (replace the value, then run just this line)
--- update public.sync_config set value = 'your-long-random-secret', updated_at = now()
---   where key = 'costings_secret';
+-- 4) Optional: in-app "Sync sheet" button (Costing page).
+--    Deploy the Apps Script as a Web App (Deploy → New deployment → Web app,
+--    "Execute as: Me", "Who has access: Anyone"), then store its URL + the
+--    trigger token here. get_sheet_sync() hands them to the boss-only button.
+insert into public.sync_config (key, value) values
+  ('webapp_url', ''),
+  ('trigger_token', '')
+on conflict (key) do nothing;
+
+create or replace function public.get_sheet_sync()
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_url text;
+  v_token text;
+begin
+  if not public.is_boss() then return null; end if; -- boss-only
+  select value into v_url   from public.sync_config where key = 'webapp_url';
+  select value into v_token from public.sync_config where key = 'trigger_token';
+  if v_url is null or v_url = '' then return null; end if;
+  return jsonb_build_object('url', v_url, 'token', coalesce(v_token, ''));
+end;
+$$;
+grant execute on function public.get_sheet_sync() to authenticated;
+
+-- 5) >>> SET YOUR VALUES <<<  (run these with your own values)
+-- update public.sync_config set value = 'your-long-random-secret' where key = 'costings_secret';
+-- For the in-app button (after deploying the Web App):
+-- update public.sync_config set value = 'https://script.google.com/macros/s/XXXX/exec' where key = 'webapp_url';
+-- update public.sync_config set value = 'your-trigger-token' where key = 'trigger_token';
