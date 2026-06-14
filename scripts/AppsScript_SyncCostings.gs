@@ -20,7 +20,7 @@
 
 // ============================ CONFIG (fill these) ============================
 const SUPABASE_URL = 'https://YOUR-PROJECT.supabase.co'; // Supabase → Settings → API → Project URL
-const SUPABASE_ANON_KEY = 'YOUR-ANON-PUBLIC-KEY';        // Supabase → Settings → API → anon public key
+const SUPABASE_ANON_KEY = 'YOUR-ANON-PUBLIC-KEY';        // Supabase → Settings → API → the PUBLISHABLE / "anon public" key. NOT the secret / service_role key.
 const SYNC_SECRET = 'your-long-random-secret';           // must match sync_config.costings_secret
 const SYNC_TAB = 'Sync';                                 // the flat tab to read
 const TRIGGER_TOKEN = 'set-a-trigger-token';             // only needed for the in-app "Sync sheet" button
