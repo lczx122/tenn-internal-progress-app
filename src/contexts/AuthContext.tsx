@@ -13,6 +13,8 @@ interface AuthState {
   displayName: string
   isAdmin: boolean
   isBoss: boolean
+  isGuest: boolean
+  roleReady: boolean
   loading: boolean
   signIn: (email: string, password: string) => Promise<{ error: string | null }>
   signOut: () => Promise<void>
@@ -25,6 +27,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [displayName, setDisplayName] = useState('')
   const [isAdmin, setIsAdmin] = useState(false)
   const [isBoss, setIsBoss] = useState(false)
+  const [isGuest, setIsGuest] = useState(false)
+  // Whether the profile role has been resolved — lets App avoid briefly
+  // showing internal pages to a guest before the role loads.
+  const [roleReady, setRoleReady] = useState(false)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -41,14 +47,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Load the display name + role from the profiles table when the user changes.
   useEffect(() => {
+    const w = typeof window !== 'undefined'
+      ? (window as { tennIsAdmin?: boolean; tennIsGuest?: boolean })
+      : null
     if (!session) {
       setDisplayName('')
       setIsAdmin(false)
       setIsBoss(false)
-      if (typeof window !== 'undefined') (window as { tennIsAdmin?: boolean }).tennIsAdmin = false
+      setIsGuest(false)
+      setRoleReady(true)
+      if (w) { w.tennIsAdmin = false; w.tennIsGuest = false }
       return
     }
     let active = true
+    setRoleReady(false)
     supabase
       .from('profiles')
       .select('full_name, role')
@@ -61,9 +73,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         )
         const boss = data?.role === 'boss'
         const admin = data?.role === 'admin' || boss // boss inherits admin powers
+        const guest = data?.role === 'guest'
         setIsAdmin(admin)
         setIsBoss(boss)
-        if (typeof window !== 'undefined') (window as { tennIsAdmin?: boolean }).tennIsAdmin = admin
+        setIsGuest(guest)
+        setRoleReady(true)
+        if (w) { w.tennIsAdmin = admin; w.tennIsGuest = guest }
       })
     return () => {
       active = false
@@ -84,7 +99,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ session, displayName, isAdmin, isBoss, loading, signIn, signOut }}
+      value={{ session, displayName, isAdmin, isBoss, isGuest, roleReady, loading, signIn, signOut }}
     >
       {children}
     </AuthContext.Provider>

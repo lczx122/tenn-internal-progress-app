@@ -16,11 +16,13 @@ import CostingForm from './pages/CostingForm'
 import SetupNotice from './pages/SetupNotice'
 
 export default function App() {
-  const { session, loading } = useAuth()
+  const { session, loading, roleReady, isGuest } = useAuth()
 
   if (!isConfigured) return <SetupNotice />
 
-  if (loading) {
+  // Wait for the session and (when signed in) the role before rendering, so a
+  // guest never briefly sees an internal page.
+  if (loading || (session && !roleReady)) {
     return (
       <div className="flex h-full items-center justify-center text-slate-500">
         Loading…
@@ -32,6 +34,16 @@ export default function App() {
     return (
       <Routes>
         <Route path="*" element={<Login />} />
+      </Routes>
+    )
+  }
+
+  // Guests can only reach the quotation generator.
+  if (isGuest) {
+    return (
+      <Routes>
+        <Route path="/quote" element={<Quotation />} />
+        <Route path="*" element={<Navigate to="/quote" replace />} />
       </Routes>
     )
   }

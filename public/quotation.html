@@ -648,6 +648,11 @@ function areaTierTableHtml(tiers){
    the coded defaults on load; everyone reads it, only admins can save it. */
 let priceOverlay = { items:{}, cabinets:{}, grills:{}, paints:{}, areaTiers:[] };
 let isAdminUser = false;
+let isGuestUser = false;
+function getGuest(){
+  try{ if(window.parent && window.parent!==window && typeof window.parent.tennIsGuest!=='undefined') return !!window.parent.tennIsGuest; }catch(e){}
+  return !!window.tennIsGuest;
+}
 
 function itemKey(cat, it){ return cat.id+'|'+it.v+'|'+it.label; }
 
@@ -1616,8 +1621,9 @@ function setVal(id,v){const el=document.getElementById(id); if(el) el.value=v||'
 function openPreview(){
   if(!collectLines().length){ alert('Add at least one item first.'); return; }
   document.getElementById('docBody').innerHTML=buildDoc();
-  // The Save option only appears once a quotation has been previewed.
-  document.getElementById('saveBtn').style.display='';
+  // The Save option only appears once a quotation has been previewed (and never
+  // for guests, who are view-only).
+  if(!isGuestUser) document.getElementById('saveBtn').style.display='';
   document.getElementById('modal').classList.add('show');
   document.body.style.overflow='hidden';
 }
@@ -1676,6 +1682,9 @@ function newQuote(){
     // Reveal the price editor for admins only (DB also enforces write access).
     isAdminUser = await checkAdmin();
     if(isAdminUser) document.getElementById('editPricesBtn').style.display='';
+    // Guests are view-only: hide the Save buttons.
+    isGuestUser = getGuest();
+    if(isGuestUser){ const m=document.getElementById('saveBtnModal'); if(m) m.style.display='none'; }
   })();
 })();
 </script>

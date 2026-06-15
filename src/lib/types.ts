@@ -38,7 +38,7 @@ export interface JobEvent {
   created_at: string
 }
 
-export type Role = 'admin' | 'staff' | 'boss'
+export type Role = 'admin' | 'staff' | 'boss' | 'guest'
 
 export interface Profile {
   id: string

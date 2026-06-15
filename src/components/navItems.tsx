@@ -17,9 +17,11 @@ const baseTabs: NavTab[] = [
   { to: '/quotes', label: 'Orders', end: false, icon: 'ledger' },
 ]
 
-// The visible tabs for the current user (boss gets the Costing tab).
+// The visible tabs for the current user (boss gets the Costing tab; guests only
+// get the quotation generator).
 export function useNavTabs(): NavTab[] {
-  const { isBoss } = useAuth()
+  const { isBoss, isGuest } = useAuth()
+  if (isGuest) return [{ to: '/quote', label: 'Quote', end: false, icon: 'receipt' }]
   return isBoss
     ? [...baseTabs, { to: '/costing', label: 'Costing', end: false, icon: 'coins' }]
     : baseTabs

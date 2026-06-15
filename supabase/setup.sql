@@ -251,12 +251,12 @@ as $$
 declare cur text;
 begin
   if not public.is_admin() then raise exception 'Admins only'; end if;
-  if new_role not in ('admin','staff','boss') then raise exception 'Invalid role: %', new_role; end if;
+  if new_role not in ('admin','staff','boss','guest') then raise exception 'Invalid role: %', new_role; end if;
   select role into cur from public.profiles where id = target;
   if (new_role = 'boss' or cur = 'boss') and not public.is_boss() then
     raise exception 'Only a boss can assign or change the boss role';
   end if;
-  if new_role = 'staff' and cur in ('admin','boss')
+  if new_role not in ('admin','boss') and cur in ('admin','boss')
      and (select count(*) from public.profiles where role in ('admin','boss')) <= 1 then
     raise exception 'Cannot remove the last admin/boss';
   end if;

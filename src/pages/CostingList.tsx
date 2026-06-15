@@ -131,18 +131,17 @@ export default function CostingList() {
         setSyncMsg('Sheet sync isn’t set up yet — deploy the Apps Script and set its URL.')
         return
       }
-      const res = await fetch(`${cfg.url}?token=${encodeURIComponent(cfg.token ?? '')}`)
-      const out = (await res.json()) as { ok?: boolean; imported?: number; error?: string }
-      if (out.ok) {
-        setSyncMsg(`Synced ${out.imported ?? 0} rows from the sheet.`)
-        await refreshAll()
-      } else {
-        setSyncMsg('Sync failed: ' + (out.error ?? 'unknown'))
-      }
+      // Apps Script web apps don't return CORS headers (they 302-redirect to
+      // googleusercontent.com), so the browser can't READ the response. We fire
+      // it in no-cors mode — the sync still runs on Google's side — then refetch.
+      // The realtime channel also refreshes the list when the table changes.
+      await fetch(`${cfg.url}?token=${encodeURIComponent(cfg.token ?? '')}`, { mode: 'no-cors' })
+      setSyncMsg('Syncing from the sheet…')
+      await new Promise((r) => setTimeout(r, 4500))
+      await refreshAll()
+      setSyncMsg('Synced from the sheet.')
     } catch {
-      // Apps Script CORS can hide the response even when the sync ran; the
-      // realtime channel will still refresh the list if it succeeded.
-      setSyncMsg('Sync triggered — the list will update if it succeeded.')
+      setSyncMsg('Could not reach the sync script — check it’s deployed for “Anyone”.')
     } finally {
       setSyncing(false)
     }

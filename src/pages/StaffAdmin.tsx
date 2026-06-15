@@ -10,6 +10,7 @@ const ROLE_STYLE: Record<Role, string> = {
   boss: 'bg-amber-100 text-amber-700',
   admin: 'bg-emerald-100 text-emerald-700',
   staff: 'bg-slate-100 text-slate-600',
+  guest: 'bg-sky-100 text-sky-700',
 }
 
 export default function StaffAdmin() {
@@ -107,6 +108,7 @@ export default function StaffAdmin() {
                   disabled={busyId === p.id}
                   className="shrink-0 rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-xs font-medium text-slate-700 disabled:opacity-50"
                 >
+                  <option value="guest">Guest (quote only)</option>
                   <option value="staff">Staff</option>
                   <option value="admin">Admin</option>
                   {/* Only a boss can assign the boss role (DB-enforced too) */}
