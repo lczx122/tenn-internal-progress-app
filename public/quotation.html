@@ -130,6 +130,20 @@
   .pe-areatier-hd,.pe-areatier-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;max-width:320px}
   .pe-areatier-hd span{font-size:10px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted)}
   .pe-areatier-row input{width:100%;text-align:right;padding:7px 8px}
+  /* editable products (Items tab) */
+  .pe-item{display:flex;align-items:flex-start;gap:8px;padding:8px 9px;border-bottom:1px dashed #eef0f6}
+  .pe-item-fields{flex:1;min-width:0;display:flex;flex-direction:column;gap:5px}
+  .pe-item-fields input{width:100%}
+  .pe-item-fields input[data-field="label"]{font-weight:600;font-size:13.5px}
+  .pe-item-fields input[data-field="sub"]{font-size:12px;color:var(--muted)}
+  .pe-item .pe-money{align-self:flex-start}
+  .pe-item .pe-money input{width:118px}
+  .pe-del{flex:none;border:1px solid var(--line);background:#fff;color:var(--accent);width:30px;height:30px;border-radius:7px;cursor:pointer;font-size:13px}
+  .pe-del:hover{background:var(--accent-soft)}
+  .pe-additem{margin-top:10px;border:1px dashed #c7d0e6;background:#fff;color:var(--navy);font-family:'Archivo';font-weight:700;font-size:12px;border-radius:8px;padding:8px 13px;cursor:pointer}
+  .pe-additem:hover{background:#f0f3fb}
+  .pe-reset-cat{border:1px solid var(--line);background:#fff;color:var(--muted);font-family:'Archivo';font-weight:700;font-size:11px;border-radius:7px;padding:5px 10px;cursor:pointer}
+  .pe-reset-cat:hover{background:#f0f3fb;color:var(--navy)}
   /* sticky save bar */
   .pe-actionbar{position:sticky;bottom:0;z-index:4;display:flex;gap:9px;align-items:center;background:var(--card);border-top:1px solid var(--line);padding:12px 0 6px;margin-top:18px;box-shadow:0 -6px 14px rgba(21,36,83,.05)}
   .pe-actionbar .act{flex:0 1 150px;padding:12px}
@@ -646,7 +660,7 @@ function areaTierTableHtml(tiers){
    Item prices and cabinet tier parameters can be overridden by an admin and
    stored in Supabase (app_settings key='pricing'). The overlay is applied over
    the coded defaults on load; everyone reads it, only admins can save it. */
-let priceOverlay = { items:{}, cabinets:{}, grills:{}, paints:{}, areaTiers:[] };
+let priceOverlay = { items:{}, catalog:{}, cabinets:{}, grills:{}, paints:{}, areaTiers:[] };
 let isAdminUser = false;
 let isGuestUser = false;
 function getGuest(){
@@ -658,11 +672,18 @@ function itemKey(cat, it){ return cat.id+'|'+it.v+'|'+it.label; }
 
 function applyOverrides(ov){
   if(!ov) return;
-  const items=ov.items||{}, cabs=ov.cabinets||{}, grls=ov.grills||{}, pnts=ov.paints||{};
-  CATALOG.forEach(cat=>cat.items.forEach(it=>{
-    const v=items[itemKey(cat,it)];
-    if(v!=null && !isNaN(+v)) it.price=+v;
-  }));
+  const items=ov.items||{}, cats=ov.catalog||{}, cabs=ov.cabinets||{}, grls=ov.grills||{}, pnts=ov.paints||{};
+  CATALOG.forEach(cat=>{
+    if(Array.isArray(cats[cat.id])){
+      // Admin replaced this category's products (names + prices + descriptions).
+      cat.items = cats[cat.id]
+        .map(it=>({v:0, label:String(it.label||'').trim(), sub:String(it.sub||''), price:(+it.price||0)}))
+        .filter(it=>it.label);
+    } else {
+      // Legacy price-only overrides.
+      cat.items.forEach(it=>{ const v=items[itemKey(cat,it)]; if(v!=null && !isNaN(+v)) it.price=+v; });
+    }
+  });
   CABINET.forEach(g=>g.options.forEach(o=>{
     const v=cabs[g.id+':'+o.id];
     if(v && v.basePrice!=null && !isNaN(+v.basePrice)) o.basePrice=+v.basePrice;
@@ -692,7 +713,7 @@ async function loadPricing(){
     await ready(supa);
     const {data}=await supa.from('app_settings').select('value').eq('key','pricing').maybeSingle();
     if(data&&data.value){
-      priceOverlay={items:(data.value.items||{}), cabinets:(data.value.cabinets||{}), grills:(data.value.grills||{}), paints:(data.value.paints||{}), areaTiers:(data.value.areaTiers||[])};
+      priceOverlay={items:(data.value.items||{}), catalog:(data.value.catalog||{}), cabinets:(data.value.cabinets||{}), grills:(data.value.grills||{}), paints:(data.value.paints||{}), areaTiers:(data.value.areaTiers||[])};
       applyOverrides(priceOverlay);
     }
   }catch(e){}
@@ -705,10 +726,11 @@ async function checkAdmin(){
 
 /* ---- price editor: snapshot of coded defaults (filled in init, before any
    overrides are applied — applyOverrides mutates the data arrays in place) ---- */
-const PRICE_DEFAULTS = { items:{}, cabinets:{}, grills:{}, paints:{}, areaTiers:[] };
+const PRICE_DEFAULTS = { items:{}, catalog:{}, cabinets:{}, grills:{}, paints:{}, areaTiers:[] };
 function capturePriceDefaults(){
-  PRICE_DEFAULTS.items={}; PRICE_DEFAULTS.cabinets={}; PRICE_DEFAULTS.grills={}; PRICE_DEFAULTS.paints={};
+  PRICE_DEFAULTS.items={}; PRICE_DEFAULTS.catalog={}; PRICE_DEFAULTS.cabinets={}; PRICE_DEFAULTS.grills={}; PRICE_DEFAULTS.paints={};
   CATALOG.forEach(cat=>cat.items.forEach(it=>{ PRICE_DEFAULTS.items[itemKey(cat,it)]=it.price; }));
+  CATALOG.forEach(cat=>{ PRICE_DEFAULTS.catalog[cat.id]=cat.items.map(it=>({label:it.label,sub:it.sub||'',price:it.price})); });
   CABINET.forEach(g=>g.options.forEach(o=>{ PRICE_DEFAULTS.cabinets[g.id+':'+o.id]={basePrice:o.basePrice}; }));
   GRILL.forEach(g=>g.options.forEach(o=>{ PRICE_DEFAULTS.grills[g.id+':'+o.id]={rate:o.rate,overRate:(o.tier?o.tier.overRate:null)}; }));
   PAINT.forEach(o=>{ PRICE_DEFAULTS.paints[o.id]={rate:o.rate}; });
@@ -743,14 +765,36 @@ function peField(kind,key,field,val,label,opts){
   const wrapped=opts.money?`<span class="pe-money"><span class="pe-rm">RM</span>${inp}</span>`:inp;
   return `<label class="pe-f"><span>${label}</span>${wrapped}</label>`;
 }
-function peItemRowHtml(cat,it){
-  const vlabel = cat.variants.length?` · ${cat.variants[it.v].split('—').pop().trim()}`:'';
-  const def=PRICE_DEFAULTS.items[itemKey(cat,it)];
-  return `<label class="pe-row" data-search="${peSafe(it.label+' '+cat.name)}">
-    <span class="pe-lbl">${it.label}${vlabel?`<small>${vlabel}</small>`:''}</span>
-    <span class="pe-ctrl"><span class="pe-badge" hidden>changed</span>
-      <span class="pe-money"><span class="pe-rm">RM</span><input type="number" step="0.01" min="0" data-kind="item" data-key="${itemKey(cat,it)}" data-default="${def}" value="${it.price}"></span>
-      <button type="button" class="pe-reset" title="Reset to default" onclick="peResetOne(this)">↺</button></span></label>`;
+const peAttr = s => String(s==null?'':s).replace(/&/g,'&amp;').replace(/"/g,'&quot;');
+// An editable product row: name + description + price, with a delete button.
+function peItemRowHtml(it){
+  it=it||{label:'',sub:'',price:''};
+  const price = (it.price===''||it.price==null) ? '' : (+it.price||0);
+  return `<div class="pe-item" data-search="${peSafe((it.label||'')+' '+(it.sub||''))}">
+    <div class="pe-item-fields">
+      <input type="text" data-kind="catitem" data-field="label" value="${peAttr(it.label)}" placeholder="Product name">
+      <input type="text" data-kind="catitem" data-field="sub" value="${peAttr(it.sub)}" placeholder="Description (optional)">
+    </div>
+    <span class="pe-money"><span class="pe-rm">RM</span><input type="number" step="0.01" min="0" data-kind="catitem" data-field="price" value="${price}"></span>
+    <button type="button" class="pe-del" title="Delete product" onclick="peDeleteItem(this)">✕</button>
+  </div>`;
+}
+function peAddItem(catId){
+  const cat=document.querySelector(`.pe-cat[data-cat="${catId}"]`); if(!cat) return;
+  const addBtn=cat.querySelector('.pe-additem');
+  addBtn.insertAdjacentHTML('beforebegin', peItemRowHtml());
+  peSetDirty();
+  const rows=cat.querySelectorAll('.pe-item'); const last=rows[rows.length-1];
+  const n=last&&last.querySelector('input[data-field="label"]'); if(n) n.focus();
+}
+function peDeleteItem(btn){ const row=btn.closest('.pe-item'); if(row) row.remove(); peSetDirty(); }
+function peResetCategory(catId){
+  if(!confirm('Reset this category to the built-in products? Your custom products here will be removed.')) return;
+  const cat=document.querySelector(`.pe-cat[data-cat="${catId}"]`); if(!cat) return;
+  cat.querySelectorAll('.pe-item').forEach(r=>r.remove());
+  const addBtn=cat.querySelector('.pe-additem');
+  (PRICE_DEFAULTS.catalog[catId]||[]).forEach(it=>addBtn.insertAdjacentHTML('beforebegin', peItemRowHtml(it)));
+  peSetDirty();
 }
 function peCardHead(name){
   return `<div class="pe-cab-hd"><div class="pe-cab-name">${name}</div>
@@ -786,11 +830,14 @@ function buildPriceEditorHtml(){
       <button type="button" class="pe-search-clear" id="peSearchClear" onclick="peClearSearch()">✕</button>
     </div></div>`;
 
-  // Items
+  // Items — admins can rename, add and delete products per category.
   h+=`<div class="pe-panel active" data-panel="items"><div class="pe-noresults">No matching items.</div>`;
   CATALOG.forEach(cat=>{
-    h+=`<div class="pe-cat" data-search="${peSafe(cat.name)}">${peSectionHead(cat.name)}`;
-    cat.items.forEach(it=>{ h+=peItemRowHtml(cat,it); });
+    h+=`<div class="pe-cat" data-cat="${cat.id}" data-search="${peSafe(cat.name)}">
+      <div class="pe-cat-hd"><h3>${cat.name}</h3>
+        <button type="button" class="pe-reset-cat" onclick="peResetCategory('${cat.id}')">Reset</button></div>`;
+    cat.items.forEach(it=>{ h+=peItemRowHtml(it); });
+    h+=`<button type="button" class="pe-additem" onclick="peAddItem('${cat.id}')">+ Add product</button>`;
     h+='</div>';
   });
   h+='</div>';
@@ -878,7 +925,7 @@ function peRecount(){
     const tab=document.querySelector(`.pe-tab[data-panel="${name}"]`);
     if(!panel||!tab) return;
     let changed=0,total=0;
-    panel.querySelectorAll('.pe-row, .pe-cab').forEach(c=>{ total++; if(c.classList.contains('changed')) changed++; });
+    panel.querySelectorAll('.pe-row, .pe-cab, .pe-item').forEach(c=>{ total++; if(c.classList.contains('changed')) changed++; });
     if(!searching){
       const pill=tab.querySelector('[data-count]');
       if(pill){ pill.textContent = changed>0?changed:total; pill.classList.toggle('hot',changed>0); }
@@ -921,15 +968,15 @@ function peFilter(){
     const tab=document.querySelector(`.pe-tab[data-panel="${name}"]`);
     if(!panel) return;
     let matches=0;
-    panel.querySelectorAll('.pe-row, .pe-cab').forEach(el=>{
+    panel.querySelectorAll('.pe-row, .pe-cab, .pe-item').forEach(el=>{
       const txt=el.dataset.search||el.textContent.toLowerCase();
       const show=!q||txt.indexOf(q)>=0;
       el.style.display=show?'':'none';
       if(show) matches++;
     });
     panel.querySelectorAll('.pe-cat').forEach(cat=>{
-      if(!cat.querySelector('.pe-row, .pe-cab')) return;
-      const vis=[...cat.querySelectorAll('.pe-row, .pe-cab')].some(e=>e.style.display!=='none');
+      if(!cat.querySelector('.pe-row, .pe-cab, .pe-item')) return;
+      const vis=[...cat.querySelectorAll('.pe-row, .pe-cab, .pe-item')].some(e=>e.style.display!=='none');
       cat.style.display=(q&&!vis)?'none':'';
     });
     const nr=panel.querySelector('.pe-noresults'); if(nr) nr.classList.toggle('show', q.length>0 && matches===0);
@@ -973,6 +1020,8 @@ function peRenderCabPreview(card){
 function peValidate(){
   const bad=[];
   document.querySelectorAll('#priceBody input[data-kind]').forEach(inp=>{
+    // Product rows are free-form (text name/desc; blank price = 0) — skip them.
+    if(inp.dataset.kind==='catitem'){ inp.classList.remove('pe-invalid'); return; }
     const v=parseFloat(inp.value);
     let invalid;
     if(inp.dataset.kind==='areatier'){
@@ -995,9 +1044,19 @@ async function savePrices(){
     alert('Please fix '+val.count+' highlighted field'+(val.count>1?'s':'')+' (blank or negative) before saving.');
     return;
   }
-  const overlay={items:{},cabinets:{},grills:{},paints:{},areaTiers:[]};
-  document.querySelectorAll('#priceBody input[data-kind="item"]').forEach(inp=>{
-    const v=parseFloat(inp.value); if(!isNaN(v)) overlay.items[inp.dataset.key]=v;
+  const overlay={items:{},catalog:{},cabinets:{},grills:{},paints:{},areaTiers:[]};
+  // Catalog products (name + description + price) per category.
+  document.querySelectorAll('#priceBody .pe-cat[data-cat]').forEach(catEl=>{
+    const list=[];
+    catEl.querySelectorAll('.pe-item').forEach(row=>{
+      const label=(row.querySelector('input[data-field="label"]')||{}).value;
+      const name=(label||'').trim();
+      if(!name) return; // blank/deleted
+      const sub=((row.querySelector('input[data-field="sub"]')||{}).value||'').trim();
+      const price=parseFloat((row.querySelector('input[data-field="price"]')||{}).value)||0;
+      list.push({label:name, sub, price});
+    });
+    overlay.catalog[catEl.dataset.cat]=list;
   });
   document.querySelectorAll('#priceBody input[data-kind="cab"]').forEach(inp=>{
     const k=inp.dataset.key,f=inp.dataset.field,v=parseFloat(inp.value);
@@ -1119,7 +1178,7 @@ function paintCardHtml(){
         <label class="fld">Height (ft) <input id="pnt-H" type="number" min="0" step="0.1" oninput="paintCalcArea()"></label>
       </div>
       <div class="cab-preview" id="pnt-preview"></div>
-      <button class="act b-primary" style="padding:11px 16px;font-size:13px" onclick="paintAdd()">+ Add Cat to Quote</button>
+      <button class="act b-primary" style="padding:11px 16px;font-size:13px" onclick="paintAdd()">+ Add Painting to Quote</button>
       <div id="pnt-lines" style="margin-top:14px"></div>
     </div>
   </div>`;
