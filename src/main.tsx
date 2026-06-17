@@ -25,6 +25,14 @@ if ((navigator as { standalone?: boolean }).standalone) {
   setTimeout(set, 1000)
 }
 
+// Register the push service worker so reminder notifications can be delivered
+// (push-only; it doesn't cache app assets).
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(() => {})
+  })
+}
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <BrowserRouter>

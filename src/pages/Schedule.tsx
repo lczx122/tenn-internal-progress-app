@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import type { Appointment } from '../lib/types'
 import { Layout } from '../components/Layout'
+import { NotificationSettings } from '../components/NotificationSettings'
 import { useAutoRefresh } from '../lib/useAutoRefresh'
 import {
   APPT_TYPES,
@@ -27,6 +28,7 @@ export default function Schedule() {
   const [month, setMonth] = useState(() => startOfDay(new Date()))
   const [selectedDay, setSelectedDay] = useState(() => startOfDay(new Date()))
   const [scope, setScope] = useState<'mine' | 'all'>('mine')
+  const [showNotif, setShowNotif] = useState(false)
   const { session } = useAuth()
   const myId = session?.user.id
   const navigate = useNavigate()
@@ -78,12 +80,25 @@ export default function Schedule() {
           className="flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-slate-900"
         />
         <button
+          onClick={() => setShowNotif((v) => !v)}
+          title="Reminder notifications"
+          aria-label="Reminder notifications"
+          className={
+            'shrink-0 rounded-lg border px-3 py-2 text-sm active:bg-slate-50 ' +
+            (showNotif ? 'border-slate-900 bg-slate-900 text-white' : 'border-slate-300 bg-white text-slate-600')
+          }
+        >
+          🔔
+        </button>
+        <button
           onClick={() => navigate('/schedule/new')}
           className="shrink-0 rounded-lg bg-slate-900 px-3 py-2 text-sm font-medium text-white active:bg-slate-700"
         >
           + New
         </button>
       </div>
+
+      {showNotif && <NotificationSettings />}
 
       <div className="mb-3 flex rounded-lg border border-slate-300 bg-white p-0.5">
         {(['mine', 'all'] as const).map((s) => (
