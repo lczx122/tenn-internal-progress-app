@@ -96,6 +96,13 @@ export async function setLead(leadMinutes: number): Promise<void> {
     .upsert({ user_id: me, lead_minutes: leadMinutes }, { onConflict: 'user_id' })
 }
 
+// Ask the server to push a test notification to this user's devices.
+export async function sendTest(): Promise<{ ok: boolean; sent?: number; error?: string }> {
+  const { data, error } = await supabase.functions.invoke('send-reminders', { body: { test: true } })
+  if (error) return { ok: false, error: error.message }
+  return (data as { ok: boolean; sent?: number; error?: string }) ?? { ok: false, error: 'No response' }
+}
+
 export async function disablePush(): Promise<void> {
   const me = await uid()
   await supabase.from('notification_prefs').upsert({ user_id: me, enabled: false }, { onConflict: 'user_id' })

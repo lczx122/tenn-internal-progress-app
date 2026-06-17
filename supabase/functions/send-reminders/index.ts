@@ -29,8 +29,47 @@ function humanize(ms: number): string {
   const d = Math.round(min / 1440); return `${d} day${d === 1 ? '' : 's'}`
 }
 
+const CORS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-cron-secret',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+}
+const jsonRes = (obj: unknown, status = 200) =>
+  new Response(JSON.stringify(obj), { status, headers: { ...CORS, 'Content-Type': 'application/json' } })
+
 Deno.serve(async (req) => {
-  // Only the scheduler (which knows the secret) may trigger this.
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS })
+
+  let body: { test?: boolean } = {}
+  try { body = await req.json() } catch (_e) { /* empty body = cron run */ }
+
+  // Authenticated "send me a test notification" path (called from the app).
+  if (body?.test) {
+    const token = (req.headers.get('Authorization') || '').replace(/^Bearer\s+/i, '')
+    const { data: { user } } = await supabase.auth.getUser(token)
+    if (!user) return jsonRes({ ok: false, error: 'Not signed in.' }, 401)
+    const { data: subs } = await supabase
+      .from('push_subscriptions').select('endpoint,p256dh,auth').eq('user_id', user.id)
+    if (!subs?.length) return jsonRes({ ok: false, error: 'No device subscribed yet — turn reminders on first.' })
+    const payload = JSON.stringify({
+      title: 'Test reminder 🔔',
+      body: 'Your reminder notifications are working.',
+      url: '/schedule', tag: 'test',
+    })
+    let testSent = 0
+    for (const sub of subs) {
+      try {
+        await webpush.sendNotification({ endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } }, payload)
+        testSent++
+      } catch (e) {
+        const code = (e as { statusCode?: number }).statusCode
+        if (code === 404 || code === 410) await supabase.from('push_subscriptions').delete().eq('endpoint', sub.endpoint)
+      }
+    }
+    return jsonRes({ ok: true, sent: testSent })
+  }
+
+  // Scheduled (cron) path — guarded by the shared secret.
   const secret = Deno.env.get('CRON_SECRET')
   if (secret && req.headers.get('x-cron-secret') !== secret) {
     return new Response('forbidden', { status: 403 })

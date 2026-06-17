@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useAuth } from '../contexts/AuthContext'
 import {
   pushSupported,
   isStandalone,
@@ -6,7 +7,11 @@ import {
   enablePush,
   disablePush,
   setLead,
+  sendTest,
 } from '../lib/push'
+
+// Only this account sees the test-notification button.
+const TEST_EMAIL = 'lczx122@gmail.com'
 
 const PRESETS = [
   { m: 15, label: '15 min' },
@@ -32,8 +37,24 @@ export function NotificationSettings() {
   const [customAmt, setCustomAmt] = useState('')
   const [customUnit, setCustomUnit] = useState<'min' | 'hour' | 'day'>('hour')
 
+  const { session } = useAuth()
+  const canTest = session?.user.email?.toLowerCase() === TEST_EMAIL
+
   const supported = pushSupported()
   const needsInstall = !supported && /iphone|ipad|ipod/i.test(navigator.userAgent) && !isStandalone()
+
+  async function test() {
+    setBusy(true)
+    setMsg('Sending test…')
+    try {
+      const r = await sendTest()
+      setMsg(r.ok ? `Test sent to ${r.sent ?? 0} device(s) — check your notifications.` : (r.error ?? 'Test failed.'))
+    } catch (e) {
+      setMsg((e as Error).message)
+    } finally {
+      setBusy(false)
+    }
+  }
 
   useEffect(() => {
     getPrefs().then((p) => {
@@ -171,6 +192,16 @@ export function NotificationSettings() {
             <p className="mt-1.5 text-xs text-slate-500">Currently: {leadLabel(lead)} before.</p>
           )}
         </>
+      )}
+
+      {canTest && supported && (
+        <button
+          onClick={test}
+          disabled={busy}
+          className="mt-3 w-full rounded-lg border border-slate-300 bg-white py-2 text-sm font-medium text-slate-700 active:bg-slate-50 disabled:opacity-50"
+        >
+          Send test notification
+        </button>
       )}
 
       {msg && <p className="mt-3 text-xs text-slate-500">{msg}</p>}
