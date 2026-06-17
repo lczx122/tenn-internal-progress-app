@@ -660,7 +660,7 @@ function areaTierTableHtml(tiers){
    Item prices and cabinet tier parameters can be overridden by an admin and
    stored in Supabase (app_settings key='pricing'). The overlay is applied over
    the coded defaults on load; everyone reads it, only admins can save it. */
-let priceOverlay = { items:{}, catalog:{}, cabinets:{}, grills:{}, paints:{}, areaTiers:[] };
+let priceOverlay = { items:{}, catalog:{}, cabinets:{}, grills:{}, paints:{}, alucabs:{}, areaTiers:[] };
 let isAdminUser = false;
 let isGuestUser = false;
 function getGuest(){
@@ -705,6 +705,11 @@ function applyOverrides(ov){
     const v=pnts[o.id];
     if(v && v.rate!=null) o.rate=+v.rate;
   });
+  const alus=ov.alucabs||{};
+  ALUCAB.forEach(o=>{
+    const v=alus[o.id];
+    if(v && v.rate!=null && !isNaN(+v.rate)) o.rate=+v.rate;
+  });
 }
 
 async function loadPricing(){
@@ -713,7 +718,7 @@ async function loadPricing(){
     await ready(supa);
     const {data}=await supa.from('app_settings').select('value').eq('key','pricing').maybeSingle();
     if(data&&data.value){
-      priceOverlay={items:(data.value.items||{}), catalog:(data.value.catalog||{}), cabinets:(data.value.cabinets||{}), grills:(data.value.grills||{}), paints:(data.value.paints||{}), areaTiers:(data.value.areaTiers||[])};
+      priceOverlay={items:(data.value.items||{}), catalog:(data.value.catalog||{}), cabinets:(data.value.cabinets||{}), grills:(data.value.grills||{}), paints:(data.value.paints||{}), alucabs:(data.value.alucabs||{}), areaTiers:(data.value.areaTiers||[])};
       applyOverrides(priceOverlay);
     }
   }catch(e){}
@@ -726,14 +731,15 @@ async function checkAdmin(){
 
 /* ---- price editor: snapshot of coded defaults (filled in init, before any
    overrides are applied — applyOverrides mutates the data arrays in place) ---- */
-const PRICE_DEFAULTS = { items:{}, catalog:{}, cabinets:{}, grills:{}, paints:{}, areaTiers:[] };
+const PRICE_DEFAULTS = { items:{}, catalog:{}, cabinets:{}, grills:{}, paints:{}, alucabs:{}, areaTiers:[] };
 function capturePriceDefaults(){
-  PRICE_DEFAULTS.items={}; PRICE_DEFAULTS.catalog={}; PRICE_DEFAULTS.cabinets={}; PRICE_DEFAULTS.grills={}; PRICE_DEFAULTS.paints={};
+  PRICE_DEFAULTS.items={}; PRICE_DEFAULTS.catalog={}; PRICE_DEFAULTS.cabinets={}; PRICE_DEFAULTS.grills={}; PRICE_DEFAULTS.paints={}; PRICE_DEFAULTS.alucabs={};
   CATALOG.forEach(cat=>cat.items.forEach(it=>{ PRICE_DEFAULTS.items[itemKey(cat,it)]=it.price; }));
   CATALOG.forEach(cat=>{ PRICE_DEFAULTS.catalog[cat.id]=cat.items.map(it=>({label:it.label,sub:it.sub||'',price:it.price})); });
   CABINET.forEach(g=>g.options.forEach(o=>{ PRICE_DEFAULTS.cabinets[g.id+':'+o.id]={basePrice:o.basePrice}; }));
   GRILL.forEach(g=>g.options.forEach(o=>{ PRICE_DEFAULTS.grills[g.id+':'+o.id]={rate:o.rate,overRate:(o.tier?o.tier.overRate:null)}; }));
   PAINT.forEach(o=>{ PRICE_DEFAULTS.paints[o.id]={rate:o.rate}; });
+  ALUCAB.forEach(o=>{ PRICE_DEFAULTS.alucabs[o.id]={rate:o.rate}; });
   PRICE_DEFAULTS.areaTiers=DEFAULT_AREA_TIERS.map(t=>({minM2:t.minM2,pct:t.pct}));
 }
 
@@ -818,12 +824,14 @@ function buildPriceEditorHtml(){
   const cabCount=CABINET.reduce((n,g)=>n+g.options.length,0);
   const grillCount=GRILL.reduce((n,g)=>n+g.options.length,0);
   const paintCount=PAINT.length;
+  const aluCount=ALUCAB.length;
   let h=`<div class="pe-head">
     <div class="pe-tabs">
       <button type="button" class="pe-tab active" data-panel="items" onclick="peSwitchTab('items')">Items <span class="pe-pill" data-count>${itemCount}</span></button>
       <button type="button" class="pe-tab" data-panel="cab" onclick="peSwitchTab('cab')">Cabinet <span class="pe-pill" data-count>${cabCount}</span></button>
       <button type="button" class="pe-tab" data-panel="grill" onclick="peSwitchTab('grill')">Grill <span class="pe-pill" data-count>${grillCount}</span></button>
       <button type="button" class="pe-tab" data-panel="paint" onclick="peSwitchTab('paint')">Paint <span class="pe-pill" data-count>${paintCount}</span></button>
+      <button type="button" class="pe-tab" data-panel="alucab" onclick="peSwitchTab('alucab')">Alu. Cabinet <span class="pe-pill" data-count>${aluCount}</span></button>
     </div>
     <div class="pe-search-wrap"><span class="pe-ico">🔍</span>
       <input class="pe-search" id="peSearch" placeholder="Search by name…" oninput="peFilter()">
@@ -887,6 +895,16 @@ function buildPriceEditorHtml(){
       <div class="pe-cab-grid">${peField('paint',o.id,'rate',o.rate,'RM/sqft',{money:true,def:d.rate})}</div></div>`;
   });
   h+='</div></div>';
+
+  // Aluminium Cabinet — per linear foot of length
+  h+=`<div class="pe-panel" data-panel="alucab"><div class="pe-noresults">No matching cabinets.</div>
+    <div class="pe-cat">${peSectionHead('Aluminium Cabinet — rate')}<p class="pe-note">Priced per linear foot (RM / ft) of cabinet length. Depth &amp; height are fixed per type.</p>`;
+  ALUCAB.forEach(o=>{
+    const d=PRICE_DEFAULTS.alucabs[o.id]||{};
+    h+=`<div class="pe-cab" data-search="${peSafe(o.name+' '+o.spec)}">${peCardHead(o.name+' · '+o.spec)}
+      <div class="pe-cab-grid" style="grid-template-columns:minmax(0,200px)">${peField('alucab',o.id,'rate',o.rate,'RM/ft',{money:true,def:d.rate})}</div></div>`;
+  });
+  h+='</div></div>';
   return h;
 }
 
@@ -920,7 +938,7 @@ function peApplyChanged(inp){
 }
 function peRecount(){
   const searching=(document.getElementById('peSearch')||{}).value;
-  ['items','cab','grill','paint'].forEach(name=>{
+  ['items','cab','grill','paint','alucab'].forEach(name=>{
     const panel=document.querySelector(`.pe-panel[data-panel="${name}"]`);
     const tab=document.querySelector(`.pe-tab[data-panel="${name}"]`);
     if(!panel||!tab) return;
@@ -963,7 +981,7 @@ function peSwitchTab(name){
 function peFilter(){
   const q=((document.getElementById('peSearch')||{}).value||'').trim().toLowerCase();
   const clr=document.getElementById('peSearchClear'); if(clr) clr.classList.toggle('show',q.length>0);
-  ['items','cab','grill','paint'].forEach(name=>{
+  ['items','cab','grill','paint','alucab'].forEach(name=>{
     const panel=document.querySelector(`.pe-panel[data-panel="${name}"]`);
     const tab=document.querySelector(`.pe-tab[data-panel="${name}"]`);
     if(!panel) return;
@@ -1044,7 +1062,7 @@ async function savePrices(){
     alert('Please fix '+val.count+' highlighted field'+(val.count>1?'s':'')+' (blank or negative) before saving.');
     return;
   }
-  const overlay={items:{},catalog:{},cabinets:{},grills:{},paints:{},areaTiers:[]};
+  const overlay={items:{},catalog:{},cabinets:{},grills:{},paints:{},alucabs:{},areaTiers:[]};
   // Catalog products (name + description + price) per category.
   document.querySelectorAll('#priceBody .pe-cat[data-cat]').forEach(catEl=>{
     const list=[];
@@ -1080,6 +1098,10 @@ async function savePrices(){
     const k=inp.dataset.key,f=inp.dataset.field,v=parseFloat(inp.value);
     (overlay.paints[k]=overlay.paints[k]||{})[f]=isNaN(v)?0:v;
   });
+  document.querySelectorAll('#priceBody input[data-kind="alucab"]').forEach(inp=>{
+    const k=inp.dataset.key,f=inp.dataset.field,v=parseFloat(inp.value);
+    (overlay.alucabs[k]=overlay.alucabs[k]||{})[f]=isNaN(v)?0:v;
+  });
   const supa=getSupa();
   if(!supa){ alert('Not connected — open this inside the app to save prices.'); return; }
   const btns=[...document.querySelectorAll('.js-save-prices')]; btns.forEach(b=>{b.disabled=true;b.textContent='Saving…';});
@@ -1101,6 +1123,7 @@ const activeVariant = {}; // catId -> variant index
 const cabinetLines = []; // [{gid,gname,oid,oname,L,H,D,price}]
 const grillLines = []; // [{gid,gname,oid,oname,unit,W,H,L,price}]
 const paintLines = []; // [{oid,oname,W,H,sqft,price}]
+const alucabLines = []; // [{oid,oname,spec,L,price}]
 
 const fmt = n => n.toLocaleString('en-MY',{minimumFractionDigits:2,maximumFractionDigits:2});
 
@@ -1184,6 +1207,69 @@ function paintCardHtml(){
   </div>`;
 }
 
+/* ============================================================
+   ALUMINIUM CABINET MODULE — measure & auto-price (per ft run)
+   Aluminium kitchen cabinets are priced per linear foot of LENGTH.
+   Each type has a fixed depth & height (shown as a spec); only the
+   length varies.  Price = Length (ft) × rate.
+   ============================================================ */
+const ALUCAB_CAT='Aluminium Cabinet';
+const ALUCAB = [
+  { id:'base',   name:'Base Cabinet',               spec:'Depth 22" · Height 34"', rate:750 },
+  { id:'wall25', name:'Wall Cabinet (2.5ft / 30")', spec:'Depth 13" · Height 30"', rate:400 },
+  { id:'wall3',  name:'Wall Cabinet (3ft / 36")',   spec:'Depth 13" · Height 36"', rate:500 },
+  { id:'corner', name:'Corner Cabinet (3ft / 36")', spec:'Depth 13" · Height 36"', rate:520 },
+];
+function alucabSel(){ return ALUCAB[+document.getElementById('alu-option').value]; }
+function alucabOptionChange(){ document.getElementById('alu-L').value=''; alucabPreview(); }
+function alucabPreview(){
+  const o=alucabSel();
+  const L=parseFloat(document.getElementById('alu-L').value)||0;
+  let html=`<div class="cab-tiers"><b>RM ${fmt(+o.rate||0)}</b> / ft <span style="color:#6b7280">· ${o.spec}</span></div>`;
+  if(L>0) html+=`<div class="cab-calc">${L} ft → <b>RM ${fmt(L*(+o.rate||0))}</b></div>`;
+  document.getElementById('alu-preview').innerHTML=html;
+}
+function alucabAdd(){
+  const o=alucabSel();
+  const L=parseFloat(document.getElementById('alu-L').value)||0;
+  if(!(L>0)){ alert('Enter the cabinet length (ft).'); return; }
+  alucabLines.push({oid:o.id,oname:o.name,spec:o.spec,L,price:L*(+o.rate||0)});
+  document.getElementById('alu-L').value='';
+  alucabPreview(); renderAlucabLines(); recalc();
+}
+function alucabRemove(i){ alucabLines.splice(i,1); renderAlucabLines(); recalc(); }
+function alucabDimStr(l){ return `${l.L} ft${l.spec?` · ${l.spec}`:''}`; }
+function renderAlucabLines(){
+  const box=document.getElementById('alu-lines'); if(!box) return;
+  if(!alucabLines.length){ box.innerHTML='<div class="cab-empty">No aluminium cabinet added yet.</div>'; return; }
+  box.innerHTML=alucabLines.map((l,i)=>`<div class="cab-line">
+    <div class="cab-line-info"><b>${l.oname}</b><br><span class="cab-dim">${alucabDimStr(l)}</span></div>
+    <div class="cab-amt">RM ${fmt(l.price)}</div>
+    <button class="cab-x" title="Remove" onclick="alucabRemove(${i})">✕</button>
+  </div>`).join('');
+}
+function alucabCardHtml(){
+  const optOpts=ALUCAB.map((o,i)=>`<option value="${i}">${o.name}</option>`).join('');
+  return `
+  <div class="cat" data-cat="alucab">
+    <div class="cat-hd" onclick="this.parentElement.classList.toggle('open')">
+      <span class="chev">▶</span>
+      <span class="cname">Aluminium Cabinet</span>
+      <span class="count zero" id="cnt-alucab">0</span>
+    </div>
+    <div class="cat-bd">
+      <div class="cab-note">Aluminium kitchen cabinets are priced per <b>linear foot</b> of length. Pick a type and enter the length in feet — depth &amp; height are fixed per type.</div>
+      <div class="cab-grid">
+        <label class="fld">Cabinet Type <select id="alu-option" onchange="alucabOptionChange()">${optOpts}</select></label>
+        <label class="fld">Length (ft) <input id="alu-L" type="number" min="0" step="0.1" oninput="alucabPreview()"></label>
+      </div>
+      <div class="cab-preview" id="alu-preview"></div>
+      <button class="act b-primary" style="padding:11px 16px;font-size:13px" onclick="alucabAdd()">+ Add Aluminium Cabinet to Quote</button>
+      <div id="alu-lines" style="margin-top:14px"></div>
+    </div>
+  </div>`;
+}
+
 /* ---------- render catalog ---------- */
 function renderCatalog(){
   const root = document.getElementById('catalog');
@@ -1196,6 +1282,8 @@ function renderCatalog(){
   renderGrillLines();
   root.insertAdjacentHTML('beforeend', paintCardHtml());
   renderPaintLines();
+  root.insertAdjacentHTML('beforeend', alucabCardHtml());
+  renderAlucabLines();
   CATALOG.forEach((cat,ci)=>{
     if(activeVariant[cat.id]===undefined) activeVariant[cat.id]=0;
     const wrap = document.createElement('div');
@@ -1367,6 +1455,9 @@ function collectLines(){
   paintLines.forEach(l=>{
     lines.push({cat:PAINT_CAT,variantName:'',label:l.oname,sub:paintDimStr(l),price:l.price,qty:1,amount:l.price});
   });
+  alucabLines.forEach(l=>{
+    lines.push({cat:ALUCAB_CAT,variantName:'',label:l.oname,sub:alucabDimStr(l),price:l.price,qty:1,amount:l.price});
+  });
   CATALOG.forEach(cat=>{
     cat.items.forEach((it,idx)=>{
       const key=`${cat.id}:${idx}`;
@@ -1394,6 +1485,8 @@ function recalc(){
   if(grlEl){grlEl.textContent=grillLines.length;grlEl.classList.toggle('zero',grillLines.length===0);}
   const pntEl=document.getElementById('cnt-paint');
   if(pntEl){pntEl.textContent=paintLines.length;pntEl.classList.toggle('zero',paintLines.length===0);}
+  const aluEl=document.getElementById('cnt-alucab');
+  if(aluEl){aluEl.textContent=alucabLines.length;aluEl.classList.toggle('zero',alucabLines.length===0);}
   // summary list
   const box=document.getElementById('sumItems');
   if(!lines.length){box.innerHTML='<div class="empty">No items selected yet.</div>';}
@@ -1422,7 +1515,7 @@ function buildDoc(){
 
   // group lines by category (cabinet groups first, then catalog categories)
   let rowsHtml='';
-  const order=[...CABINET.map(gp=>gp.name), ...GRILL.map(gp=>gp.name), PAINT_CAT, ...CATALOG.map(c=>c.name)];
+  const order=[...CABINET.map(gp=>gp.name), ...GRILL.map(gp=>gp.name), PAINT_CAT, ALUCAB_CAT, ...CATALOG.map(c=>c.name)];
   const seen=new Set();
   order.forEach(cname=>{
     if(seen.has(cname)) return; seen.add(cname);
@@ -1608,6 +1701,7 @@ async function saveQuote(){
     cabinets:cabinetLines.map(l=>Object.assign({},l)),
     grills:grillLines.map(l=>Object.assign({},l)),
     paints:paintLines.map(l=>Object.assign({},l)),
+    alucabs:alucabLines.map(l=>Object.assign({},l)),
     variants:Object.assign({},activeVariant),
     lines, totals:{sub,deposit:dep,discount:disc,balance:bal}
   };
@@ -1662,13 +1756,15 @@ async function loadDocument(id, asType){
     if(Array.isArray(p.grills)) p.grills.forEach(l=>grillLines.push(Object.assign({},l)));
     paintLines.length=0;
     if(Array.isArray(p.paints)) p.paints.forEach(l=>paintLines.push(Object.assign({},l)));
+    alucabLines.length=0;
+    if(Array.isArray(p.alucabs)) p.alucabs.forEach(l=>alucabLines.push(Object.assign({},l)));
     sourceId=(asType==='SO')?data.id:null;
     sourceNumber=(asType==='SO')?data.number:null;
     applyDocTypeUI(asType||'SO');
     committedNo=null;
     renderCatalog();   // re-renders items using the restored state/variants
     await refreshPendingNumber();
-    if(!p.selections && !(p.cabinets&&p.cabinets.length) && !(p.grills&&p.grills.length) && !(p.paints&&p.paints.length))
+    if(!p.selections && !(p.cabinets&&p.cabinets.length) && !(p.grills&&p.grills.length) && !(p.paints&&p.paints.length) && !(p.alucabs&&p.alucabs.length))
       setQnoStatus('Loaded customer from '+data.number+' — items could not be restored, please re-add');
     else
       setQnoStatus('Converting from '+data.number+' — preview, then Save Sales Order');
@@ -1698,6 +1794,7 @@ function newQuote(){
   cabinetLines.length=0;
   grillLines.length=0;
   paintLines.length=0;
+  alucabLines.length=0;
   ['c_name','c_ic','c_unit','c_phone','c_email','c_remarks'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('t_dep').value=0;
   document.getElementById('t_disc').value=0;
