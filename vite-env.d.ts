@@ -8,3 +8,6 @@ interface ImportMetaEnv {
 interface ImportMeta {
   readonly env: ImportMetaEnv
 }
+
+// Injected at build time by vite.config.ts (cache-busts the quotation iframe).
+declare const __BUILD_ID__: string

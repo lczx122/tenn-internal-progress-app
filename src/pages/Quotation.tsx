@@ -11,6 +11,8 @@ export default function Quotation() {
   const [params] = useSearchParams()
   const usp = new URLSearchParams(params)
   usp.set('embed', '1')
+  // Cache-bust so a new deploy's quotation.html is always loaded fresh.
+  usp.set('v', __BUILD_ID__)
   const qs = usp.toString()
   const src = `/quotation.html?${qs}`
   return (
