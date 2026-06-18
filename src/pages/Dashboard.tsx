@@ -2,12 +2,13 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
-import type { Appointment, Job, JobEvent, JobWork } from '../lib/types'
+import type { Appointment, Claim, Job, JobEvent, JobWork } from '../lib/types'
 import { Layout } from '../components/Layout'
 import { STAGES, getStage, overallPercent } from '../lib/stages'
 import { CATEGORIES } from '../lib/categories'
 import { getApptType, startOfDay, addDays, dayLabel, timeLabel } from '../lib/appointments'
 import { relativeTime, formatDateTime } from '../lib/format'
+import { collectedTotal, money } from '../lib/claims'
 import { useAutoRefresh } from '../lib/useAutoRefresh'
 
 const STALE_DAYS = 7
@@ -18,21 +19,24 @@ export default function Dashboard() {
   const [works, setWorks] = useState<JobWork[]>([])
   const [events, setEvents] = useState<JobEvent[]>([])
   const [appts, setAppts] = useState<Appointment[]>([])
+  const [claims, setClaims] = useState<Claim[]>([])
   const [loading, setLoading] = useState(true)
   const { session } = useAuth()
   const myId = session?.user.id
 
   async function load() {
-    const [{ data: j }, { data: w }, { data: e }, { data: ap }] = await Promise.all([
+    const [{ data: j }, { data: w }, { data: e }, { data: ap }, { data: cl }] = await Promise.all([
       supabase.from('jobs').select('*').order('updated_at', { ascending: false }),
       supabase.from('job_works').select('*'),
       supabase.from('job_events').select('*').order('created_at', { ascending: false }).limit(20),
       supabase.from('appointments').select('*').eq('status', 'scheduled').order('starts_at'),
+      supabase.from('claims').select('*'),
     ])
     setJobs((j as Job[]) ?? [])
     setWorks((w as JobWork[]) ?? [])
     setEvents((e as JobEvent[]) ?? [])
     setAppts((ap as Appointment[]) ?? [])
+    setClaims((cl as Claim[]) ?? [])
     setLoading(false)
   }
 
@@ -44,6 +48,7 @@ export default function Dashboard() {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'job_works' }, () => load())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'job_events' }, () => load())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'appointments' }, () => load())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'claims' }, () => load())
       .subscribe()
     return () => {
       supabase.removeChannel(channel)
@@ -140,6 +145,30 @@ export default function Dashboard() {
       .map(([holder, count]) => ({ holder, count }))
       .sort((a, b) => b.count - a.count)
   }, [active])
+
+  // ---- Claims: collected vs outstanding across active units ----
+  const claimsSummary = useMemo(() => {
+    const byJob = new Map<string, Claim[]>()
+    for (const c of claims) {
+      const arr = byJob.get(c.job_id) ?? []
+      arr.push(c)
+      byJob.set(c.job_id, arr)
+    }
+    let order = 0
+    let collected = 0
+    const outstanding: { job: Job; balance: number }[] = []
+    for (const u of active) {
+      const o = Number(u.job.order_total || 0)
+      const got = collectedTotal(byJob.get(u.job.id) ?? [])
+      if (o <= 0 && got <= 0) continue
+      order += o
+      collected += got
+      const balance = o - got
+      if (balance > 0) outstanding.push({ job: u.job, balance })
+    }
+    outstanding.sort((a, b) => b.balance - a.balance)
+    return { order, collected, balance: order - collected, outstanding }
+  }, [claims, active])
 
   // Look up a unit's name for the global activity feed.
   const jobName = useMemo(() => {
@@ -277,6 +306,57 @@ export default function Dashboard() {
           </div>
 
           <div className="space-y-5">
+          {/* Claims summary */}
+          <section>
+            <div className="mb-2 flex items-center justify-between px-1">
+              <h2 className="text-sm font-semibold text-slate-700">Claims</h2>
+              <Link to="/claims" className="text-xs font-medium text-slate-500">View all ›</Link>
+            </div>
+            {claimsSummary.order === 0 && claimsSummary.collected === 0 ? (
+              <Empty>No order totals set yet. Add one on a unit to track collections.</Empty>
+            ) : (
+              <div className="space-y-3 rounded-xl bg-white p-4 shadow-sm">
+                <div className="grid grid-cols-3 gap-2 text-center">
+                  <div className="rounded-lg bg-slate-50 p-2">
+                    <div className="text-[11px] text-slate-400">Order</div>
+                    <div className="text-sm font-semibold text-slate-800">{money(claimsSummary.order)}</div>
+                  </div>
+                  <div className="rounded-lg bg-emerald-50 p-2">
+                    <div className="text-[11px] text-emerald-700/70">Collected</div>
+                    <div className="text-sm font-semibold text-emerald-700">{money(claimsSummary.collected)}</div>
+                  </div>
+                  <div className="rounded-lg bg-amber-50 p-2">
+                    <div className="text-[11px] text-amber-700/70">Outstanding</div>
+                    <div className="text-sm font-semibold text-amber-700">{money(claimsSummary.balance)}</div>
+                  </div>
+                </div>
+                <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100">
+                  <div
+                    className="h-full rounded-full bg-emerald-500 transition-all"
+                    style={{ width: `${claimsSummary.order > 0 ? Math.min(100, Math.round((claimsSummary.collected / claimsSummary.order) * 100)) : 0}%` }}
+                  />
+                </div>
+                {claimsSummary.outstanding.length > 0 && (
+                  <ul className="space-y-1.5 pt-1">
+                    {claimsSummary.outstanding.slice(0, 5).map(({ job, balance }) => (
+                      <li key={job.id}>
+                        <Link
+                          to={`/job/${job.id}`}
+                          className="flex items-center justify-between gap-2 rounded-lg px-2 py-1.5 active:bg-slate-50"
+                        >
+                          <span className="min-w-0 truncate text-sm text-slate-700">
+                            {job.customer_name || job.unit_code || '—'}
+                          </span>
+                          <span className="shrink-0 text-sm font-medium text-amber-700">{money(balance)}</span>
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
+          </section>
+
           {/* Category breakdown */}
           <Section title="By category">
             {categoryStats.length === 0 ? (
