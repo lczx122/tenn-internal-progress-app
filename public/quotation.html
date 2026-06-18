@@ -359,6 +359,7 @@
       <div class="btns">
         <button class="act b-primary" id="previewBtn" onclick="openPreview()">Preview Quotation</button>
         <button class="act b-save" id="saveBtn" style="display:none" onclick="saveQuote()">💾 Save Quotation</button>
+        <button class="act b-primary" id="convertBtn" style="display:none" onclick="convertToSO()">🧾 Convert to Sales Order</button>
         <button class="act b-clear" onclick="newQuote()">New Quote</button>
       </div>
       <p class="hint" style="margin-top:10px">Preview the quotation first, then tap <b>Save Quotation</b> to assign its <b>QT-YYMM-XXX</b> number and store it in the shared register.</p>
@@ -371,6 +372,7 @@
   <div class="modal-inner">
     <div class="modal-bar">
       <button class="act b-save" id="saveBtnModal" onclick="saveQuote()">💾 Save Quotation</button>
+      <button class="act b-primary" id="convertBtnModal" style="display:none" onclick="convertToSO()">🧾 Convert to Sales Order</button>
       <button class="act b-primary" onclick="window.print()">🖨 Print / PDF</button>
       <button class="act b-ghost" onclick="closePreview()">Close</button>
     </div>
@@ -409,8 +411,16 @@ const CATALOG = [
     id:'smarthome', name:'Smart Home & Plug Point',
     variants:[],
     items:[
-      {v:0,label:'Smart Home (Installment)',sub:'RM99.00/month × 60 months',price:5940},
-      {v:0,label:'Smart Home (Full Pay)',sub:'Full payment',price:0},
+      {v:0,label:'Aqara Smart Home Package',sub:'Wall Switch (1/2/3 gang) ×5 · Hub M2 ×1 · Presence Multi-Sensor FP300 ×1 · Smart Door Lock A100 ×1',price:0},
+      {v:0,label:'Aqara Smart Wall Switch H1 (No Neutral, Single Rocker)',sub:'Colours: White / Grey',price:229},
+      {v:0,label:'Aqara Smart Wall Switch H1 (No Neutral, Double Rocker)',sub:'Colours: White / Grey',price:269},
+      {v:0,label:'Aqara Smart Wall Switch H1 (No Neutral, Triple Rocker)',sub:'Colours: White / Grey',price:409},
+      {v:0,label:'Aqara Presence Multi-Sensor FP300',sub:'White',price:439},
+      {v:0,label:'Aqara Hub M2',sub:'Black',price:409},
+      {v:0,label:'Aqara Smart Lock U200',sub:'Colours: Black / Silver / White',price:1399},
+      {v:0,label:'Aqara Smart Door Lock A100',sub:'Black',price:1599},
+      {v:0,label:'Aqara Door Lock D100 (Zigbee)',sub:'Black',price:2899},
+      {v:0,label:'Aqara Smart Facial Recognition Door Lock D200i',sub:'Gold',price:3599},
       {v:0,label:'ADDON CCTV',sub:'Price by specification',price:0},
       {v:0,label:'ADDON Standard Plug Point',sub:'Includes wiring & casing',price:200},
       {v:0,label:'ADDON Air-Cond & Water Heater Plug',sub:'Includes wiring & casing',price:450},
@@ -420,8 +430,8 @@ const CATALOG = [
     id:'smartlock', name:'Smart Lock',
     variants:[],
     items:[
-      {v:0,label:'6-in-1 Sistem (Full Pay)',sub:'Fingerprint · Password · RFID · OTP · Emergency key · App',price:1299},
-      {v:0,label:'Premium Smart Lock Sistem (Full Pay)',sub:'',price:2352},
+      {v:0,label:'Aqara Smart Lock U200 (Standard)',sub:'Colours: Black / Silver / White',price:1399},
+      {v:0,label:'Aqara Smart Door Lock D200i (Premium)',sub:'Facial Recognition · Gold',price:3599},
     ]
   },
   {
@@ -462,7 +472,7 @@ const TERMS = [
    ⚠️ THE BASE PRICES BELOW ARE EXAMPLES — replace with your real
    rates. Set CABINET_PRICES_SET to true once done to hide the warning.
    ============================================================ */
-const CABINET_PRICES_SET = false;
+const CABINET_PRICES_SET = true;
 
 // Global area-pricing tiers (admin-editable, shared by all cabinets).
 const DEFAULT_AREA_TIERS = [
@@ -1622,6 +1632,25 @@ async function ready(supa){ try{ await supa.auth.getSession(); }catch(e){} }
 function currentNumber(){return committedNo||pendingNo||'—';}
 function setQnoStatus(t){const el=document.getElementById('qno_status');if(el)el.textContent=t;}
 
+// The "Convert to Sales Order" button only makes sense for a SAVED quotation
+// (we need its register id to link the new SO back to it). Guests never save.
+function updateConvertBtn(){
+  const show = (docType==='QT' && !!savedId && !!committedNo && !isGuestUser);
+  ['convertBtn','convertBtnModal'].forEach(id=>{const b=document.getElementById(id); if(b) b.style.display=show?'':'none';});
+}
+
+/* Convert the just-saved quotation into a Sales Order. Reuses loadDocument(),
+   which restores every item from the stored payload, switches to SO mode and
+   links the new SO back to this quotation as its source. */
+async function convertToSO(){
+  if(docType!=='QT'){ alert('This is already a Sales Order.'); return; }
+  if(!savedId){ alert('Save the quotation first, then convert it to a Sales Order.'); return; }
+  if(!confirm('Convert '+(committedNo||'this quotation')+' into a Sales Order?\nA new SO number is assigned when you save.')) return;
+  closePreview();
+  await loadDocument(savedId,'SO');
+  updateConvertBtn();
+}
+
 // Reflect the current document type in the title bar, button labels and field.
 function updateDocLabels(){
   const name=docName();
@@ -1643,6 +1672,7 @@ function setDocType(t){
   applyDocTypeUI(t);
   committedNo=null; savedId=null; sourceId=null; sourceNumber=null;
   document.getElementById('saveBtn').style.display='none'; // re-preview the new type
+  updateConvertBtn();
   refreshPendingNumber();
 }
 
@@ -1725,6 +1755,7 @@ async function saveQuote(){
       setQnoStatus('Saved locally (offline)');
     }
     document.getElementById('c_qno').value=committedNo;
+    updateConvertBtn();
     // refresh the open preview so the printed doc shows the final number
     if(document.getElementById('modal').classList.contains('show'))
       document.getElementById('docBody').innerHTML=buildDoc();
@@ -1762,6 +1793,7 @@ async function loadDocument(id, asType){
     sourceNumber=(asType==='SO')?data.number:null;
     applyDocTypeUI(asType||'SO');
     committedNo=null;
+    updateConvertBtn();
     renderCatalog();   // re-renders items using the restored state/variants
     await refreshPendingNumber();
     if(!p.selections && !(p.cabinets&&p.cabinets.length) && !(p.grills&&p.grills.length) && !(p.paints&&p.paints.length) && !(p.alucabs&&p.alucabs.length))
@@ -1802,6 +1834,7 @@ function newQuote(){
   committedNo=null; pendingNo=null; savedId=null; sourceId=null; sourceNumber=null;
   setQnoStatus('');
   document.getElementById('saveBtn').style.display='none';
+  updateConvertBtn();
   renderCatalog();
   refreshPendingNumber();
 }
