@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { AppHeader } from '../components/Layout'
 import { BottomNav } from '../components/BottomNav'
@@ -9,10 +10,18 @@ import { Sidebar } from '../components/Sidebar'
 // ?from=<id>&type=SO from "Convert to SO") are forwarded to the iframe.
 export default function Quotation() {
   const [params] = useSearchParams()
+  // Cache-bust with a value that's unique per visit (build id + a fresh nonce
+  // each time this page mounts). A per-build id alone only refreshes once the
+  // device loads a new app shell; a per-visit nonce guarantees the iframe never
+  // serves a stale quotation.html, so /quote always matches /quotation.html.
+  // Stable across re-renders (useMemo) so the iframe doesn't reload mid-session.
+  const cacheBust = useMemo(
+    () => `${__BUILD_ID__}.${Date.now().toString(36)}`,
+    [],
+  )
   const usp = new URLSearchParams(params)
   usp.set('embed', '1')
-  // Cache-bust so a new deploy's quotation.html is always loaded fresh.
-  usp.set('v', __BUILD_ID__)
+  usp.set('v', cacheBust)
   const qs = usp.toString()
   const src = `/quotation.html?${qs}`
   return (
