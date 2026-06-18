@@ -2,12 +2,13 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
-import type { Appointment, Job, JobEvent, JobWork } from '../lib/types'
+import type { Appointment, Claim, Job, JobEvent, JobWork } from '../lib/types'
 import { STAGES, getStage } from '../lib/stages'
 import { CATEGORIES, getCategory } from '../lib/categories'
 import { getApptType } from '../lib/appointments'
 import { Layout } from '../components/Layout'
 import { StageBar } from '../components/StageBar'
+import { ClaimsSection } from '../components/ClaimsSection'
 import { formatDate, formatDateTime } from '../lib/format'
 import { useAutoRefresh } from '../lib/useAutoRefresh'
 
@@ -20,6 +21,7 @@ export default function JobDetail() {
   const [works, setWorks] = useState<JobWork[]>([])
   const [events, setEvents] = useState<JobEvent[]>([])
   const [appts, setAppts] = useState<Appointment[]>([])
+  const [claims, setClaims] = useState<Claim[]>([])
   const [loading, setLoading] = useState(true)
   const [note, setNote] = useState('')
   const [busy, setBusy] = useState(false)
@@ -27,16 +29,18 @@ export default function JobDetail() {
 
   const loadAll = useCallback(async () => {
     if (!id) return
-    const [{ data: j }, { data: wk }, { data: ev }, { data: ap }] = await Promise.all([
+    const [{ data: j }, { data: wk }, { data: ev }, { data: ap }, { data: cl }] = await Promise.all([
       supabase.from('jobs').select('*').eq('id', id).single(),
       supabase.from('job_works').select('*').eq('job_id', id).order('created_at'),
       supabase.from('job_events').select('*').eq('job_id', id).order('created_at', { ascending: false }),
       supabase.from('appointments').select('*').eq('job_id', id).order('starts_at'),
+      supabase.from('claims').select('*').eq('job_id', id).order('created_at'),
     ])
     setJob((j as Job) ?? null)
     setWorks((wk as JobWork[]) ?? [])
     setEvents((ev as JobEvent[]) ?? [])
     setAppts((ap as Appointment[]) ?? [])
+    setClaims((cl as Claim[]) ?? [])
     setLoading(false)
   }, [id])
 
@@ -48,6 +52,7 @@ export default function JobDetail() {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'job_works', filter: `job_id=eq.${id}` }, () => loadAll())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'job_events', filter: `job_id=eq.${id}` }, () => loadAll())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'appointments', filter: `job_id=eq.${id}` }, () => loadAll())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'claims', filter: `job_id=eq.${id}` }, () => loadAll())
       .subscribe()
     return () => {
       supabase.removeChannel(channel)
@@ -109,18 +114,6 @@ export default function JobDetail() {
     setBusy(false)
   }
 
-  async function changeKeyHolder() {
-    if (!job) return
-    const next = window.prompt('Who has the keys now?', job.key_holder)
-    if (next === null) return
-    const trimmed = next.trim() || 'Office'
-    if (trimmed === job.key_holder) return
-    setBusy(true)
-    await supabase.from('jobs').update({ key_holder: trimmed, updated_by: displayName }).eq('id', job.id)
-    await logEvent('key', `🔑 Keys handed to ${trimmed}`)
-    setBusy(false)
-  }
-
   async function addNote() {
     const trimmed = note.trim()
     if (!trimmed) return
@@ -167,21 +160,56 @@ export default function JobDetail() {
       <div className="xl:columns-2 xl:gap-6 xl:[&>div]:break-inside-avoid xl:[&>section]:mb-4 xl:[&>section]:mt-0 xl:[&>section]:break-inside-avoid">
       {/* Summary card */}
       <section className="rounded-xl bg-white p-4 shadow-sm">
-        {job.project && (
+        <div className="mb-2 flex items-start justify-between gap-2">
+          {job.project ? (
+            <Link
+              to={`/units?project=${encodeURIComponent(job.project)}`}
+              className="inline-block rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600 active:bg-slate-200"
+            >
+              📁 {job.project}
+            </Link>
+          ) : (
+            <span />
+          )}
           <Link
-            to={`/units?project=${encodeURIComponent(job.project)}`}
-            className="mb-2 inline-block rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600 active:bg-slate-200"
+            to={`/job/${job.id}/edit`}
+            className="shrink-0 rounded-lg border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-600 active:bg-slate-100"
           >
-            📁 {job.project}
+            ✎ Edit details
           </Link>
+        </div>
+
+        {(job.unit_code || job.address) && (
+          <p className="text-slate-700">🏠 {job.unit_code || job.address}</p>
         )}
-        {job.address && <p className="text-slate-700">🏠 {job.address}</p>}
         {job.phone && (
           <p className="mt-1 text-slate-700">
             📞 <a href={`tel:${job.phone}`} className="underline">{job.phone}</a>
           </p>
         )}
+        <p className="mt-1 text-sm text-slate-500">
+          {job.is_owner ? '👤 Owner' : `👤 Not owner${job.owner_relationship ? ` · ${job.owner_relationship}` : ''}`}
+        </p>
+
+        {job.house_types && job.house_types.length > 0 && (
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {job.house_types.map((t) => (
+              <span key={t} className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
+                {t}
+              </span>
+            ))}
+          </div>
+        )}
+
         <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
+          <div className="rounded-lg bg-slate-50 p-2">
+            <div className="text-slate-400">PIC</div>
+            <div className="font-medium text-slate-700">{job.pic || '—'}</div>
+          </div>
+          <div className="rounded-lg bg-amber-50 p-2">
+            <div className="text-amber-700/70">🔑 Keys</div>
+            <div className="font-medium text-amber-800">{job.key_holder || 'Office'}</div>
+          </div>
           <div className="rounded-lg bg-slate-50 p-2">
             <div className="text-slate-400">Start</div>
             <div className="font-medium text-slate-700">{formatDate(job.start_date)}</div>
@@ -191,16 +219,17 @@ export default function JobDetail() {
             <div className="font-medium text-slate-700">{formatDate(job.target_date)}</div>
           </div>
         </div>
-        <button
-          onClick={changeKeyHolder}
-          className="mt-4 flex w-full items-center justify-between rounded-lg bg-amber-50 px-3 py-2.5 text-left active:bg-amber-100"
-        >
-          <span className="text-sm text-amber-900">
-            🔑 Keys with <strong>{job.key_holder}</strong>
-          </span>
-          <span className="text-xs font-medium text-amber-700">Change ›</span>
-        </button>
       </section>
+
+      {/* Customer claims */}
+      <ClaimsSection
+        job={job}
+        claims={claims}
+        displayName={displayName}
+        session={session}
+        isAdmin={isAdmin}
+        onChange={loadAll}
+      />
 
       {/* Appointments */}
       <section className="mt-4 rounded-xl bg-white p-4 shadow-sm">

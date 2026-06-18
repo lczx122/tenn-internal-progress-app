@@ -11,6 +11,8 @@ import QuotesRegister from './pages/QuotesRegister'
 import Schedule from './pages/Schedule'
 import AppointmentForm from './pages/AppointmentForm'
 import StaffAdmin from './pages/StaffAdmin'
+import ProjectsAdmin from './pages/ProjectsAdmin'
+import Claims from './pages/Claims'
 import CostingList from './pages/CostingList'
 import CostingForm from './pages/CostingForm'
 import SetupNotice from './pages/SetupNotice'
@@ -53,16 +55,19 @@ export default function App() {
       <Route path="/" element={<Dashboard />} />
       <Route path="/units" element={<JobsList />} />
       <Route path="/new" element={<NewJob />} />
+      <Route path="/claims" element={<Claims />} />
       <Route path="/quote" element={<Quotation />} />
       <Route path="/quotes" element={<QuotesRegister />} />
       <Route path="/schedule" element={<Schedule />} />
       <Route path="/schedule/new" element={<AppointmentForm />} />
       <Route path="/appointment/:id" element={<AppointmentForm />} />
       <Route path="/staff" element={<StaffAdmin />} />
+      <Route path="/projects" element={<ProjectsAdmin />} />
       <Route path="/costing" element={<CostingList />} />
       <Route path="/costing/new" element={<CostingForm />} />
       <Route path="/costing/:id" element={<CostingForm />} />
       <Route path="/job/:id" element={<JobDetail />} />
+      <Route path="/job/:id/edit" element={<NewJob />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )

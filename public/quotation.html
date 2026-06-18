@@ -1135,13 +1135,13 @@ const fmt = n => n.toLocaleString('en-MY',{minimumFractionDigits:2,maximumFracti
    ============================================================ */
 const PAINT_CAT='Cat (Painting)';
 const PAINT = [
-  { id:'dalaman', name:'Interior House Painting', rate:0 },
-  { id:'luar',    name:'Exterior Wall Painting',  rate:0 },
-  { id:'bilik1',  name:'Bedroom 1 Painting',      rate:0 },
-  { id:'bilik2',  name:'Bedroom 2 Painting',      rate:0 },
-  { id:'bilik3',  name:'Bedroom 3 Painting',      rate:0 },
-  { id:'bilik4',  name:'Bedroom 4 Painting',      rate:0 },
-  { id:'seluruh', name:'Whole House Painting',    rate:0 },
+  { id:'dalaman', name:'Interior House Painting', rate:4.8 },
+  { id:'luar',    name:'Exterior Wall Painting',  rate:9.8 },
+  { id:'bilik1',  name:'Bedroom 1 Painting',      rate:4.8 },
+  { id:'bilik2',  name:'Bedroom 2 Painting',      rate:4.8 },
+  { id:'bilik3',  name:'Bedroom 3 Painting',      rate:4.8 },
+  { id:'bilik4',  name:'Bedroom 4 Painting',      rate:4.8 },
+  { id:'seluruh', name:'Whole House Painting',    rate:4.8 },
 ];
 function paintSel(){ return PAINT[+document.getElementById('pnt-option').value]; }
 function paintCalcArea(){

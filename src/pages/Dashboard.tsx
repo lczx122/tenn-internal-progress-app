@@ -245,8 +245,8 @@ export default function Dashboard() {
                       <div className="flex items-start justify-between gap-2">
                         <div className="min-w-0">
                           <p className="truncate font-semibold text-slate-900">{u.job.customer_name}</p>
-                          {u.job.address && (
-                            <p className="truncate text-xs text-slate-500">{u.job.address}</p>
+                          {(u.job.unit_code || u.job.address) && (
+                            <p className="truncate text-xs text-slate-500">{u.job.unit_code || u.job.address}</p>
                           )}
                         </div>
                         <div className="flex shrink-0 flex-wrap justify-end gap-1">

@@ -12,6 +12,34 @@ export interface Job {
   created_at: string
   updated_at: string
   updated_by: string
+  // Added in the unit revamp. Older rows default to empty / sensible values.
+  unit_code: string
+  is_owner: boolean
+  owner_relationship: string
+  house_types: string[]
+  pic: string
+  key_holder_type: string
+  order_total: number
+}
+
+export interface Project {
+  id: string
+  name: string
+  created_at: string
+}
+
+// A payment collected from the customer against a unit's order total.
+export interface Claim {
+  id: string
+  job_id: string
+  category: string // one of CLAIM_CATEGORIES
+  amount: number // resolved RM collected
+  percent: number | null // set when entered as a % of the order total
+  note: string
+  collected_on: string | null
+  created_by: string | null
+  created_by_name: string
+  created_at: string
 }
 
 export interface JobWork {

@@ -75,6 +75,14 @@ export default function StaffAdmin() {
         also delete records, archive units, and edit prices. Add new staff in your Supabase dashboard
         (Authentication → Users); they appear here automatically.
       </p>
+      <Link
+        to="/projects"
+        className="mb-3 flex items-center justify-between rounded-xl bg-white p-3 shadow-sm active:bg-slate-50"
+      >
+        <span className="text-sm font-medium text-slate-700">📁 Manage projects</span>
+        <span className="text-xs font-medium text-slate-400">Add / rename / remove ›</span>
+      </Link>
+
       {error && <p className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
 
       {loading ? (

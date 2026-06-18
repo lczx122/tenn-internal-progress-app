@@ -107,6 +107,8 @@ export default function JobsList() {
           !q ||
           j.customer_name.toLowerCase().includes(q) ||
           j.address.toLowerCase().includes(q) ||
+          (j.unit_code ?? '').toLowerCase().includes(q) ||
+          (j.pic ?? '').toLowerCase().includes(q) ||
           j.key_holder.toLowerCase().includes(q) ||
           (worksByJob.get(j.id) ?? []).some((w) =>
             w.category.toLowerCase().includes(q)
@@ -291,9 +293,9 @@ export default function JobsList() {
                             <p className="truncate font-semibold text-slate-900">
                               {job.customer_name}
                             </p>
-                            {job.address && (
+                            {(job.unit_code || job.address) && (
                               <p className="truncate text-sm text-slate-500">
-                                {job.address}
+                                {job.unit_code || job.address}
                               </p>
                             )}
                           </div>

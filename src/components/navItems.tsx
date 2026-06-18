@@ -15,6 +15,7 @@ const baseTabs: NavTab[] = [
   { to: '/schedule', label: 'Schedule', end: false, icon: 'calendar' },
   { to: '/quote', label: 'Quote', end: false, icon: 'receipt' },
   { to: '/quotes', label: 'Orders', end: false, icon: 'ledger' },
+  { to: '/claims', label: 'Claims', end: false, icon: 'wallet' },
 ]
 
 // The visible tabs for the current user (boss gets the Costing tab; guests only
@@ -75,6 +76,14 @@ export function TabIcon({ name, className = 'h-[22px] w-[22px]' }: { name: strin
           <rect x="3.5" y="4" width="17" height="16" rx="2.2" />
           <path d="M3.5 9.2h17" />
           <path d="M7.2 13h9.6M7.2 16.4h6" />
+        </svg>
+      )
+    case 'wallet':
+      return (
+        <svg {...p}>
+          <rect x="3" y="6" width="18" height="13" rx="2.4" />
+          <path d="M3 9.5h18" />
+          <circle cx="16.5" cy="14" r="1.1" fill="currentColor" stroke="none" />
         </svg>
       )
     case 'coins':
