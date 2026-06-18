@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type Dispatch, type SetStateAction } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import { useAuth } from '../contexts/AuthContext'
 import type { Job, JobWork } from '../lib/types'
 import { Layout } from '../components/Layout'
 import { PercentBar } from '../components/StageBar'
@@ -32,6 +33,7 @@ export default function JobsList() {
   const [sortBy, setSortBy] = useState<'updated' | 'name' | 'progress'>('updated')
   const [collapsed, setCollapsed] = useState<Set<string>>(() => loadSet('tenn_collapsed_projects'))
   const [pinned, setPinned] = useState<Set<string>>(() => loadSet('tenn_pinned_projects'))
+  const { isAdmin } = useAuth()
   const navigate = useNavigate()
 
   function toggleIn(
@@ -226,12 +228,19 @@ export default function JobsList() {
       </div>
 
       <div className="mb-3 flex items-center justify-between">
-        <button
-          onClick={() => setShowArchived((v) => !v)}
-          className="text-xs font-medium text-slate-500 underline"
-        >
-          {showArchived ? '← Back to active units' : 'View archived units'}
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setShowArchived((v) => !v)}
+            className="text-xs font-medium text-slate-500 underline"
+          >
+            {showArchived ? '← Back to active units' : 'View archived units'}
+          </button>
+          {isAdmin && (
+            <Link to="/units/bulk" className="text-xs font-medium text-slate-500 underline">
+              Bulk edit ▦
+            </Link>
+          )}
+        </div>
         {(catFilter || stageFilter || projectFilter) && (
           <button
             onClick={() => {

@@ -6,6 +6,7 @@ import Dashboard from './pages/Dashboard'
 import JobsList from './pages/JobsList'
 import JobDetail from './pages/JobDetail'
 import NewJob from './pages/NewJob'
+import UnitsBulk from './pages/UnitsBulk'
 import Quotation from './pages/Quotation'
 import QuotesRegister from './pages/QuotesRegister'
 import Schedule from './pages/Schedule'
@@ -54,6 +55,7 @@ export default function App() {
     <Routes>
       <Route path="/" element={<Dashboard />} />
       <Route path="/units" element={<JobsList />} />
+      <Route path="/units/bulk" element={<UnitsBulk />} />
       <Route path="/new" element={<NewJob />} />
       <Route path="/claims" element={<Claims />} />
       <Route path="/quote" element={<Quotation />} />
