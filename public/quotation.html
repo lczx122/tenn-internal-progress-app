@@ -140,6 +140,10 @@
   .pe-item .pe-money input{width:118px}
   .pe-del{flex:none;border:1px solid var(--line);background:#fff;color:var(--accent);width:30px;height:30px;border-radius:7px;cursor:pointer;font-size:13px}
   .pe-del:hover{background:var(--accent-soft)}
+  .pe-hide{flex:none;border:1px solid var(--line);background:#fff;width:30px;height:30px;border-radius:7px;cursor:pointer;font-size:13px;line-height:1}
+  .pe-hide:hover{background:#f0f3fb}
+  .pe-item.pe-hidden{opacity:.55}
+  .pe-item.pe-hidden .pe-item-fields input{text-decoration:line-through}
   .pe-additem{margin-top:10px;border:1px dashed #c7d0e6;background:#fff;color:var(--navy);font-family:'Archivo';font-weight:700;font-size:12px;border-radius:8px;padding:8px 13px;cursor:pointer}
   .pe-additem:hover{background:#f0f3fb}
   .pe-reset-cat{border:1px solid var(--line);background:#fff;color:var(--muted);font-family:'Archivo';font-weight:700;font-size:11px;border-radius:7px;padding:5px 10px;cursor:pointer}
@@ -684,13 +688,36 @@ function applyOverrides(ov){
   if(!ov) return;
   const items=ov.items||{}, cats=ov.catalog||{}, cabs=ov.cabinets||{}, grls=ov.grills||{}, pnts=ov.paints||{};
   CATALOG.forEach(cat=>{
-    if(Array.isArray(cats[cat.id])){
-      // Admin replaced this category's products (names + prices + descriptions).
-      cat.items = cats[cat.id]
-        .map(it=>({v:0, label:String(it.label||'').trim(), sub:String(it.sub||''), price:(+it.price||0)}))
-        .filter(it=>it.label);
+    const ov=cats[cat.id];
+    if(Array.isArray(ov)){
+      // DB-driven catalog: merge the saved overlay onto the built-in products by
+      // stable id. Built-in products NOT present in the overlay are kept (so a
+      // newly shipped product can never be masked again); admin-added products
+      // are appended; `hidden` soft-deletes a row without losing it (reversible).
+      const byId={}, byLabel={}, used=new Set();
+      ov.forEach(e=>{ if(!e) return; if(e.id!=null) byId[e.id]=e; else if(e.label) byLabel[String(e.label).trim().toLowerCase()]=e; });
+      const builtinIds=new Set(cat.items.map(it=>it.id));
+      const merged=cat.items.map(it=>{
+        let e=byId[it.id];
+        if(!e){ const k=String(it.label).trim().toLowerCase(); e=byLabel[k]; if(e) used.add(e); } // legacy (pre-id) overlay matched by name
+        if(!e) return Object.assign({}, it);
+        return { v:0, id:it.id,
+          label:(e.label!=null && String(e.label).trim())?String(e.label).trim():it.label,
+          sub:(e.sub!=null?String(e.sub):it.sub),
+          price:(e.price!=null && !isNaN(+e.price))?+e.price:it.price,
+          hidden:!!e.hidden };
+      });
+      ov.forEach(e=>{
+        if(!e) return;
+        if(e.id!=null && builtinIds.has(e.id)) return; // already merged onto its built-in
+        if(e.id==null && used.has(e)) return;          // legacy override already applied above
+        const label=String(e.label||'').trim(); if(!label) return;
+        merged.push({ v:0, id:(e.id!=null?e.id:'custom:'+label.toLowerCase()),
+          label, sub:String(e.sub||''), price:(+e.price||0), hidden:!!e.hidden, custom:true });
+      });
+      cat.items=merged;
     } else {
-      // Legacy price-only overrides.
+      // Legacy price-only overrides (keyed by item).
       cat.items.forEach(it=>{ const v=items[itemKey(cat,it)]; if(v!=null && !isNaN(+v)) it.price=+v; });
     }
   });
@@ -741,11 +768,20 @@ async function checkAdmin(){
 
 /* ---- price editor: snapshot of coded defaults (filled in init, before any
    overrides are applied — applyOverrides mutates the data arrays in place) ---- */
+// Give every built-in product a stable id (position-based; built-ins are only
+// ever appended, never reordered, so ids stay stable across deploys). The id is
+// how the saved DB overlay re-attaches each product's edits and hidden flag.
+function normalizeCatalog(){
+  CATALOG.forEach(cat=>cat.items.forEach((it,i)=>{
+    if(it.id==null) it.id=cat.id+'#'+i;
+    if(it.hidden==null) it.hidden=false;
+  }));
+}
 const PRICE_DEFAULTS = { items:{}, catalog:{}, cabinets:{}, grills:{}, paints:{}, alucabs:{}, areaTiers:[] };
 function capturePriceDefaults(){
   PRICE_DEFAULTS.items={}; PRICE_DEFAULTS.catalog={}; PRICE_DEFAULTS.cabinets={}; PRICE_DEFAULTS.grills={}; PRICE_DEFAULTS.paints={}; PRICE_DEFAULTS.alucabs={};
   CATALOG.forEach(cat=>cat.items.forEach(it=>{ PRICE_DEFAULTS.items[itemKey(cat,it)]=it.price; }));
-  CATALOG.forEach(cat=>{ PRICE_DEFAULTS.catalog[cat.id]=cat.items.map(it=>({label:it.label,sub:it.sub||'',price:it.price})); });
+  CATALOG.forEach(cat=>{ PRICE_DEFAULTS.catalog[cat.id]=cat.items.map(it=>({id:it.id,label:it.label,sub:it.sub||'',price:it.price,hidden:false})); });
   CABINET.forEach(g=>g.options.forEach(o=>{ PRICE_DEFAULTS.cabinets[g.id+':'+o.id]={basePrice:o.basePrice}; }));
   GRILL.forEach(g=>g.options.forEach(o=>{ PRICE_DEFAULTS.grills[g.id+':'+o.id]={rate:o.rate,overRate:(o.tier?o.tier.overRate:null)}; }));
   PAINT.forEach(o=>{ PRICE_DEFAULTS.paints[o.id]={rate:o.rate}; });
@@ -782,28 +818,44 @@ function peField(kind,key,field,val,label,opts){
   return `<label class="pe-f"><span>${label}</span>${wrapped}</label>`;
 }
 const peAttr = s => String(s==null?'':s).replace(/&/g,'&amp;').replace(/"/g,'&quot;');
-// An editable product row: name + description + price, with a delete button.
+// An editable product row: name + description + price. Every row carries its
+// stable id and hidden state; built-ins can be hidden (reversible) but only
+// admin-added custom rows can be permanently deleted.
 function peItemRowHtml(it){
-  it=it||{label:'',sub:'',price:''};
+  it=it||{label:'',sub:'',price:'',hidden:false};
   const price = (it.price===''||it.price==null) ? '' : (+it.price||0);
-  return `<div class="pe-item" data-search="${peSafe((it.label||'')+' '+(it.sub||''))}">
+  const hidden=!!it.hidden, custom=!!it.custom;
+  return `<div class="pe-item${hidden?' pe-hidden':''}" data-id="${peAttr(it.id||'')}" data-custom="${custom?'1':''}" data-hidden="${hidden?'1':''}" data-search="${peSafe((it.label||'')+' '+(it.sub||''))}">
     <div class="pe-item-fields">
       <input type="text" data-kind="catitem" data-field="label" value="${peAttr(it.label)}" placeholder="Product name">
       <input type="text" data-kind="catitem" data-field="sub" value="${peAttr(it.sub)}" placeholder="Description (optional)">
     </div>
     <span class="pe-money"><span class="pe-rm">RM</span><input type="number" step="0.01" min="0" data-kind="catitem" data-field="price" value="${price}"></span>
-    <button type="button" class="pe-del" title="Delete product" onclick="peDeleteItem(this)">✕</button>
+    <button type="button" class="pe-hide" title="${hidden?'Hidden — tap to show in quotes':'Visible — tap to hide from quotes'}" onclick="peToggleHide(this)">${hidden?'🚫':'👁'}</button>
+    ${custom?`<button type="button" class="pe-del" title="Delete custom product" onclick="peDeleteItem(this)">✕</button>`:''}
   </div>`;
 }
 function peAddItem(catId){
   const cat=document.querySelector(`.pe-cat[data-cat="${catId}"]`); if(!cat) return;
   const addBtn=cat.querySelector('.pe-additem');
-  addBtn.insertAdjacentHTML('beforebegin', peItemRowHtml());
+  const id='custom:'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+  addBtn.insertAdjacentHTML('beforebegin', peItemRowHtml({label:'',sub:'',price:'',id,custom:true,hidden:false}));
   peSetDirty();
   const rows=cat.querySelectorAll('.pe-item'); const last=rows[rows.length-1];
   const n=last&&last.querySelector('input[data-field="label"]'); if(n) n.focus();
 }
 function peDeleteItem(btn){ const row=btn.closest('.pe-item'); if(row) row.remove(); peSetDirty(); }
+// Reversible soft-delete: flip a product's hidden state. Hidden products are
+// kept (and saved) so they can be restored, but skipped in the quote builder.
+function peToggleHide(btn){
+  const row=btn.closest('.pe-item'); if(!row) return;
+  const hide = row.dataset.hidden!=='1';
+  row.dataset.hidden = hide?'1':'';
+  row.classList.toggle('pe-hidden', hide);
+  btn.textContent = hide?'🚫':'👁';
+  btn.title = hide?'Hidden — tap to show in quotes':'Visible — tap to hide from quotes';
+  peSetDirty();
+}
 function peResetCategory(catId){
   if(!confirm('Reset this category to the built-in products? Your custom products here will be removed.')) return;
   const cat=document.querySelector(`.pe-cat[data-cat="${catId}"]`); if(!cat) return;
@@ -1077,12 +1129,14 @@ async function savePrices(){
   document.querySelectorAll('#priceBody .pe-cat[data-cat]').forEach(catEl=>{
     const list=[];
     catEl.querySelectorAll('.pe-item').forEach(row=>{
-      const label=(row.querySelector('input[data-field="label"]')||{}).value;
-      const name=(label||'').trim();
-      if(!name) return; // blank/deleted
-      const sub=((row.querySelector('input[data-field="sub"]')||{}).value||'').trim();
+      const name=(((row.querySelector('input[data-field="label"]')||{}).value)||'').trim();
+      if(!name) return; // blank row — drop
+      const sub=(((row.querySelector('input[data-field="sub"]')||{}).value)||'').trim();
       const price=parseFloat((row.querySelector('input[data-field="price"]')||{}).value)||0;
-      list.push({label:name, sub, price});
+      const id=row.dataset.id||('custom:'+name.toLowerCase());
+      const hidden=row.dataset.hidden==='1';
+      const custom=row.dataset.custom==='1';
+      list.push({id, label:name, sub, price, hidden, custom}); // hidden rows kept (reversible)
     });
     overlay.catalog[catEl.dataset.cat]=list;
   });
@@ -1321,7 +1375,7 @@ function renderCatalog(){
 
 function renderItems(cat){
   const v = activeVariant[cat.id];
-  const rows = cat.items.map((it,idx)=>({it,idx})).filter(o=>o.it.v===v);
+  const rows = cat.items.map((it,idx)=>({it,idx})).filter(o=>o.it.v===v && !o.it.hidden);
   const html = `
     <table class="items">
       <thead><tr><th>Item</th><th class="r">Unit Price (RM)</th><th class="r" style="width:70px">Qty</th><th class="r">Amount (RM)</th></tr></thead>
@@ -1841,8 +1895,10 @@ function newQuote(){
 
 /* ---------- init ---------- */
 (function init(){
-  // Snapshot coded defaults BEFORE loadPricing()/applyOverrides() mutate the
-  // price arrays — powers the editor's "changed" badges and reset-to-default.
+  // Stamp stable ids on built-in products, then snapshot coded defaults BEFORE
+  // loadPricing()/applyOverrides() mutate the arrays — powers the editor's
+  // "changed" badges, reset-to-default, and the id-keyed overlay merge.
+  normalizeCatalog();
   capturePriceDefaults();
   // One-time delegated input listener for the price editor (its inner HTML is
   // rebuilt on every open, but #priceBody itself persists).
