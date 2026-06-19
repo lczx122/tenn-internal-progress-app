@@ -74,19 +74,19 @@ export default function Claims() {
       )
   }, [jobs, claimsByJob, query])
 
-  // Column / grand totals for the footer.
+  // Grand totals for the footer.
   const totals = useMemo(() => {
-    const byCat: Record<string, number> = {}
-    for (const c of CLAIM_CATEGORIES) byCat[c] = 0
     let order = 0
     let collected = 0
     for (const r of rows) {
-      for (const c of CLAIM_CATEGORIES) byCat[c] += r.byCat[c]
       order += r.order
       collected += r.collected
     }
-    return { byCat, order, collected, balance: order - collected }
+    return { order, collected, balance: order - collected }
   }, [rows])
+
+  const pct = (collected: number, order: number) =>
+    order > 0 ? Math.round((collected / order) * 100) + '%' : '—'
 
   const num = 'px-3 py-2 text-right tabular-nums whitespace-nowrap'
   const head = 'px-3 py-2 text-right text-xs font-semibold text-slate-500 whitespace-nowrap'
@@ -122,12 +122,8 @@ export default function Claims() {
               <tr className="border-b border-slate-200">
                 <th className="px-3 py-2 text-left text-xs font-semibold text-slate-500">Unit</th>
                 <th className={head}>Order</th>
-                {CLAIM_CATEGORIES.map((c) => (
-                  <th key={c} className={head}>
-                    {c}
-                  </th>
-                ))}
                 <th className={head}>Collected</th>
+                <th className={head}>%</th>
                 <th className={head}>Balance</th>
               </tr>
             </thead>
@@ -145,12 +141,8 @@ export default function Claims() {
                     </div>
                   </td>
                   <td className={num + ' text-slate-700'}>{r.order ? money(r.order) : '—'}</td>
-                  {CLAIM_CATEGORIES.map((c) => (
-                    <td key={c} className={num + ' text-slate-600'}>
-                      {r.byCat[c] ? money(r.byCat[c]) : '—'}
-                    </td>
-                  ))}
                   <td className={num + ' font-semibold text-emerald-700'}>{money(r.collected)}</td>
+                  <td className={num + ' text-slate-500'}>{pct(r.collected, r.order)}</td>
                   <td className={num + (r.balance > 0 ? ' font-semibold text-amber-700' : ' text-slate-400')}>
                     {money(r.balance)}
                   </td>
@@ -161,12 +153,8 @@ export default function Claims() {
               <tr className="border-t-2 border-slate-200 bg-slate-50 font-semibold">
                 <td className="px-3 py-2 text-left text-slate-700">Total ({rows.length})</td>
                 <td className={num + ' text-slate-800'}>{money(totals.order)}</td>
-                {CLAIM_CATEGORIES.map((c) => (
-                  <td key={c} className={num + ' text-slate-800'}>
-                    {money(totals.byCat[c])}
-                  </td>
-                ))}
                 <td className={num + ' text-emerald-700'}>{money(totals.collected)}</td>
+                <td className={num + ' text-slate-600'}>{pct(totals.collected, totals.order)}</td>
                 <td className={num + ' text-amber-700'}>{money(totals.balance)}</td>
               </tr>
             </tfoot>
