@@ -208,6 +208,16 @@
   .cab-x{border:none;background:var(--accent-soft);color:var(--accent);width:28px;height:28px;border-radius:6px;cursor:pointer;font-size:13px;flex:none}
   .cab-x:hover{background:#f8d7dd}
   .cab-empty{color:var(--muted);font-size:13px;text-align:center;padding:12px}
+  /* discount module */
+  .disc-list{display:flex;flex-direction:column;gap:8px}
+  .disc-row{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;cursor:pointer;background:#fff;transition:.15s}
+  .disc-row:hover{background:#f7f9fd}
+  .disc-row.on{border-color:var(--navy);background:#f3f6fc}
+  .disc-row input[type=checkbox]{width:17px;height:17px;flex:none;accent-color:var(--navy);cursor:pointer}
+  .disc-name{flex:1;font-weight:600;font-size:13.5px}
+  .disc-amt{font-weight:700;font-size:13px;color:var(--accent);white-space:nowrap}
+  .sum-items .row.disc span:last-child{color:var(--accent);font-weight:700}
+  .sum-items .row.disc span:first-child{color:var(--accent)}
 
   .variant-tabs{display:flex;gap:8px;margin:6px 0 12px;flex-wrap:wrap}
   .vtab{font-size:12.5px;font-weight:600;border:1px solid var(--line);background:#fff;border-radius:8px;padding:7px 14px;cursor:pointer;color:var(--muted);transition:.15s}
@@ -356,6 +366,7 @@
       <div class="sum-items" id="sumItems"><div class="empty">No items selected yet.</div></div>
       <div class="totals">
         <div class="sum-line"><span>Total Package (RM)</span><span id="t_sub" class="it-amt">0.00</span></div>
+        <div class="sum-line" id="t_rebate_line" hidden><span class="dim" style="font-size:13px">Less Rebates (RM)</span><span id="t_rebate" class="it-amt">0.00</span></div>
         <div class="adj"><span class="dim" style="font-size:13px">Less Deposit (RM)</span><input id="t_dep" type="number" min="0" step="0.01" value="0"></div>
         <div class="adj"><span class="dim" style="font-size:13px">Less Discount (RM)</span><input id="t_disc" type="number" min="0" step="0.01" value="0"></div>
         <div class="sum-line" style="margin-top:8px"><span>Total Balance</span><span id="t_bal" class="grand">RM 0.00</span></div>
@@ -681,7 +692,7 @@ function areaTierTableHtml(tiers){
    Item prices and cabinet tier parameters can be overridden by an admin and
    stored in Supabase (app_settings key='pricing'). The overlay is applied over
    the coded defaults on load; everyone reads it, only admins can save it. */
-let priceOverlay = { items:{}, catalog:{}, cabinets:{}, grills:{}, paints:{}, alucabs:{}, areaTiers:[] };
+let priceOverlay = { items:{}, catalog:{}, cabinets:{}, grills:{}, paints:{}, alucabs:{}, areaTiers:[], discounts:[] };
 let isAdminUser = false;
 let isGuestUser = false;
 function getGuest(){
@@ -754,6 +765,14 @@ function applyOverrides(ov){
     const v=alus[o.id];
     if(v && v.rate!=null && !isNaN(+v.rate)) o.rate=+v.rate;
   });
+  // Discounts are fully admin-managed: the saved list (if any) replaces the
+  // default seed so add/edit/delete in Edit Prices is authoritative.
+  if(Array.isArray(ov.discounts)){
+    DISCOUNTS = ov.discounts
+      .map(d=>({ id:(d&&d.id!=null)?String(d.id):('disc:'+Math.random().toString(36).slice(2,8)),
+                 label:String((d&&d.label)||'').trim(), amount:(+(d&&d.amount)||0) }))
+      .filter(d=>d.label);
+  }
 }
 
 async function loadPricing(){
@@ -762,7 +781,7 @@ async function loadPricing(){
     await ready(supa);
     const {data}=await supa.from('app_settings').select('value').eq('key','pricing').maybeSingle();
     if(data&&data.value){
-      priceOverlay={items:(data.value.items||{}), catalog:(data.value.catalog||{}), cabinets:(data.value.cabinets||{}), grills:(data.value.grills||{}), paints:(data.value.paints||{}), alucabs:(data.value.alucabs||{}), areaTiers:(data.value.areaTiers||[])};
+      priceOverlay={items:(data.value.items||{}), catalog:(data.value.catalog||{}), cabinets:(data.value.cabinets||{}), grills:(data.value.grills||{}), paints:(data.value.paints||{}), alucabs:(data.value.alucabs||{}), areaTiers:(data.value.areaTiers||[]), discounts:(data.value.discounts||[])};
       applyOverrides(priceOverlay);
     }
   }catch(e){}
@@ -784,9 +803,10 @@ function normalizeCatalog(){
     if(it.hidden==null) it.hidden=false;
   }));
 }
-const PRICE_DEFAULTS = { items:{}, catalog:{}, cabinets:{}, grills:{}, paints:{}, alucabs:{}, areaTiers:[] };
+const PRICE_DEFAULTS = { items:{}, catalog:{}, cabinets:{}, grills:{}, paints:{}, alucabs:{}, areaTiers:[], discounts:[] };
 function capturePriceDefaults(){
   PRICE_DEFAULTS.items={}; PRICE_DEFAULTS.catalog={}; PRICE_DEFAULTS.cabinets={}; PRICE_DEFAULTS.grills={}; PRICE_DEFAULTS.paints={}; PRICE_DEFAULTS.alucabs={};
+  PRICE_DEFAULTS.discounts=DEFAULT_DISCOUNTS.map(d=>({...d}));
   CATALOG.forEach(cat=>cat.items.forEach(it=>{ PRICE_DEFAULTS.items[itemKey(cat,it)]=it.price; }));
   CATALOG.forEach(cat=>{ PRICE_DEFAULTS.catalog[cat.id]=cat.items.map(it=>({id:it.id,label:it.label,sub:it.sub||'',price:it.price,hidden:false})); });
   CABINET.forEach(g=>g.options.forEach(o=>{ PRICE_DEFAULTS.cabinets[g.id+':'+o.id]={basePrice:o.basePrice}; }));
@@ -901,6 +921,7 @@ function buildPriceEditorHtml(){
       <button type="button" class="pe-tab" data-panel="grill" onclick="peSwitchTab('grill')">Grill <span class="pe-pill" data-count>${grillCount}</span></button>
       <button type="button" class="pe-tab" data-panel="paint" onclick="peSwitchTab('paint')">Paint <span class="pe-pill" data-count>${paintCount}</span></button>
       <button type="button" class="pe-tab" data-panel="alucab" onclick="peSwitchTab('alucab')">Alu. Cabinet <span class="pe-pill" data-count>${aluCount}</span></button>
+      <button type="button" class="pe-tab" data-panel="discount" onclick="peSwitchTab('discount')">Discounts <span class="pe-pill" data-count>${DISCOUNTS.length}</span></button>
     </div>
     <div class="pe-search-wrap"><span class="pe-ico">🔍</span>
       <input class="pe-search" id="peSearch" placeholder="Search by name…" oninput="peFilter()">
@@ -981,7 +1002,37 @@ function buildPriceEditorHtml(){
       <div class="pe-cab-grid" style="grid-template-columns:minmax(0,200px)">${peField('alucab',o.id,'rate',o.rate,'RM/ft',{money:true,def:d.rate})}</div></div>`;
   });
   h+='</div></div>';
+
+  // Discounts — admins can add, rename, re-price and delete selectable rebates.
+  h+=`<div class="pe-panel" data-panel="discount"><div class="pe-noresults">No matching discounts.</div>
+    <div class="pe-cat" data-disc="1">
+      <div class="pe-cat-hd"><h3>Discounts &amp; Rebates</h3></div>
+      <p class="pe-note">These show as tick-box options in the quotation. Each subtracts its flat amount from the total.</p>`;
+  DISCOUNTS.forEach(d=>{ h+=peDiscountRowHtml(d); });
+  h+=`<button type="button" class="pe-additem" onclick="peAddDiscount()">+ Add discount</button>`;
+  h+='</div></div>';
   return h;
+}
+// An editable discount row: name + flat amount, with a delete button.
+function peDiscountRowHtml(d){
+  d=d||{label:'',amount:''};
+  const amt=(d.amount===''||d.amount==null)?'':(+d.amount||0);
+  const id=d.id||('disc:'+Date.now().toString(36)+Math.random().toString(36).slice(2,6));
+  return `<div class="pe-item" data-id="${peAttr(id)}" data-search="${peSafe(d.label||'')}">
+    <div class="pe-item-fields">
+      <input type="text" data-kind="discitem" data-field="label" value="${peAttr(d.label)}" placeholder="Discount name (e.g. Cabinet Rebate)">
+    </div>
+    <span class="pe-money"><span class="pe-rm">− RM</span><input type="number" step="0.01" min="0" data-kind="discitem" data-field="amount" value="${amt}"></span>
+    <button type="button" class="pe-del" title="Delete discount" onclick="peDeleteItem(this)">✕</button>
+  </div>`;
+}
+function peAddDiscount(){
+  const cat=document.querySelector('.pe-cat[data-disc="1"]'); if(!cat) return;
+  const addBtn=cat.querySelector('.pe-additem');
+  addBtn.insertAdjacentHTML('beforebegin', peDiscountRowHtml());
+  peSetDirty();
+  const rows=cat.querySelectorAll('.pe-item'); const last=rows[rows.length-1];
+  const n=last&&last.querySelector('input[data-field="label"]'); if(n) n.focus();
 }
 
 /* ---- editor behavior ---- */
@@ -1014,7 +1065,7 @@ function peApplyChanged(inp){
 }
 function peRecount(){
   const searching=(document.getElementById('peSearch')||{}).value;
-  ['items','cab','grill','paint','alucab'].forEach(name=>{
+  ['items','cab','grill','paint','alucab','discount'].forEach(name=>{
     const panel=document.querySelector(`.pe-panel[data-panel="${name}"]`);
     const tab=document.querySelector(`.pe-tab[data-panel="${name}"]`);
     if(!panel||!tab) return;
@@ -1057,7 +1108,7 @@ function peSwitchTab(name){
 function peFilter(){
   const q=((document.getElementById('peSearch')||{}).value||'').trim().toLowerCase();
   const clr=document.getElementById('peSearchClear'); if(clr) clr.classList.toggle('show',q.length>0);
-  ['items','cab','grill','paint','alucab'].forEach(name=>{
+  ['items','cab','grill','paint','alucab','discount'].forEach(name=>{
     const panel=document.querySelector(`.pe-panel[data-panel="${name}"]`);
     const tab=document.querySelector(`.pe-tab[data-panel="${name}"]`);
     if(!panel) return;
@@ -1114,8 +1165,8 @@ function peRenderCabPreview(card){
 function peValidate(){
   const bad=[];
   document.querySelectorAll('#priceBody input[data-kind]').forEach(inp=>{
-    // Product rows are free-form (text name/desc; blank price = 0) — skip them.
-    if(inp.dataset.kind==='catitem'){ inp.classList.remove('pe-invalid'); return; }
+    // Product & discount rows are free-form (text name; blank amount = 0) — skip.
+    if(inp.dataset.kind==='catitem' || inp.dataset.kind==='discitem'){ inp.classList.remove('pe-invalid'); return; }
     const v=parseFloat(inp.value);
     let invalid;
     if(inp.dataset.kind==='areatier'){
@@ -1138,7 +1189,15 @@ async function savePrices(){
     alert('Please fix '+val.count+' highlighted field'+(val.count>1?'s':'')+' (blank or negative) before saving.');
     return;
   }
-  const overlay={items:{},catalog:{},cabinets:{},grills:{},paints:{},alucabs:{},areaTiers:[]};
+  const overlay={items:{},catalog:{},cabinets:{},grills:{},paints:{},alucabs:{},areaTiers:[],discounts:[]};
+  // Discounts — admin-managed selectable rebates (name + flat amount).
+  document.querySelectorAll('#priceBody .pe-cat[data-disc="1"] .pe-item').forEach(row=>{
+    const label=(((row.querySelector('input[data-field="label"]')||{}).value)||'').trim();
+    if(!label) return; // blank row — drop
+    const amount=parseFloat((row.querySelector('input[data-field="amount"]')||{}).value)||0;
+    const id=row.dataset.id||('disc:'+label.toLowerCase());
+    overlay.discounts.push({id,label,amount});
+  });
   // Catalog products (name + description + price) per category.
   document.querySelectorAll('#priceBody .pe-cat[data-cat]').forEach(catEl=>{
     const list=[];
@@ -1195,6 +1254,19 @@ async function savePrices(){
   }finally{ btns.forEach(b=>{b.disabled=false;b.textContent='Save prices';}); }
 }
 
+/* ============================================================
+   DISCOUNT MODULE — selectable rebates/discounts
+   Admin-managed (add/edit/delete in Edit Prices) and stored in the
+   DB overlay. Each ticked discount subtracts its flat amount from the
+   total. The first one ships as a RM 5,000 Cabinet Rebate.
+   ============================================================ */
+const DEFAULT_DISCOUNTS = [
+  { id:'cabreb', label:'Cabinet Rebate', amount:5000 },
+];
+let DISCOUNTS = DEFAULT_DISCOUNTS.map(d=>({...d}));
+function selectedDiscounts(){ return DISCOUNTS.filter(d=>discountSel[d.id]); }
+function discountTotal(){ return selectedDiscounts().reduce((s,d)=>s+(+d.amount||0),0); }
+
 /* ---------- state ---------- */
 const state = {}; // key `${catId}:${itemIndex}` -> qty
 const activeVariant = {}; // catId -> variant index
@@ -1202,6 +1274,7 @@ const cabinetLines = []; // [{gid,gname,oid,oname,L,H,D,price}]
 const grillLines = []; // [{gid,gname,oid,oname,unit,W,H,L,price}]
 const paintLines = []; // [{oid,oname,W,H,sqft,price}]
 const alucabLines = []; // [{oid,oname,spec,L,price}]
+const discountSel = {}; // discount id -> true when applied
 
 const fmt = n => n.toLocaleString('en-MY',{minimumFractionDigits:2,maximumFractionDigits:2});
 
@@ -1384,6 +1457,36 @@ function renderCatalog(){
     root.appendChild(wrap);
     renderItems(cat);
   });
+  root.insertAdjacentHTML('beforeend', discountCardHtml());
+  recalc();
+}
+
+/* ---------- discount module UI ---------- */
+function discountCardHtml(){
+  if(!DISCOUNTS.length) return '';
+  const rows=DISCOUNTS.map(d=>`
+    <label class="disc-row${discountSel[d.id]?' on':''}">
+      <input type="checkbox" ${discountSel[d.id]?'checked':''} onchange="toggleDiscount('${d.id}',this)">
+      <span class="disc-name">${d.label}</span>
+      <span class="disc-amt">− RM ${fmt(+d.amount||0)}</span>
+    </label>`).join('');
+  return `
+  <div class="cat open" data-cat="discount">
+    <div class="cat-hd" onclick="this.parentElement.classList.toggle('open')">
+      <span class="chev">▶</span>
+      <span class="cname">Discounts &amp; Rebates</span>
+      <span class="count zero" id="cnt-discount">0</span>
+    </div>
+    <div class="cat-bd">
+      <div class="cab-note">Tick any discounts that apply — each is subtracted from the total.</div>
+      <div class="disc-list">${rows}</div>
+    </div>
+  </div>`;
+}
+function toggleDiscount(id,cb){
+  const on=cb.checked;
+  if(on) discountSel[id]=true; else delete discountSel[id];
+  const row=cb.closest('.disc-row'); if(row) row.classList.toggle('on',on);
   recalc();
 }
 
@@ -1578,17 +1681,25 @@ function recalc(){
   if(pntEl){pntEl.textContent=paintLines.length;pntEl.classList.toggle('zero',paintLines.length===0);}
   const aluEl=document.getElementById('cnt-alucab');
   if(aluEl){aluEl.textContent=alucabLines.length;aluEl.classList.toggle('zero',alucabLines.length===0);}
-  // summary list
+  const discounts=selectedDiscounts();
+  const dscEl=document.getElementById('cnt-discount');
+  if(dscEl){dscEl.textContent=discounts.length;dscEl.classList.toggle('zero',discounts.length===0);}
+  // summary list (items, then any applied discounts)
   const box=document.getElementById('sumItems');
-  if(!lines.length){box.innerHTML='<div class="empty">No items selected yet.</div>';}
+  if(!lines.length && !discounts.length){box.innerHTML='<div class="empty">No items selected yet.</div>';}
   else{
-    box.innerHTML=lines.map(l=>`<div class="row"><span><span class="q">${l.qty}×</span> ${l.label}${l.variantName?` <span class="q">(${l.variantName.split('—')[1]?l.variantName.split('—')[1].trim():''})</span>`:''}</span><span>${fmt(l.amount)}</span></div>`).join('');
+    let html=lines.map(l=>`<div class="row"><span><span class="q">${l.qty}×</span> ${l.label}${l.variantName?` <span class="q">(${l.variantName.split('—')[1]?l.variantName.split('—')[1].trim():''})</span>`:''}</span><span>${fmt(l.amount)}</span></div>`).join('');
+    html+=discounts.map(d=>`<div class="row disc"><span>${d.label}</span><span>− ${fmt(+d.amount||0)}</span></div>`).join('');
+    box.innerHTML=html;
   }
   const sub=lines.reduce((s,l)=>s+l.amount,0);
+  const reb=discountTotal();
   const dep=parseFloat(document.getElementById('t_dep').value)||0;
   const disc=parseFloat(document.getElementById('t_disc').value)||0;
-  const bal=sub-dep-disc;
+  const bal=sub-reb-dep-disc;
   document.getElementById('t_sub').textContent=fmt(sub);
+  const rebLine=document.getElementById('t_rebate_line');
+  if(rebLine){ rebLine.hidden=discounts.length===0; document.getElementById('t_rebate').textContent=fmt(reb); }
   document.getElementById('t_bal').textContent='RM '+fmt(bal);
 }
 document.getElementById('t_dep').addEventListener('input',recalc);
@@ -1599,9 +1710,11 @@ function buildDoc(){
   const lines=collectLines();
   const g=id=>document.getElementById(id).value.trim();
   const sub=lines.reduce((s,l)=>s+l.amount,0);
+  const discounts=selectedDiscounts();
+  const reb=discountTotal();
   const dep=parseFloat(document.getElementById('t_dep').value)||0;
   const disc=parseFloat(document.getElementById('t_disc').value)||0;
-  const bal=sub-dep-disc;
+  const bal=sub-reb-dep-disc;
   const dateStr = g('c_date') ? new Date(g('c_date')).toLocaleDateString('en-GB') : new Date().toLocaleDateString('en-GB');
 
   // group lines by category (cabinet groups first, then catalog categories)
@@ -1655,6 +1768,7 @@ function buildDoc(){
 
     <div class="doc-totals">
       <div class="tl"><span>Total Package</span><span>RM ${fmt(sub)}</span></div>
+      ${discounts.map(d=>`<div class="tl"><span>Less ${d.label}</span><span>− RM ${fmt(+d.amount||0)}</span></div>`).join('')}
       ${dep?`<div class="tl"><span>Less Deposit</span><span>− RM ${fmt(dep)}</span></div>`:''}
       ${disc?`<div class="tl"><span>Less Discount</span><span>− RM ${fmt(disc)}</span></div>`:''}
       <div class="tl big"><span>Total Balance</span><span>RM ${fmt(bal)}</span></div>
@@ -1799,9 +1913,11 @@ async function saveQuote(){
   const g=id=>(document.getElementById(id).value||'').trim();
   if(!g('c_name')){ alert('Enter the customer name before saving.'); document.getElementById('c_name').focus(); return; }
   const sub=lines.reduce((s,l)=>s+l.amount,0);
+  const discounts=selectedDiscounts().map(d=>({id:d.id,label:d.label,amount:+d.amount||0}));
+  const reb=discounts.reduce((s,d)=>s+d.amount,0);
   const dep=parseFloat(document.getElementById('t_dep').value)||0;
   const disc=parseFloat(document.getElementById('t_disc').value)||0;
-  const bal=sub-dep-disc;
+  const bal=sub-reb-dep-disc;
   const cats=[...new Set(lines.map(l=>l.cat))].join(', ');
   const payload={
     doc_type:docType,
@@ -1813,8 +1929,9 @@ async function saveQuote(){
     grills:grillLines.map(l=>Object.assign({},l)),
     paints:paintLines.map(l=>Object.assign({},l)),
     alucabs:alucabLines.map(l=>Object.assign({},l)),
+    discounts,
     variants:Object.assign({},activeVariant),
-    lines, totals:{sub,deposit:dep,discount:disc,balance:bal}
+    lines, totals:{sub,rebates:reb,deposit:dep,discount:disc,balance:bal}
   };
   const supa=getSupa();
   setSaving(true);
@@ -1870,6 +1987,14 @@ async function loadDocument(id, asType){
     if(Array.isArray(p.paints)) p.paints.forEach(l=>paintLines.push(Object.assign({},l)));
     alucabLines.length=0;
     if(Array.isArray(p.alucabs)) p.alucabs.forEach(l=>alucabLines.push(Object.assign({},l)));
+    // Restore applied discounts; re-add any the admin has since deleted so the
+    // reopened document still reflects exactly what was quoted.
+    for(const k in discountSel) delete discountSel[k];
+    if(Array.isArray(p.discounts)) p.discounts.forEach(d=>{
+      if(!d||d.id==null) return;
+      discountSel[d.id]=true;
+      if(!DISCOUNTS.some(x=>x.id===d.id)) DISCOUNTS.push({id:d.id,label:d.label||'Discount',amount:+d.amount||0});
+    });
     sourceId=(asType==='SO')?data.id:null;
     sourceNumber=(asType==='SO')?data.number:null;
     applyDocTypeUI(asType||'SO');
@@ -1904,6 +2029,7 @@ function closePreview(){
 function newQuote(){
   if(!confirm('Start a new '+docName().toLowerCase()+'? This clears the current customer and items. Your saved name and initials stay.')) return;
   for(const k in state) delete state[k];
+  for(const k in discountSel) delete discountSel[k];
   cabinetLines.length=0;
   grillLines.length=0;
   paintLines.length=0;
