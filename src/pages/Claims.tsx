@@ -87,9 +87,12 @@ export default function Claims() {
 
   const pct = (collected: number, order: number) =>
     order > 0 ? Math.round((collected / order) * 100) + '%' : '—'
+  // Compact figures for the table so it fits any phone without sideways scroll
+  // (no "RM" prefix / cents — the tiles above show full precision).
+  const compact = (n: number) => Math.round(n).toLocaleString('en-MY')
 
-  const num = 'px-3 py-2 text-right tabular-nums whitespace-nowrap'
-  const head = 'px-3 py-2 text-right text-xs font-semibold text-slate-500 whitespace-nowrap'
+  const num = 'px-2 py-2 text-right tabular-nums whitespace-nowrap'
+  const head = 'px-2 py-2 text-right text-xs font-semibold text-slate-500 whitespace-nowrap'
 
   return (
     <Layout title="Claims" bottomNav wide onRefresh={load}>
@@ -116,15 +119,15 @@ export default function Claims() {
           No claims yet. Open a unit and set its order total to start tracking collections.
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-xl bg-white shadow-sm">
-          <table className="min-w-full text-sm">
+        <div className="rounded-xl bg-white shadow-sm">
+          <table className="w-full table-fixed text-xs">
             <thead>
               <tr className="border-b border-slate-200">
-                <th className="px-3 py-2 text-left text-xs font-semibold text-slate-500">Unit</th>
-                <th className={head}>Order</th>
-                <th className={head}>Collected</th>
-                <th className={head}>%</th>
-                <th className={head}>Balance</th>
+                <th className="px-2 py-2 text-left text-xs font-semibold text-slate-500">Unit</th>
+                <th className={head + ' w-[64px]'}>Order</th>
+                <th className={head + ' w-[64px]'}>Collect</th>
+                <th className={head + ' w-[38px]'}>%</th>
+                <th className={head + ' w-[64px]'}>Bal.</th>
               </tr>
             </thead>
             <tbody>
@@ -134,28 +137,28 @@ export default function Claims() {
                   onClick={() => navigate(`/job/${r.job.id}`)}
                   className="cursor-pointer border-b border-slate-100 last:border-0 hover:bg-slate-50"
                 >
-                  <td className="px-3 py-2">
-                    <div className="font-medium text-slate-800">{r.job.customer_name || r.job.unit_code || '—'}</div>
-                    <div className="text-xs text-slate-400">
+                  <td className="px-2 py-2">
+                    <div className="truncate font-medium text-slate-800">{r.job.customer_name || r.job.unit_code || '—'}</div>
+                    <div className="truncate text-[11px] text-slate-400">
                       {[r.job.unit_code, r.job.project].filter(Boolean).join(' · ')}
                     </div>
                   </td>
-                  <td className={num + ' text-slate-700'}>{r.order ? money(r.order) : '—'}</td>
-                  <td className={num + ' font-semibold text-emerald-700'}>{money(r.collected)}</td>
+                  <td className={num + ' text-slate-700'}>{r.order ? compact(r.order) : '—'}</td>
+                  <td className={num + ' font-semibold text-emerald-700'}>{compact(r.collected)}</td>
                   <td className={num + ' text-slate-500'}>{pct(r.collected, r.order)}</td>
                   <td className={num + (r.balance > 0 ? ' font-semibold text-amber-700' : ' text-slate-400')}>
-                    {money(r.balance)}
+                    {compact(r.balance)}
                   </td>
                 </tr>
               ))}
             </tbody>
             <tfoot>
               <tr className="border-t-2 border-slate-200 bg-slate-50 font-semibold">
-                <td className="px-3 py-2 text-left text-slate-700">Total ({rows.length})</td>
-                <td className={num + ' text-slate-800'}>{money(totals.order)}</td>
-                <td className={num + ' text-emerald-700'}>{money(totals.collected)}</td>
+                <td className="px-2 py-2 text-left text-slate-700">Total ({rows.length})</td>
+                <td className={num + ' text-slate-800'}>{compact(totals.order)}</td>
+                <td className={num + ' text-emerald-700'}>{compact(totals.collected)}</td>
                 <td className={num + ' text-slate-600'}>{pct(totals.collected, totals.order)}</td>
-                <td className={num + ' text-amber-700'}>{money(totals.balance)}</td>
+                <td className={num + ' text-amber-700'}>{compact(totals.balance)}</td>
               </tr>
             </tfoot>
           </table>
