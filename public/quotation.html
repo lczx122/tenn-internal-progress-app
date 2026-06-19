@@ -820,6 +820,9 @@ function capturePriceDefaults(){
 let peDirty=false;
 const peNum=v=>{ const n=parseFloat(v); return isNaN(n)?null:n; };
 const peEq=(a,b)=>{ const x=peNum(a),y=peNum(b); return x!==null&&y!==null&&Math.abs(x-y)<1e-9; };
+// Equivalent values: blank==blank, identical text, or numerically equal. Unlike
+// peEq this treats two blanks as equal (so empty tier rows aren't "changed").
+const peSame=(a,b)=>{ a=(a==null?'':String(a)).trim(); b=(b==null?'':String(b)).trim(); if(a===b) return true; const x=parseFloat(a),y=parseFloat(b); return !isNaN(x)&&!isNaN(y)&&Math.abs(x-y)<1e-9; };
 const peSafe=s=>String(s==null?'':s).replace(/"/g,'&quot;').toLowerCase();
 
 /* ---- price editor modal ---- */
@@ -1041,7 +1044,10 @@ function peInitEditor(){
   peDirty=false;
   document.getElementById('peActionbar').classList.remove('dirty');
   const body=document.getElementById('priceBody');
-  body.querySelectorAll('input[data-kind]').forEach(inp=>inp.classList.remove('pe-invalid'));
+  // Snapshot each field's value as the "saved" baseline for this session, so the
+  // CHANGED highlight reflects edits made since opening — not a permanent
+  // difference from the built-in defaults (which never goes away after saving).
+  body.querySelectorAll('input[data-kind]').forEach(inp=>{ inp.dataset.opened=inp.value; inp.classList.remove('pe-invalid'); });
   body.querySelectorAll('.pe-row, .pe-cab').forEach(c=>{ const i=c.querySelector('input[data-kind]'); if(i) peApplyChanged(i); });
   body.querySelectorAll('.pe-tier-preview').forEach(p=>peRenderCabPreview(p.closest('.pe-cab')));
   peRecount();
@@ -1058,11 +1064,16 @@ function onPeInput(e){
 }
 function peApplyChanged(inp){
   const cont=inp.closest('.pe-row')||inp.closest('.pe-cab'); if(!cont) return;
-  let changed=false;
-  cont.querySelectorAll('input[data-kind]').forEach(i=>{ if(!peEq(i.value,i.dataset.default)) changed=true; });
-  cont.classList.toggle('changed',changed);
-  const badge=cont.querySelector('.pe-badge'); if(badge) badge.hidden=!changed;
-  const reset=cont.querySelector('.pe-reset'); if(reset) reset.disabled=!changed;
+  // dirty = edited since the editor opened (drives the red CHANGED highlight).
+  // customized = differs from the built-in default (enables the Reset button).
+  let dirty=false, customized=false;
+  cont.querySelectorAll('input[data-kind]').forEach(i=>{
+    if(i.dataset.opened!==undefined && !peSame(i.value,i.dataset.opened)) dirty=true;
+    if(i.dataset.default!==undefined && !peSame(i.value,i.dataset.default)) customized=true;
+  });
+  cont.classList.toggle('changed',dirty);
+  const badge=cont.querySelector('.pe-badge'); if(badge) badge.hidden=!dirty;
+  const reset=cont.querySelector('.pe-reset'); if(reset) reset.disabled=!customized;
 }
 function peRecount(){
   const searching=(document.getElementById('peSearch')||{}).value;
