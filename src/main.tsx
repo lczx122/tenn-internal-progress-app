@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
 import App from './App'
 import { AuthProvider } from './contexts/AuthContext'
+import FieldEditor from './components/FieldEditor'
 import './index.css'
 
 // iOS home-screen (standalone) apps launch with a stale layout viewport:
@@ -38,6 +39,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     <BrowserRouter>
       <AuthProvider>
         <App />
+        <FieldEditor />
       </AuthProvider>
     </BrowserRouter>
   </React.StrictMode>
