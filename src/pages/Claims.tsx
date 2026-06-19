@@ -12,6 +12,7 @@ export default function Claims() {
   const [claims, setClaims] = useState<Claim[]>([])
   const [loading, setLoading] = useState(true)
   const [query, setQuery] = useState('')
+  const [project, setProject] = useState('')
   const navigate = useNavigate()
 
   async function load() {
@@ -49,8 +50,8 @@ export default function Claims() {
     return m
   }, [claims])
 
-  // One row per unit that has an order total or any collection.
-  const rows = useMemo(() => {
+  // One row per unit that has an order total or any collection (after search).
+  const baseRows = useMemo(() => {
     const q = query.trim().toLowerCase()
     return jobs
       .map((j) => {
@@ -58,7 +59,7 @@ export default function Claims() {
         const byCat = sumByCategory(list)
         const collected = CLAIM_CATEGORIES.reduce((s, c) => s + byCat[c], 0)
         const order = Number(j.order_total || 0)
-        return { job: j, byCat, collected, order, balance: order - collected }
+        return { job: j, collected, order, balance: order - collected }
       })
       .filter((r) => r.order > 0 || r.collected > 0)
       .filter(
@@ -68,13 +69,25 @@ export default function Claims() {
           r.job.unit_code.toLowerCase().includes(q) ||
           r.job.project.toLowerCase().includes(q),
       )
-      .sort((a, b) =>
-        a.job.project.localeCompare(b.job.project) ||
-        a.job.customer_name.localeCompare(b.job.customer_name),
-      )
   }, [jobs, claimsByJob, query])
 
-  // Grand totals for the footer.
+  // One spreadsheet per project, switchable with chips.
+  const projects = useMemo(() => {
+    const set = new Set<string>()
+    for (const r of baseRows) set.add(r.job.project || '—')
+    return [...set].sort((a, b) => a.localeCompare(b))
+  }, [baseRows])
+  const activeProject = projects.includes(project) ? project : projects[0] ?? ''
+
+  const rows = useMemo(
+    () =>
+      baseRows
+        .filter((r) => (r.job.project || '—') === activeProject)
+        .sort((a, b) => a.job.customer_name.localeCompare(b.job.customer_name)),
+    [baseRows, activeProject],
+  )
+
+  // Totals for the active project.
   const totals = useMemo(() => {
     let order = 0
     let collected = 0
@@ -87,12 +100,12 @@ export default function Claims() {
 
   const pct = (collected: number, order: number) =>
     order > 0 ? Math.round((collected / order) * 100) + '%' : '—'
-  // Compact figures for the table so it fits any phone without sideways scroll
-  // (no "RM" prefix / cents — the tiles above show full precision).
-  const compact = (n: number) => Math.round(n).toLocaleString('en-MY')
+  // Compact RM (rounded, no cents) so the table fits any phone without sideways
+  // scroll — the tiles above show full precision.
+  const rm = (n: number) => 'RM ' + Math.round(n).toLocaleString('en-MY')
 
-  const num = 'px-2 py-2 text-right tabular-nums whitespace-nowrap'
-  const head = 'px-2 py-2 text-right text-xs font-semibold text-slate-500 whitespace-nowrap'
+  const num = 'px-1.5 py-2 text-right tabular-nums whitespace-nowrap overflow-hidden'
+  const head = 'px-1.5 py-2 text-right text-xs font-semibold text-slate-500 whitespace-nowrap'
 
   return (
     <Layout title="Claims" bottomNav wide onRefresh={load}>
@@ -105,11 +118,35 @@ export default function Claims() {
         />
       </div>
 
-      {/* Summary tiles */}
+      {/* Project chips — one spreadsheet per project */}
+      {projects.length > 0 && (
+        <div className="mb-3 flex gap-2 overflow-x-auto pb-1">
+          {projects.map((p) => (
+            <button
+              key={p}
+              onClick={() => setProject(p)}
+              className={
+                'shrink-0 rounded-full border px-3 py-1.5 text-sm font-medium ' +
+                (p === activeProject
+                  ? 'border-slate-900 bg-slate-900 text-white'
+                  : 'border-slate-300 bg-white text-slate-600 active:bg-slate-50')
+              }
+            >
+              {p}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Summary tiles for the active project */}
       <div className="mb-4 grid grid-cols-3 gap-3">
         <Tile label="Total order value" value={money(totals.order)} />
         <Tile label="Collected" value={money(totals.collected)} accent="text-emerald-600" />
-        <Tile label="Outstanding" value={money(totals.balance)} accent={totals.balance > 0 ? 'text-amber-600' : 'text-slate-900'} />
+        <Tile
+          label="Outstanding"
+          value={money(totals.balance)}
+          accent={totals.balance > 0 ? 'text-amber-600' : 'text-slate-900'}
+        />
       </div>
 
       {loading ? (
@@ -124,10 +161,10 @@ export default function Claims() {
             <thead>
               <tr className="border-b border-slate-200">
                 <th className="px-2 py-2 text-left text-xs font-semibold text-slate-500">Unit</th>
-                <th className={head + ' w-[64px]'}>Order</th>
-                <th className={head + ' w-[64px]'}>Collect</th>
-                <th className={head + ' w-[38px]'}>%</th>
-                <th className={head + ' w-[64px]'}>Bal.</th>
+                <th className={head + ' w-[80px]'}>Order</th>
+                <th className={head + ' w-[80px]'}>Collect</th>
+                <th className={head + ' w-[36px]'}>%</th>
+                <th className={head + ' w-[80px]'}>Bal.</th>
               </tr>
             </thead>
             <tbody>
@@ -138,16 +175,16 @@ export default function Claims() {
                   className="cursor-pointer border-b border-slate-100 last:border-0 hover:bg-slate-50"
                 >
                   <td className="px-2 py-2">
-                    <div className="truncate font-medium text-slate-800">{r.job.customer_name || r.job.unit_code || '—'}</div>
-                    <div className="truncate text-[11px] text-slate-400">
-                      {[r.job.unit_code, r.job.project].filter(Boolean).join(' · ')}
+                    <div className="truncate font-medium text-slate-800">
+                      {r.job.customer_name || r.job.unit_code || '—'}
                     </div>
+                    {r.job.unit_code && <div className="truncate text-[11px] text-slate-400">{r.job.unit_code}</div>}
                   </td>
-                  <td className={num + ' text-slate-700'}>{r.order ? compact(r.order) : '—'}</td>
-                  <td className={num + ' font-semibold text-emerald-700'}>{compact(r.collected)}</td>
+                  <td className={num + ' text-slate-700'}>{r.order ? rm(r.order) : '—'}</td>
+                  <td className={num + ' font-semibold text-emerald-700'}>{rm(r.collected)}</td>
                   <td className={num + ' text-slate-500'}>{pct(r.collected, r.order)}</td>
                   <td className={num + (r.balance > 0 ? ' font-semibold text-amber-700' : ' text-slate-400')}>
-                    {compact(r.balance)}
+                    {rm(r.balance)}
                   </td>
                 </tr>
               ))}
@@ -155,10 +192,10 @@ export default function Claims() {
             <tfoot>
               <tr className="border-t-2 border-slate-200 bg-slate-50 font-semibold">
                 <td className="px-2 py-2 text-left text-slate-700">Total ({rows.length})</td>
-                <td className={num + ' text-slate-800'}>{compact(totals.order)}</td>
-                <td className={num + ' text-emerald-700'}>{compact(totals.collected)}</td>
+                <td className={num + ' text-slate-800'}>{rm(totals.order)}</td>
+                <td className={num + ' text-emerald-700'}>{rm(totals.collected)}</td>
                 <td className={num + ' text-slate-600'}>{pct(totals.collected, totals.order)}</td>
-                <td className={num + ' text-amber-700'}>{compact(totals.balance)}</td>
+                <td className={num + ' text-amber-700'}>{rm(totals.balance)}</td>
               </tr>
             </tfoot>
           </table>
