@@ -112,7 +112,7 @@ export function ClaimsSection({
 
   return (
     <section className="mt-4 rounded-xl bg-white p-4 shadow-sm">
-      <h2 className="mb-3 text-sm font-semibold text-slate-700">💰 Customer claims</h2>
+      <h2 className="mb-3 text-sm font-semibold text-slate-700">💰 Customer collection</h2>
 
       {/* Order total + progress */}
       <div className="mb-3">

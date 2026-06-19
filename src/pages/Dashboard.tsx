@@ -309,7 +309,7 @@ export default function Dashboard() {
           {/* Claims summary */}
           <section>
             <div className="mb-2 flex items-center justify-between px-1">
-              <h2 className="text-sm font-semibold text-slate-700">Claims</h2>
+              <h2 className="text-sm font-semibold text-slate-700">Collection</h2>
               <Link to="/claims" className="text-xs font-medium text-slate-500">View all ›</Link>
             </div>
             {claimsSummary.order === 0 && claimsSummary.collected === 0 ? (

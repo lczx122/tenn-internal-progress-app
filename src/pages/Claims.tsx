@@ -108,7 +108,7 @@ export default function Claims() {
   const head = 'px-1.5 py-2 text-right text-xs font-semibold text-slate-500 whitespace-nowrap'
 
   return (
-    <Layout title="Claims" bottomNav wide onRefresh={load}>
+    <Layout title="Collection" bottomNav wide onRefresh={load}>
       <div className="mb-3">
         <input
           value={query}
@@ -153,7 +153,7 @@ export default function Claims() {
         <p className="py-10 text-center text-slate-400">Loading…</p>
       ) : rows.length === 0 ? (
         <div className="rounded-xl border border-dashed border-slate-300 py-12 text-center text-slate-400">
-          No claims yet. Open a unit and set its order total to start tracking collections.
+          No collections yet. Open a unit and set its order total to start tracking collections.
         </div>
       ) : (
         <div className="rounded-xl bg-white shadow-sm">

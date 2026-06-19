@@ -15,7 +15,7 @@ const baseTabs: NavTab[] = [
   { to: '/schedule', label: 'Schedule', end: false, icon: 'calendar' },
   { to: '/quote', label: 'Quote', end: false, icon: 'receipt' },
   { to: '/quotes', label: 'Orders', end: false, icon: 'ledger' },
-  { to: '/claims', label: 'Claims', end: false, icon: 'wallet' },
+  { to: '/claims', label: 'Collection', end: false, icon: 'wallet' },
 ]
 
 // The visible tabs for the current user (boss gets the Costing tab; guests only
