@@ -2185,10 +2185,21 @@ async function buildPdfBlob(){
     const {jsPDF}=window.jspdf;
     const pdf=new jsPDF('p','mm','a4');
     const pageW=pdf.internal.pageSize.getWidth(), pageH=pdf.internal.pageSize.getHeight();
-    const imgW=pageW, imgH=canvas.height*imgW/canvas.width;
-    let left=imgH, pos=0;
-    pdf.addImage(img,'JPEG',0,pos,imgW,imgH,undefined,'FAST'); left-=pageH;
-    while(left>0){ pos-=pageH; pdf.addPage(); pdf.addImage(img,'JPEG',0,pos,imgW,imgH,undefined,'FAST'); left-=pageH; }
+    const margin=8, availW=pageW-margin*2, availH=pageH-margin*2;
+    const fullH=canvas.height*availW/canvas.width;   // height if drawn at content width
+    if(fullH<=availH*1.4){
+      // Fits (or nearly) on one page → scale to fit so nothing is clipped
+      // (keeps the signature block whole — this is the common case).
+      let w=availW, h=fullH;
+      if(h>availH){ const s=availH/h; h=availH; w=w*s; }
+      pdf.addImage(img,'JPEG',(pageW-w)/2,margin,w,h,undefined,'FAST');
+    }else{
+      // Genuinely long document → paginate across full pages.
+      const imgW=pageW, imgH=canvas.height*imgW/canvas.width;
+      let left=imgH, pos=0;
+      pdf.addImage(img,'JPEG',0,pos,imgW,imgH,undefined,'FAST'); left-=pageH;
+      while(left>0){ pos-=pageH; pdf.addPage(); pdf.addImage(img,'JPEG',0,pos,imgW,imgH,undefined,'FAST'); left-=pageH; }
+    }
     return pdf.output('blob');
   } finally{ document.body.removeChild(holder); }
 }
