@@ -526,6 +526,13 @@ const CABINET = [
   { id:'kasut', name:'Shoe Cabinet', options:[
       { id:'alu', name:'Aluminium Shoe Cabinet', ...cabOpt(900, 900, 1000) },
   ]},
+  // Fixed-price renovation packages — no measurement; the price is flat.
+  { id:'paket', name:'Renovation Package', options:[
+      { id:'r2s', name:'2 Room Standard', fixed:true, basePrice:24999, defL:0, defH:0 },
+      { id:'r2p', name:'2 Room Premium',  fixed:true, basePrice:29999, defL:0, defH:0 },
+      { id:'r3s', name:'3 Room Standard', fixed:true, basePrice:30999, defL:0, defH:0 },
+      { id:'r3p', name:'3 Room Premium',  fixed:true, basePrice:35999, defL:0, defH:0 },
+  ]},
 ];
 
 /* ============================================================
@@ -926,6 +933,13 @@ function buildPriceEditorHtml(){
       <div class="pe-areatiers"><div class="pe-areatier-hd"><span>Min area (m²)</span><span>Uplift %</span></div>${tierRows}</div></div>`;
   CABINET.forEach(g=>g.options.forEach(o=>{
     const k=g.id+':'+o.id, d=PRICE_DEFAULTS.cabinets[k]||{};
+    if(o.fixed){ // flat-price package — single price field, no area tiers
+      h+=`<div class="pe-cab" data-search="${peSafe(g.name+' '+o.name)}">${peCardHead(g.name+' · '+o.name)}
+        <div class="pe-cab-grid" style="grid-template-columns:minmax(0,200px)">
+          ${peField('cab',k,'basePrice',o.basePrice,'Fixed price (RM)',{money:true,def:d.basePrice})}
+        </div></div>`;
+      return;
+    }
     h+=`<div class="pe-cab" data-search="${peSafe(g.name+' '+o.name)}">${peCardHead(g.name+' · '+o.name)}
       <div class="pe-cab-grid" style="grid-template-columns:minmax(0,200px)">
         ${peField('cab',k,'basePrice',o.basePrice,'Base RM (at 1 m²)',{money:true,def:d.basePrice})}
@@ -1438,8 +1452,11 @@ function cabGroupChange(){
 }
 function cabOptionChange(){
   const {o}=cabSel();
-  document.getElementById('cab-L').value=o.defL; // pre-fill default length
-  document.getElementById('cab-H').value=o.defH; // pre-fill default height
+  const fixed=!!o.fixed;
+  const L=document.getElementById('cab-L'), H=document.getElementById('cab-H'), D=document.getElementById('cab-D');
+  [L,H,D].forEach(el=>{ if(el) el.disabled=fixed; });
+  if(fixed){ L.value=''; H.value=''; if(D) D.value=''; }   // fixed packages ignore dimensions
+  else { L.value=o.defL; H.value=o.defH; }                 // pre-fill defaults
   cabPreview();
 }
 function cabSel(){
@@ -1449,6 +1466,10 @@ function cabSel(){
 }
 function cabPreview(){
   const {o}=cabSel();
+  if(o.fixed){
+    document.getElementById('cab-preview').innerHTML=`<div class="cab-calc">Fixed package price → <b>RM ${fmt(+o.basePrice||0)}</b></div>`;
+    return;
+  }
   const L=parseFloat(document.getElementById('cab-L').value)||0;
   const H=parseFloat(document.getElementById('cab-H').value)||0;
   let html=`<div class="cab-tiers"><b>Area tiers:</b> ${areaTierTableHtml()} <span style="color:#6b7280">· base RM ${fmt(+o.basePrice||0)}</span></div>`;
@@ -1461,6 +1482,11 @@ function cabPreview(){
 }
 function cabAdd(){
   const {g,o}=cabSel();
+  if(o.fixed){ // flat-price package — no measurement required
+    cabinetLines.push({gid:g.id,gname:g.name,oid:o.id,oname:o.name,L:0,H:0,D:0,price:(+o.basePrice||0),fixed:true});
+    renderCabLines(); recalc();
+    return;
+  }
   const L=parseFloat(document.getElementById('cab-L').value)||0;
   const H=parseFloat(document.getElementById('cab-H').value)||0;
   const D=parseFloat(document.getElementById('cab-D').value)||0;
@@ -1473,6 +1499,7 @@ function cabAdd(){
 }
 function cabRemove(i){ cabinetLines.splice(i,1); renderCabLines(); recalc(); }
 function dimStr(l){
+  if(l.fixed) return '';
   return `L ${l.L} × H ${l.H} × D ${l.D} mm`;
 }
 function renderCabLines(){
@@ -1480,7 +1507,7 @@ function renderCabLines(){
   if(!box) return;
   if(!cabinetLines.length){ box.innerHTML='<div class="cab-empty">No cabinets added yet.</div>'; return; }
   box.innerHTML=cabinetLines.map((l,i)=>`<div class="cab-line">
-    <div class="cab-line-info"><b>${l.oname}</b> <span class="muted">· ${l.gname}</span><br><span class="cab-dim">${dimStr(l)}</span></div>
+    <div class="cab-line-info"><b>${l.oname}</b> <span class="muted">· ${l.gname}</span>${dimStr(l)?`<br><span class="cab-dim">${dimStr(l)}</span>`:''}</div>
     <div class="cab-amt">RM ${fmt(l.price)}</div>
     <button class="cab-x" title="Remove" onclick="cabRemove(${i})">✕</button>
   </div>`).join('');
