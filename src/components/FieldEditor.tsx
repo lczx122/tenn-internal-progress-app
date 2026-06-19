@@ -167,7 +167,11 @@ export default function FieldEditor() {
       className={`fixed inset-0 z-[200] ${open ? '' : 'pointer-events-none opacity-0'}`}
     >
       <div className="absolute inset-0 bg-slate-900/45" onClick={close} />
-      <div ref={barRef} className="absolute inset-x-0 top-0 bg-white px-4 py-3 shadow-xl">
+      <div
+        ref={barRef}
+        className="absolute inset-x-0 top-0 bg-white px-4 pb-3 shadow-xl"
+        style={{ paddingTop: 'max(0.75rem, env(safe-area-inset-top))' }}
+      >
         <div className="mb-2 text-[11px] font-bold uppercase tracking-wide text-slate-500">
           {label || 'Edit'}
         </div>

@@ -277,7 +277,7 @@
   .fed{position:fixed;inset:0;z-index:200;display:none}
   .fed.show{display:block}
   .fed-backdrop{position:absolute;inset:0;background:rgba(15,20,40,.45)}
-  .fed-bar{position:absolute;top:0;left:0;right:0;background:#fff;border-bottom:1px solid var(--line);box-shadow:0 8px 28px rgba(21,36,83,.22);padding:12px 14px;will-change:transform}
+  .fed-bar{position:absolute;top:0;left:0;right:0;background:#fff;border-bottom:1px solid var(--line);box-shadow:0 8px 28px rgba(21,36,83,.22);padding:max(12px,env(safe-area-inset-top)) 14px 12px;will-change:transform}
   .fed-label{font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);font-weight:700;margin-bottom:8px}
   .fed-row{display:flex;gap:10px;align-items:stretch}
   .fed-host{flex:1;display:flex}
