@@ -1637,6 +1637,42 @@ function setQty(catId,idx,val){
   recalc();
 }
 
+/* ---------- work-category mapping (Sales Order → unit work cards) ----------
+   The single source of truth that maps each quote category (by its STABLE id)
+   to the unit's work categories (see src/lib/categories.ts). Resolved in-app
+   into payload.work_categories; the DB trigger just inserts that list — no
+   guessing. To change what work a category creates, edit the value here. A
+   value is an array so one category can open several cards (e.g. Smart Home
+   also opens an EE card for its plug points). Keys: catalog use cat.id;
+   cabinet groups use 'cab:'+id; grill groups use 'grill:'+id; plus 'paint'
+   and 'alucab'. */
+const WORK_MAP = {
+  'smarthome': ['Smart Home', 'EE'],
+  'smartlock': ['Smart Lock'],
+  'other':     ['Aluminium'],
+  'cab:dapur':  ['Mindhome'],
+  'cab:tv':     ['Mindhome'],
+  'cab:almari': ['Mindhome'],
+  'cab:dining': ['Mindhome'],
+  'cab:kasut':  ['Aluminium'],
+  'cab:paket':  ['Mindhome'],
+  'grill:iron': ['Aluminium'],
+  'grill:alu':  ['Aluminium'],
+  'paint':      ['Painting'],
+  'alucab':     ['Aluminium'],
+};
+// The distinct unit work categories implied by the current selection.
+function computeWorkCategories(){
+  const set=new Set();
+  const add=key=>{ (WORK_MAP[key]||[]).forEach(w=>set.add(w)); };
+  Object.keys(state).forEach(k=>{ if((state[k]||0)>0) add(k.split(':')[0]); }); // catalog items
+  cabinetLines.forEach(l=>add('cab:'+l.gid));
+  grillLines.forEach(l=>add('grill:'+l.gid));
+  if(paintLines.length) add('paint');
+  if(alucabLines.length) add('alucab');
+  return [...set];
+}
+
 /* ---------- totals + summary ---------- */
 function collectLines(){
   const lines=[];
@@ -1938,6 +1974,8 @@ async function saveQuote(){
     alucabs:alucabLines.map(l=>Object.assign({},l)),
     discounts,
     variants:Object.assign({},activeVariant),
+    // Explicit unit work cards to open when this becomes a Sales Order.
+    work_categories:computeWorkCategories(),
     lines, totals:{sub,rebates:reb,deposit:dep,discount:disc,balance:bal}
   };
   const supa=getSupa();

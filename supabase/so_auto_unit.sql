@@ -63,35 +63,15 @@ begin
 end;
 $$;
 
--- ---------------------------------------------------------------------------
---  Map a quotation category label (e.g. "Kitchen Cabinet", "Iron Grill") to a
---  unit work category (see src/lib/categories.ts). Falls back to 'Products'.
--- ---------------------------------------------------------------------------
-create or replace function public.so_work_category(p_cat text)
-returns text language sql immutable as $$
-  select case
-    when p_cat ilike '%smart home%'        then 'Smart Home'
-    when p_cat ilike '%smart lock%'        then 'Smart Lock'
-    when p_cat ilike '%lock%'              then 'Smart Lock'
-    when p_cat ilike '%paint%'             then 'Painting'
-    when p_cat ilike '%mindhome%'          then 'Mindhome'
-    when p_cat ilike '%electric%'
-      or p_cat ilike '%wiring%'
-      or p_cat ~* '(^|[^a-z])ee([^a-z]|$)' then 'EE'
-    when p_cat ilike '%cabinet%'
-      or p_cat ilike '%grill%'
-      or p_cat ilike '%alumin%'
-      or p_cat ilike '%renovation package%'
-      or p_cat ilike '%yard%'
-      or p_cat ilike '%door%'              then 'Aluminium'
-    else 'Products'
-  end;
-$$;
+-- The work cards a Sales Order opens are decided IN-APP (see WORK_MAP in
+-- public/quotation.html) and delivered explicitly in payload.work_categories —
+-- no string-guessing here. The earlier heuristic mapper is dropped.
+drop function if exists public.so_work_category(text);
 
 -- ---------------------------------------------------------------------------
---  On Sales Order insert: create or reuse a unit, add the quoted work, and
---  link the document to that unit. Wrapped so a failure can never roll back
---  (and thus block) the sales order itself.
+--  On Sales Order insert: create or reuse a unit, add the work cards the
+--  document specifies, and link the document to that unit. Wrapped so a
+--  failure can never roll back (and thus block) the sales order itself.
 -- ---------------------------------------------------------------------------
 create or replace function public.tg_so_create_unit()
 returns trigger
@@ -102,8 +82,8 @@ declare
   v_unit_norm text;
   v_job       uuid;
   v_project   text;
-  v_cat       text;
   v_key       text;
+  v_added     int := 0;
 begin
   if new.doc_type <> 'SO' or new.unit_id is not null then
     return new;
@@ -159,20 +139,32 @@ begin
               coalesce(nullif(new.prepared_by, ''), 'System'));
   end if;
 
-  -- One work card per distinct quoted category (skip any already on the unit).
-  foreach v_cat in array string_to_array(coalesce(new.categories, ''), ',')
-  loop
-    v_cat := trim(v_cat);
-    continue when v_cat = '';
-    v_key := public.so_work_category(v_cat);
-    if not exists (
-      select 1 from public.job_works where job_id = v_job and category = v_key
-    ) then
-      insert into public.job_works (job_id, category, title, stage, updated_by)
-        values (v_job, v_key, '', 'booked',
-                coalesce(nullif(new.prepared_by, ''), 'System'));
-    end if;
-  end loop;
+  -- Add the work cards the document specifies (resolved in-app), skipping any
+  -- the unit already has.
+  if jsonb_typeof(new.payload->'work_categories') = 'array' then
+    for v_key in select jsonb_array_elements_text(new.payload->'work_categories')
+    loop
+      v_key := trim(v_key);
+      continue when v_key = '';
+      if not exists (
+        select 1 from public.job_works where job_id = v_job and category = v_key
+      ) then
+        insert into public.job_works (job_id, category, title, stage, updated_by)
+          values (v_job, v_key, '', 'booked',
+                  coalesce(nullif(new.prepared_by, ''), 'System'));
+      end if;
+      v_added := v_added + 1;
+    end loop;
+  end if;
+
+  -- Fallback for a document with no explicit list: one generic card.
+  if v_added = 0 and not exists (
+    select 1 from public.job_works where job_id = v_job and category = 'Products'
+  ) then
+    insert into public.job_works (job_id, category, title, stage, updated_by)
+      values (v_job, 'Products', '', 'booked',
+              coalesce(nullif(new.prepared_by, ''), 'System'));
+  end if;
 
   update public.quotations set unit_id = v_job where id = new.id;
 
