@@ -272,10 +272,19 @@
     .modal-bar{gap:7px;margin-bottom:10px}
     .modal-bar .act{flex:1 1 96px;padding:10px 8px;font-size:12.5px}
   }
-  /* While the on-screen keyboard is open, give the page and the price-editor
-     modal extra scroll room so the focused field can be lifted above it. */
-  body.kbd-open .wrap{padding-bottom:60vh}
-  body.kbd-open #priceModal .modal-inner{padding-bottom:55vh}
+  /* Mobile field editor — a focused editing bar pinned above the keyboard so
+     the value you're typing is always visible (no scrolling guesswork). */
+  .fed{position:fixed;inset:0;z-index:200;display:none}
+  .fed.show{display:block}
+  .fed-backdrop{position:absolute;inset:0;background:rgba(15,20,40,.45)}
+  .fed-bar{position:absolute;top:0;left:0;right:0;background:#fff;border-bottom:1px solid var(--line);box-shadow:0 8px 28px rgba(21,36,83,.22);padding:12px 14px;will-change:transform}
+  .fed-label{font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);font-weight:700;margin-bottom:8px}
+  .fed-row{display:flex;gap:10px;align-items:stretch}
+  .fed-host{flex:1;display:flex}
+  .fed-input{flex:1;width:100%;font-size:17px;padding:12px;border:1.5px solid var(--navy);border-radius:10px;outline:none;font-family:inherit;color:var(--ink);background:#fff}
+  textarea.fed-input{min-height:96px;resize:vertical;line-height:1.4}
+  .fed-done{flex:none;background:var(--navy);color:#fff;border:none;border-radius:10px;padding:0 18px;font-family:'Archivo';font-weight:700;font-size:14px;cursor:pointer}
+  .fed-done:active{background:var(--navy-2)}
   /* In-page confirm dialog (native confirm() is unreliable inside the iframe). */
   .ui-confirm{position:fixed;inset:0;background:rgba(15,20,40,.55);display:flex;align-items:center;justify-content:center;z-index:120;padding:24px}
   .ui-confirm-box{background:#fff;border-radius:14px;padding:20px 18px;max-width:340px;width:100%;box-shadow:0 24px 70px rgba(0,0,0,.35)}
@@ -389,6 +398,21 @@
         <button class="act b-clear" onclick="newQuote()">New Quote</button>
       </div>
       <p class="hint" style="margin-top:10px">Preview the quotation first, then tap <b>Save Quotation</b> to assign its <b>QT-YYMM-XXX</b> number and store it in the shared register.</p>
+    </div>
+  </div>
+</div>
+
+<!-- MOBILE FIELD EDITOR — focused editing bar pinned above the keyboard -->
+<div class="fed" id="fieldEditor">
+  <div class="fed-backdrop" onclick="fedCommit()"></div>
+  <div class="fed-bar" id="fedBar">
+    <div class="fed-label" id="fedLabel"></div>
+    <div class="fed-row">
+      <div class="fed-host" id="fedHost">
+        <input id="fedInput" class="fed-input" autocomplete="off">
+        <textarea id="fedArea" class="fed-input" rows="4" style="display:none"></textarea>
+      </div>
+      <button type="button" class="fed-done" onclick="fedCommit()">Done</button>
     </div>
   </div>
 </div>
@@ -867,6 +891,73 @@ function uiConfirm(msg, okLabel, cancelLabel){
 async function closePriceEditorGuarded(){
   if(peDirty && !(await uiConfirm('Discard unsaved price changes?','Discard','Keep editing'))) return;
   closePriceEditor();
+}
+
+/* ---------- mobile field editor ----------
+   On touch devices, tapping any text/number field opens a focused editing bar
+   pinned to the top of the screen — always above the keyboard — and commits the
+   value back to the real field on Done. Replaces fragile scroll-into-view. */
+let fedTarget=null, fedOpen=false;
+function fedIsEditable(f){
+  if(!f||!f.tagName||f.id==='fedInput'||f.id==='fedArea') return false;
+  if(f.readOnly||f.disabled) return false;
+  if(f.tagName==='TEXTAREA') return true;
+  if(f.tagName!=='INPUT') return false;
+  const t=(f.getAttribute('type')||'text').toLowerCase();
+  if(['text','number','tel','email','search'].indexOf(t)<0) return false; // leave date/select/native pickers alone
+  if(f.id==='peSearch') return false;   // keep the live price search inline
+  return true;
+}
+function fedLabelFor(field){
+  if(field.dataset && field.dataset.fedLabel) return field.dataset.fedLabel;
+  if(field.classList && field.classList.contains('qty')){
+    const row=field.closest('tr'), n=row&&row.querySelector('.it-label');
+    return n ? 'Quantity — '+n.textContent.trim() : 'Quantity';
+  }
+  const lab=field.closest('label');
+  if(lab){ const c=lab.cloneNode(true); c.querySelectorAll('input,textarea,select,datalist,button,.pe-money,.pe-rm').forEach(n=>n.remove()); const t=c.textContent.replace(/\s+/g,' ').trim(); if(t) return t; }
+  return field.getAttribute('aria-label')||field.getAttribute('placeholder')||'Edit value';
+}
+function openFieldEditor(field){
+  if(fedOpen||!field) return;
+  fedTarget=field; fedOpen=true;
+  const inp=document.getElementById('fedInput'), area=document.getElementById('fedArea');
+  let el;
+  if(field.tagName==='TEXTAREA'){ el=area; inp.style.display='none'; area.style.display=''; }
+  else{
+    el=inp; area.style.display='none'; inp.style.display='';
+    const t=(field.getAttribute('type')||'text').toLowerCase();
+    inp.type=(t==='search'?'text':t);
+    ['inputmode','step','min','max','list'].forEach(a=>{ if(field.hasAttribute(a)) inp.setAttribute(a,field.getAttribute(a)); else inp.removeAttribute(a); });
+  }
+  el.value=field.value;
+  document.getElementById('fedLabel').textContent=fedLabelFor(field);
+  document.getElementById('fieldEditor').classList.add('show');
+  fedReposition();
+  el.focus();   // synchronous (inside the tap) so the keyboard stays up on iOS
+  try{ if(!(el===inp&&inp.type==='number')) el.setSelectionRange(el.value.length, el.value.length); }catch(e){}
+}
+function fedCommit(){
+  if(!fedOpen) return;
+  const field=fedTarget;
+  const el=(field&&field.tagName==='TEXTAREA')?document.getElementById('fedArea'):document.getElementById('fedInput');
+  if(field && el){
+    field.value=el.value;
+    field.dispatchEvent(new Event('input',{bubbles:true}));
+    field.dispatchEvent(new Event('change',{bubbles:true}));
+  }
+  closeFieldEditor();
+}
+function closeFieldEditor(){
+  fedOpen=false; fedTarget=null;
+  const i=document.getElementById('fedInput'), a=document.getElementById('fedArea');
+  if(i) i.blur(); if(a) a.blur();
+  document.getElementById('fieldEditor').classList.remove('show');
+}
+function fedReposition(){
+  const bar=document.getElementById('fedBar'); if(!bar) return;
+  const vv=window.visualViewport;
+  bar.style.transform='translateY('+(vv?Math.max(0,vv.offsetTop):0)+'px)';
 }
 
 function peField(kind,key,field,val,label,opts){
@@ -2314,50 +2405,22 @@ async function newQuote(){
   // One-time delegated input listener for the price editor (its inner HTML is
   // rebuilt on every open, but #priceBody itself persists).
   document.getElementById('priceBody').addEventListener('input', onPeInput);
-  // Keep the focused field visible above the mobile keyboard. The app shell
-  // stays full-height when the keyboard opens (by design), so iOS leaves fields
-  // hidden behind it; we scroll the field into the unobscured area instead
-  // (using visualViewport so the maths accounts for the keyboard). Works for
-  // the main form (window scroll) and the price editor (modal scroll).
+  // On touch devices, route editing through the pinned field editor (always
+  // above the keyboard) instead of trying to scroll fields into view.
   (function(){
-    // Touch devices only — desktop keyboards don't obscure the page, and we
-    // don't want a scroll jump when clicking a field with a mouse.
     const isTouch=(navigator.maxTouchPoints||0)>0 || (window.matchMedia&&window.matchMedia('(pointer:coarse)').matches);
     if(!isTouch) return;
-    function scrollableAncestor(el){
-      for(let n=el.parentElement;n;n=n.parentElement){
-        const oy=getComputedStyle(n).overflowY;
-        if((oy==='auto'||oy==='scroll') && n.scrollHeight>n.clientHeight+1) return n;
-      }
-      return null; // → scroll the window
-    }
-    function keepVisible(el){
-      if(!el||!el.getBoundingClientRect) return;
-      const vv=window.visualViewport;
-      const vh=vv?vv.height:window.innerHeight;
-      const offTop=vv?vv.offsetTop:0;
-      const r=el.getBoundingClientRect();
-      const desired=offTop+Math.max(64, vh*0.22);  // sit the field near the top of the visible area
-      const delta=r.top-desired;
-      if(Math.abs(delta)<6) return;
-      const sc=scrollableAncestor(el);
-      if(sc) sc.scrollTop+=delta; else window.scrollBy(0,delta);
-    }
-    let active=null, blurT=null;
+    // Redirect focus from a real field to the editor, synchronously within the
+    // tap so iOS keeps the keyboard up.
     document.addEventListener('focusin',e=>{
-      const t=e.target; if(!(t&&t.matches&&t.matches('input,textarea,select'))) return;
-      active=t; clearTimeout(blurT);
-      document.body.classList.add('kbd-open');
-      setTimeout(()=>keepVisible(t), 300);   // after the keyboard animates in
+      if(fedOpen) return;
+      if(fedIsEditable(e.target)) openFieldEditor(e.target);
     });
-    document.addEventListener('focusout',()=>{
-      blurT=setTimeout(()=>{
-        const a=document.activeElement;
-        if(!a || !/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)){ document.body.classList.remove('kbd-open'); active=null; }
-      }, 250);
-    });
-    if(window.visualViewport)
-      window.visualViewport.addEventListener('resize',()=>{ if(active) keepVisible(active); });
+    document.getElementById('fedInput').addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); fedCommit(); } });
+    if(window.visualViewport){
+      window.visualViewport.addEventListener('resize',()=>{ if(fedOpen) fedReposition(); });
+      window.visualViewport.addEventListener('scroll',()=>{ if(fedOpen) fedReposition(); });
+    }
   })();
 
   document.getElementById('c_date').value=new Date().toISOString().slice(0,10);
