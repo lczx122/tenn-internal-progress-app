@@ -275,6 +275,12 @@
   /* While the on-screen keyboard is open in the price editor, give the modal
      extra scroll room so the focused field can be lifted above the keyboard. */
   #priceModal.kbd .modal-inner{padding-bottom:52vh}
+  /* In-page confirm dialog (native confirm() is unreliable inside the iframe). */
+  .ui-confirm{position:fixed;inset:0;background:rgba(15,20,40,.55);display:flex;align-items:center;justify-content:center;z-index:120;padding:24px}
+  .ui-confirm-box{background:#fff;border-radius:14px;padding:20px 18px;max-width:340px;width:100%;box-shadow:0 24px 70px rgba(0,0,0,.35)}
+  .ui-confirm-msg{font-size:14px;color:var(--navy);line-height:1.55;margin-bottom:16px}
+  .ui-confirm-btns{display:flex;gap:10px}
+  .ui-confirm-btns .act{flex:1;padding:11px 12px;font-size:13.5px}
   .doc{background:#fff;border-radius:8px;box-shadow:0 20px 60px rgba(0,0,0,.3)}
   @media print{
     @page{margin:14mm}
@@ -839,8 +845,26 @@ function closePriceEditor(){
   document.getElementById('priceModal').classList.remove('show');
   document.body.style.overflow='';
 }
-function closePriceEditorGuarded(){
-  if(peDirty && !confirm('Discard unsaved price changes?')) return;
+// In-page confirm — native window.confirm() is unreliable inside the embedded
+// iframe on mobile (it can be suppressed/obscured while JS blocks, freezing the
+// page). Returns a Promise<boolean>.
+function uiConfirm(msg, okLabel, cancelLabel){
+  return new Promise(res=>{
+    const ov=document.createElement('div'); ov.className='ui-confirm';
+    const box=document.createElement('div'); box.className='ui-confirm-box';
+    const m=document.createElement('div'); m.className='ui-confirm-msg'; m.textContent=msg;
+    const btns=document.createElement('div'); btns.className='ui-confirm-btns';
+    const no=document.createElement('button'); no.type='button'; no.className='act b-ghost'; no.textContent=cancelLabel||'Cancel';
+    const yes=document.createElement('button'); yes.type='button'; yes.className='act b-primary'; yes.textContent=okLabel||'OK';
+    btns.appendChild(no); btns.appendChild(yes); box.appendChild(m); box.appendChild(btns); ov.appendChild(box);
+    function done(v){ ov.remove(); res(v); }
+    no.onclick=()=>done(false); yes.onclick=()=>done(true);
+    ov.addEventListener('click',e=>{ if(e.target===ov) done(false); });
+    document.body.appendChild(ov); yes.focus();
+  });
+}
+async function closePriceEditorGuarded(){
+  if(peDirty && !(await uiConfirm('Discard unsaved price changes?','Discard','Keep editing'))) return;
   closePriceEditor();
 }
 
@@ -890,8 +914,8 @@ function peToggleHide(btn){
   btn.title = hide?'Hidden — tap to show in quotes':'Visible — tap to hide from quotes';
   peSetDirty();
 }
-function peResetCategory(catId){
-  if(!confirm('Reset this category to the built-in products? Your custom products here will be removed.')) return;
+async function peResetCategory(catId){
+  if(!(await uiConfirm('Reset this category to the built-in products? Your custom products here will be removed.','Reset','Cancel'))) return;
   const cat=document.querySelector(`.pe-cat[data-cat="${catId}"]`); if(!cat) return;
   cat.querySelectorAll('.pe-item').forEach(r=>r.remove());
   const addBtn=cat.querySelector('.pe-additem');
@@ -1106,9 +1130,9 @@ function peResetOne(btn){
   if(hasTiers) peRenderAllCabPreviews(); // global tiers changed
   peSetDirty(); peRecount();
 }
-function peResetSection(btn){
+async function peResetSection(btn){
   const sec=btn.closest('.pe-cat'); if(!sec) return;
-  if(!confirm('Reset all prices in this section to the built-in defaults?')) return;
+  if(!(await uiConfirm('Reset all prices in this section to the built-in defaults?','Reset','Cancel'))) return;
   sec.querySelectorAll('input[data-kind]').forEach(i=>{ i.value=i.dataset.default; i.classList.remove('pe-invalid'); });
   sec.querySelectorAll('.pe-row, .pe-cab').forEach(c=>{ const i=c.querySelector('input[data-kind]'); if(i) peApplyChanged(i); });
   sec.querySelectorAll('.pe-tier-preview').forEach(p=>peRenderCabPreview(p.closest('.pe-cab')));
@@ -1894,7 +1918,7 @@ function updateConvertBtn(){
 async function convertToSO(){
   if(docType!=='QT'){ alert('This is already a Sales Order.'); return; }
   if(!savedId){ alert('Save the quotation first, then convert it to a Sales Order.'); return; }
-  if(!confirm('Convert '+(committedNo||'this quotation')+' into a Sales Order?\nA new SO number is assigned when you save.')) return;
+  if(!(await uiConfirm('Convert '+(committedNo||'this quotation')+' into a Sales Order? A new SO number is assigned when you save.','Convert','Cancel'))) return;
   closePreview();
   await loadDocument(savedId,'SO');
   updateConvertBtn();
@@ -2259,8 +2283,8 @@ async function printOrShare(btn){
 }
 
 /* ---------- start a new document ---------- */
-function newQuote(){
-  if(!confirm('Start a new '+docName().toLowerCase()+'? This clears the current customer and items. Your saved name and initials stay.')) return;
+async function newQuote(){
+  if(!(await uiConfirm('Start a new '+docName().toLowerCase()+'? This clears the current customer and items. Your saved name and initials stay.','Start new','Cancel'))) return;
   for(const k in state) delete state[k];
   for(const k in discountSel) delete discountSel[k];
   cabinetLines.length=0;
