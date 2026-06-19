@@ -272,9 +272,10 @@
     .modal-bar{gap:7px;margin-bottom:10px}
     .modal-bar .act{flex:1 1 96px;padding:10px 8px;font-size:12.5px}
   }
-  /* While the on-screen keyboard is open in the price editor, give the modal
-     extra scroll room so the focused field can be lifted above the keyboard. */
-  #priceModal.kbd .modal-inner{padding-bottom:52vh}
+  /* While the on-screen keyboard is open, give the page and the price-editor
+     modal extra scroll room so the focused field can be lifted above it. */
+  body.kbd-open .wrap{padding-bottom:60vh}
+  body.kbd-open #priceModal .modal-inner{padding-bottom:55vh}
   /* In-page confirm dialog (native confirm() is unreliable inside the iframe). */
   .ui-confirm{position:fixed;inset:0;background:rgba(15,20,40,.55);display:flex;align-items:center;justify-content:center;z-index:120;padding:24px}
   .ui-confirm-box{background:#fff;border-radius:14px;padding:20px 18px;max-width:340px;width:100%;box-shadow:0 24px 70px rgba(0,0,0,.35)}
@@ -2313,38 +2314,50 @@ async function newQuote(){
   // One-time delegated input listener for the price editor (its inner HTML is
   // rebuilt on every open, but #priceBody itself persists).
   document.getElementById('priceBody').addEventListener('input', onPeInput);
-  // Keep the focused price field visible above the mobile keyboard. iOS shoves
-  // the whole fixed modal up when the keyboard opens, hiding the field; we
-  // scroll it back into the unobscured area (visualViewport height) instead.
+  // Keep the focused field visible above the mobile keyboard. The app shell
+  // stays full-height when the keyboard opens (by design), so iOS leaves fields
+  // hidden behind it; we scroll the field into the unobscured area instead
+  // (using visualViewport so the maths accounts for the keyboard). Works for
+  // the main form (window scroll) and the price editor (modal scroll).
   (function(){
-    // Touch devices only — desktop keyboards don't obscure the modal, and we
+    // Touch devices only — desktop keyboards don't obscure the page, and we
     // don't want a scroll jump when clicking a field with a mouse.
     const isTouch=(navigator.maxTouchPoints||0)>0 || (window.matchMedia&&window.matchMedia('(pointer:coarse)').matches);
     if(!isTouch) return;
-    const modal=document.getElementById('priceModal');
-    const body=document.getElementById('priceBody');
-    if(!modal||!body) return;
-    function reveal(el){
+    function scrollableAncestor(el){
+      for(let n=el.parentElement;n;n=n.parentElement){
+        const oy=getComputedStyle(n).overflowY;
+        if((oy==='auto'||oy==='scroll') && n.scrollHeight>n.clientHeight+1) return n;
+      }
+      return null; // → scroll the window
+    }
+    function keepVisible(el){
       if(!el||!el.getBoundingClientRect) return;
       const vv=window.visualViewport;
-      const vh=(vv&&vv.height)||window.innerHeight;
+      const vh=vv?vv.height:window.innerHeight;
+      const offTop=vv?vv.offsetTop:0;
       const r=el.getBoundingClientRect();
-      const target=Math.max(70, vh*0.30);   // sit the field ~30% down the visible area
-      modal.scrollTop += (r.top - target);
-      if(window.scrollY) window.scrollTo(0,0); // undo iOS pushing the page up
+      const desired=offTop+Math.max(64, vh*0.22);  // sit the field near the top of the visible area
+      const delta=r.top-desired;
+      if(Math.abs(delta)<6) return;
+      const sc=scrollableAncestor(el);
+      if(sc) sc.scrollTop+=delta; else window.scrollBy(0,delta);
     }
-    let blurT=null;
-    body.addEventListener('focusin',e=>{
+    let active=null, blurT=null;
+    document.addEventListener('focusin',e=>{
       const t=e.target; if(!(t&&t.matches&&t.matches('input,textarea,select'))) return;
-      clearTimeout(blurT); modal.classList.add('kbd');
-      setTimeout(()=>reveal(t), 280);        // wait for the keyboard to animate in
+      active=t; clearTimeout(blurT);
+      document.body.classList.add('kbd-open');
+      setTimeout(()=>keepVisible(t), 300);   // after the keyboard animates in
     });
-    body.addEventListener('focusout',()=>{ blurT=setTimeout(()=>modal.classList.remove('kbd'), 250); });
-    if(window.visualViewport)
-      window.visualViewport.addEventListener('resize',()=>{
+    document.addEventListener('focusout',()=>{
+      blurT=setTimeout(()=>{
         const a=document.activeElement;
-        if(a&&a.closest&&a.closest('#priceBody')) reveal(a);
-      });
+        if(!a || !/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)){ document.body.classList.remove('kbd-open'); active=null; }
+      }, 250);
+    });
+    if(window.visualViewport)
+      window.visualViewport.addEventListener('resize',()=>{ if(active) keepVisible(active); });
   })();
 
   document.getElementById('c_date').value=new Date().toISOString().slice(0,10);
