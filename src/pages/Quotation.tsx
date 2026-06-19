@@ -35,6 +35,7 @@ export default function Quotation() {
             src={src}
             title="Tenn Fasteners — Quotation Generator"
             className="h-full w-full border-0"
+            allow="web-share; clipboard-write"
           />
         </div>
         <BottomNav />

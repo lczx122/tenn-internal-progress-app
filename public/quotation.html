@@ -389,7 +389,7 @@
     <div class="modal-bar">
       <button class="act b-save" id="saveBtnModal" onclick="saveQuote()">💾 Save Quotation</button>
       <button class="act b-primary" id="convertBtnModal" style="display:none" onclick="convertToSO()">🧾 Convert to Sales Order</button>
-      <button class="act b-primary" onclick="window.print()">🖨 Print / PDF</button>
+      <button class="act b-primary" id="shareBtn" onclick="printOrShare(this)">🖨 Print / PDF</button>
       <button class="act b-ghost" onclick="closePreview()">Close</button>
     </div>
     <div class="doc print-area-on"><div class="doc-pad" id="docBody"></div></div>
@@ -1992,8 +1992,9 @@ async function saveQuote(){
       committedNo=data.number; savedId=data.id;
       document.getElementById('c_qno').value=committedNo;
       setQnoStatus('✓ Changes saved to '+committedNo);
-      if(document.getElementById('modal').classList.contains('show'))
-        document.getElementById('docBody').innerHTML=buildDoc();
+      if(document.getElementById('modal').classList.contains('show')){
+        document.getElementById('docBody').innerHTML=buildDoc(); prepareSharePdf();
+      }
       flashSaved('Updated ✓ — '+committedNo);
       return;
     }
@@ -2016,8 +2017,9 @@ async function saveQuote(){
     document.getElementById('c_qno').value=committedNo;
     updateConvertBtn();
     // refresh the open preview so the printed doc shows the final number
-    if(document.getElementById('modal').classList.contains('show'))
-      document.getElementById('docBody').innerHTML=buildDoc();
+    if(document.getElementById('modal').classList.contains('show')){
+      document.getElementById('docBody').innerHTML=buildDoc(); prepareSharePdf();
+    }
     flashSaved('Saved ✓ — '+committedNo);
   }catch(e){
     setQnoStatus('Not saved');
@@ -2128,10 +2130,107 @@ function openPreview(){
   if(!isGuestUser && !viewMode) document.getElementById('saveBtn').style.display='';
   document.getElementById('modal').classList.add('show');
   document.body.style.overflow='hidden';
+  refreshShareButton();
+  prepareSharePdf();   // build the PDF in the background so sharing is instant
 }
 function closePreview(){
   document.getElementById('modal').classList.remove('show');
   document.body.style.overflow='';
+}
+
+/* ---------- print on desktop · native "Share PDF" on mobile ----------
+   window.print() is a no-op in most mobile/in-app browsers, so on devices that
+   can share files we generate a real PDF and open the OS share sheet (WhatsApp,
+   email, …). The PDF is built in the background when the preview opens so the
+   share fires inside the tap's user-gesture (iOS requires this).            */
+function canShareFiles(){
+  try{ return !!(navigator.canShare && navigator.canShare({files:[new File(['x'],'x.pdf',{type:'application/pdf'})]})); }
+  catch(e){ return false; }
+}
+// Use the share sheet on touch devices (phones/tablets) where window.print()
+// is unreliable; keep the normal print dialog on desktop.
+function shouldShare(){
+  if(!canShareFiles()) return false;
+  const coarse = window.matchMedia && window.matchMedia('(pointer:coarse)').matches;
+  return (navigator.maxTouchPoints||0) > 0 || coarse;
+}
+function refreshShareButton(){
+  const b=document.getElementById('shareBtn'); if(!b) return;
+  b.textContent = shouldShare() ? '📤 Share PDF' : '🖨 Print / PDF';
+}
+function loadScript(src){
+  return new Promise((res,rej)=>{ const s=document.createElement('script'); s.src=src; s.async=true; s.onload=res; s.onerror=()=>rej(new Error('Failed to load '+src)); document.head.appendChild(s); });
+}
+let _pdfLibs=null;
+function ensurePdfLibs(){
+  if(_pdfLibs) return _pdfLibs;
+  _pdfLibs=(async()=>{
+    if(!window.html2canvas) await loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js');
+    if(!(window.jspdf&&window.jspdf.jsPDF)) await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
+    if(!window.html2canvas || !(window.jspdf&&window.jspdf.jsPDF)) throw new Error('PDF tools unavailable');
+  })();
+  return _pdfLibs;
+}
+// Render the on-screen document to an A4 PDF blob (image-based, multi-page).
+async function buildPdfBlob(){
+  const src=document.getElementById('docBody'); if(!src) throw new Error('Nothing to share');
+  const holder=document.createElement('div');
+  holder.className='doc';
+  holder.style.cssText='position:fixed;left:-10000px;top:0;width:760px;background:#fff';
+  const clone=src.cloneNode(true); clone.style.width='auto';
+  holder.appendChild(clone); document.body.appendChild(holder);
+  try{
+    const canvas=await html2canvas(holder,{scale:2,backgroundColor:'#ffffff',useCORS:true,windowWidth:760});
+    const img=canvas.toDataURL('image/jpeg',0.92);
+    const {jsPDF}=window.jspdf;
+    const pdf=new jsPDF('p','mm','a4');
+    const pageW=pdf.internal.pageSize.getWidth(), pageH=pdf.internal.pageSize.getHeight();
+    const imgW=pageW, imgH=canvas.height*imgW/canvas.width;
+    let left=imgH, pos=0;
+    pdf.addImage(img,'JPEG',0,pos,imgW,imgH,undefined,'FAST'); left-=pageH;
+    while(left>0){ pos-=pageH; pdf.addPage(); pdf.addImage(img,'JPEG',0,pos,imgW,imgH,undefined,'FAST'); left-=pageH; }
+    return pdf.output('blob');
+  } finally{ document.body.removeChild(holder); }
+}
+function shareName(){
+  const n=currentNumber();
+  return ((n&&n!=='—')?n:docName().replace(/\s+/g,'_'))+'.pdf';
+}
+let _shareFile=null, _sharePrep=null;
+function prepareSharePdf(){
+  if(!shouldShare()) return null;
+  _shareFile=null;
+  _sharePrep=(async()=>{
+    await ensurePdfLibs();
+    const blob=await buildPdfBlob();
+    _shareFile=new File([blob], shareName(), {type:'application/pdf'});
+  })().catch(()=>{ _shareFile=null; });
+  return _sharePrep;
+}
+function downloadBlob(blob,name){
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a'); a.href=url; a.download=name; document.body.appendChild(a); a.click();
+  setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); },1500);
+}
+async function printOrShare(btn){
+  if(!shouldShare()){ window.print(); return; }   // desktop → normal print dialog
+  const label=btn.textContent;
+  try{
+    if(!_shareFile){            // background build not finished yet — wait for it
+      btn.disabled=true; btn.textContent='Preparing…';
+      try{ await (_sharePrep||prepareSharePdf()); }catch(e){}
+      btn.disabled=false; btn.textContent=label;
+    }
+    if(_shareFile && navigator.canShare && navigator.canShare({files:[_shareFile]})){
+      await navigator.share({files:[_shareFile], title:_shareFile.name.replace(/\.pdf$/,''), text:docName()+' from Tenn Fasteners'});
+    } else if(_shareFile){
+      downloadBlob(_shareFile,_shareFile.name);   // share unavailable → save the file
+    } else {
+      window.print();                             // PDF tools blocked → fall back to print
+    }
+  }catch(e){
+    if(!(e&&e.name==='AbortError')){ try{ window.print(); }catch(_){} }  // ignore user-cancelled share
+  }finally{ btn.disabled=false; btn.textContent=label; }
 }
 
 /* ---------- start a new document ---------- */
