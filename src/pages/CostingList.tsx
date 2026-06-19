@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import type { Costing, JobWork } from '../lib/types'
 import { Layout } from '../components/Layout'
+import { FinanceToggle } from '../components/FinanceToggle'
 import { overallPercent } from '../lib/stages'
 import { useAutoRefresh } from '../lib/useAutoRefresh'
 import {
@@ -255,6 +256,7 @@ export default function CostingList() {
 
   return (
     <Layout title="Costing" bottomNav wide onRefresh={refreshAll}>
+      <FinanceToggle current="costing" />
       <div className="space-y-3 lg:max-w-3xl">
         <div className="flex gap-2">
           <input

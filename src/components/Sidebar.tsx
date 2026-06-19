@@ -1,12 +1,13 @@
-import { Link, NavLink } from 'react-router-dom'
+import { Link, NavLink, useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
-import { TabIcon, useNavTabs } from './navItems'
+import { TabIcon, useNavTabs, isTabActive } from './navItems'
 
 // Left navigation rail for tablet/desktop (lg+). Hidden on phones, where the
 // BottomNav is used instead. Shows the brand, the same tabs as the bottom bar,
 // and the signed-in user with sign-out / admin link at the foot.
 export function Sidebar() {
   const tabs = useNavTabs()
+  const { pathname } = useLocation()
   const { displayName, isAdmin, signOut } = useAuth()
   return (
     <aside className="hidden w-60 shrink-0 flex-col border-r border-slate-800 bg-slate-900 text-white lg:flex">
@@ -23,9 +24,9 @@ export function Sidebar() {
             key={t.to}
             to={t.to}
             end={t.end}
-            className={({ isActive }) =>
+            className={
               'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition ' +
-              (isActive ? 'bg-white/15 text-white' : 'text-slate-300 hover:bg-white/5 hover:text-white')
+              (isTabActive(pathname, t) ? 'bg-white/15 text-white' : 'text-slate-300 hover:bg-white/5 hover:text-white')
             }
           >
             <TabIcon name={t.icon} className="h-5 w-5" />

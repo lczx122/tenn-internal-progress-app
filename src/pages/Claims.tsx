@@ -6,6 +6,7 @@ import { Layout } from '../components/Layout'
 import { CLAIM_CATEGORIES } from '../lib/units'
 import { money, sumByCategory } from '../lib/claims'
 import { useAutoRefresh } from '../lib/useAutoRefresh'
+import { FinanceToggle } from '../components/FinanceToggle'
 
 export default function Claims() {
   const [jobs, setJobs] = useState<Job[]>([])
@@ -109,6 +110,7 @@ export default function Claims() {
 
   return (
     <Layout title="Collection" bottomNav wide onRefresh={load}>
+      <FinanceToggle current="collection" />
       <div className="mb-3">
         <input
           value={query}

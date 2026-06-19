@@ -7,25 +7,33 @@ export interface NavTab {
   label: string
   end: boolean
   icon: string
+  // Extra routes that should also light up this tab (for merged sections, e.g.
+  // the Quotes tab covers the quote builder, the Money tab covers Costing).
+  match?: string[]
 }
 
+// Five tabs. Two pairs are merged into one slot each:
+//   • Quotes  = Orders register (+ the quote builder at /quote)
+//   • Money   = Collection (+ Costing at /costing, boss only — via in-page toggle)
 const baseTabs: NavTab[] = [
   { to: '/', label: 'Dashboard', end: true, icon: 'dashboard' },
   { to: '/units', label: 'Units', end: false, icon: 'home' },
   { to: '/schedule', label: 'Schedule', end: false, icon: 'calendar' },
-  { to: '/quote', label: 'Quote', end: false, icon: 'receipt' },
-  { to: '/quotes', label: 'Orders', end: false, icon: 'ledger' },
-  { to: '/claims', label: 'Collection', end: false, icon: 'wallet' },
+  { to: '/quotes', label: 'Quotes', end: false, icon: 'ledger', match: ['/quote'] },
+  { to: '/claims', label: 'Money', end: false, icon: 'wallet', match: ['/costing'] },
 ]
 
-// The visible tabs for the current user (boss gets the Costing tab; guests only
-// get the quotation generator).
+// The visible tabs for the current user (guests only get the quotation tool).
 export function useNavTabs(): NavTab[] {
-  const { isBoss, isGuest } = useAuth()
+  const { isGuest } = useAuth()
   if (isGuest) return [{ to: '/quote', label: 'Quote', end: false, icon: 'receipt' }]
-  return isBoss
-    ? [...baseTabs, { to: '/costing', label: 'Costing', end: false, icon: 'coins' }]
-    : baseTabs
+  return baseTabs
+}
+
+// Active when the path matches the tab's own route or any of its merged routes.
+export function isTabActive(pathname: string, t: NavTab): boolean {
+  const hit = (to: string, end: boolean) => pathname === to || (!end && pathname.startsWith(to + '/'))
+  return hit(t.to, t.end) || (t.match ?? []).some((m) => hit(m, false))
 }
 
 export function TabIcon({ name, className = 'h-[22px] w-[22px]' }: { name: string; className?: string }) {
