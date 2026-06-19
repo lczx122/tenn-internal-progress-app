@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
+import { useLocation } from 'react-router-dom'
 
 // App-wide mobile field editor: on touch devices, focusing any text/number
-// field opens a focused editing bar pinned to the top of the screen — always
-// above the keyboard — and mirrors what you type back into the real field. This
-// is the React-app twin of the editor built into public/quotation.html.
+// field opens a focused editing card floating above the keyboard, and mirrors
+// what you type back into the real field. React-app twin of the editor in
+// public/quotation.html.
 //
-// Opt a field out with `data-fed-skip` (e.g. an inline search you want to keep
-// in place), or override its title with `data-fed-label="…"`.
+// Opt a field out with `data-fed-skip`; override its title with
+// `data-fed-label="…"`.
 
 const TEXT_TYPES = new Set(['text', 'number', 'tel', 'email', 'url', 'search'])
 
@@ -66,31 +67,44 @@ export default function FieldEditor() {
   const [touch] = useState(isTouchDevice)
   const [open, setOpen] = useState(false)
   const [label, setLabel] = useState('')
+  const location = useLocation()
 
   const rootRef = useRef<HTMLDivElement>(null)
-  const barRef = useRef<HTMLDivElement>(null)
+  const cardRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const areaRef = useRef<HTMLTextAreaElement>(null)
   const targetRef = useRef<HTMLInputElement | HTMLTextAreaElement | null>(null)
+  const originalRef = useRef('')
+
+  // Place the card vertically centred in the area above the keyboard.
+  function reposition() {
+    const card = cardRef.current
+    if (!card) return
+    const vv = window.visualViewport
+    const vh = vv ? vv.height : window.innerHeight
+    const off = vv ? vv.offsetTop : 0
+    card.style.top = `${off + vh * 0.42}px`
+  }
+
+  function dismiss() {
+    setOpen(false)
+    inputRef.current?.blur()
+    areaRef.current?.blur()
+    targetRef.current = null
+  }
 
   useEffect(() => {
     if (!touch) return
     // Which control shows is driven imperatively (not via React) so it's correct
-    // at the synchronous focus() call — React can't re-clobber the display.
+    // at the synchronous focus() call.
     if (areaRef.current) areaRef.current.style.display = 'none'
-
-    function reposition() {
-      const bar = barRef.current
-      if (!bar) return
-      const vv = window.visualViewport
-      bar.style.transform = `translateY(${vv ? Math.max(0, vv.offsetTop) : 0}px)`
-    }
 
     function openFor(target: HTMLInputElement | HTMLTextAreaElement) {
       const input = inputRef.current
       const area = areaRef.current
       if (!input || !area) return
       targetRef.current = target
+      originalRef.current = target.value
       const ml = target.tagName === 'TEXTAREA'
       const el: HTMLInputElement | HTMLTextAreaElement = ml ? area : input
       if (ml) {
@@ -139,49 +153,61 @@ export default function FieldEditor() {
     }
   }, [touch])
 
+  // Close if the user navigates away while the editor is open.
+  useEffect(() => {
+    dismiss()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.pathname, location.search])
+
   if (!touch) return null
 
   function onBoxInput(e: React.FormEvent<HTMLInputElement | HTMLTextAreaElement>) {
     const target = targetRef.current
     if (target) setNativeValue(target, (e.target as HTMLInputElement).value)
   }
-  function close() {
-    setOpen(false)
-    inputRef.current?.blur()
-    areaRef.current?.blur()
-    targetRef.current = null
+  function cancel() {
+    const t = targetRef.current
+    if (t) setNativeValue(t, originalRef.current)
+    dismiss()
   }
   function onKeyDown(e: React.KeyboardEvent) {
     if ((e.key === 'Enter' && areaRef.current?.style.display === 'none') || e.key === 'Escape') {
       e.preventDefault()
-      close()
+      if (e.key === 'Escape') cancel()
+      else dismiss()
     }
   }
 
   const inputClass =
-    'min-w-0 flex-1 rounded-[10px] border-[1.5px] border-slate-900 px-3 py-3 text-[17px] outline-none'
+    'w-full rounded-[10px] border-[1.5px] border-slate-900 px-3 py-3 text-[17px] outline-none'
 
   return (
     <div
       ref={rootRef}
       className={`fixed inset-0 z-[200] ${open ? '' : 'pointer-events-none opacity-0'}`}
     >
-      <div className="absolute inset-0 bg-slate-900/45" onClick={close} />
+      <div className="absolute inset-0 bg-slate-900/45" onClick={dismiss} />
       <div
-        ref={barRef}
-        className="absolute inset-x-0 top-0 bg-white px-4 pb-3 shadow-xl"
-        style={{ paddingTop: 'max(0.75rem, env(safe-area-inset-top))' }}
+        ref={cardRef}
+        className="absolute left-1/2 w-[min(360px,calc(100%-2rem))] -translate-x-1/2 -translate-y-1/2 rounded-2xl bg-white p-4 shadow-2xl"
       >
         <div className="mb-2 text-[11px] font-bold uppercase tracking-wide text-slate-500">
           {label || 'Edit'}
         </div>
-        <div className="flex items-stretch gap-2.5">
-          <input ref={inputRef} tabIndex={-1} onInput={onBoxInput} onKeyDown={onKeyDown} className={inputClass} />
-          <textarea ref={areaRef} tabIndex={-1} rows={4} onInput={onBoxInput} className={`${inputClass} resize-y`} />
+        <input ref={inputRef} tabIndex={-1} onInput={onBoxInput} onKeyDown={onKeyDown} className={inputClass} />
+        <textarea ref={areaRef} tabIndex={-1} rows={4} onInput={onBoxInput} className={`${inputClass} resize-y`} />
+        <div className="mt-3.5 flex gap-2.5">
           <button
             type="button"
-            onClick={close}
-            className="shrink-0 rounded-[10px] bg-slate-900 px-4 font-semibold text-white active:bg-slate-700"
+            onClick={cancel}
+            className="rounded-[10px] border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-600 active:bg-slate-50"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={dismiss}
+            className="flex-1 rounded-[10px] bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white active:bg-slate-700"
           >
             Done
           </button>

@@ -272,18 +272,19 @@
     .modal-bar{gap:7px;margin-bottom:10px}
     .modal-bar .act{flex:1 1 96px;padding:10px 8px;font-size:12.5px}
   }
-  /* Mobile field editor — a focused editing bar pinned above the keyboard so
-     the value you're typing is always visible (no scrolling guesswork). */
+  /* Mobile field editor — a focused editing card floating in the area above the
+     keyboard, so the value you're typing is always clearly visible. */
   .fed{position:fixed;inset:0;z-index:200;display:none}
   .fed.show{display:block}
-  .fed-backdrop{position:absolute;inset:0;background:rgba(15,20,40,.45)}
-  .fed-bar{position:absolute;top:0;left:0;right:0;background:#fff;border-bottom:1px solid var(--line);box-shadow:0 8px 28px rgba(21,36,83,.22);padding:max(12px,env(safe-area-inset-top)) 14px 12px;will-change:transform}
+  .fed-backdrop{position:absolute;inset:0;background:rgba(15,20,40,.5)}
+  .fed-card{position:absolute;left:50%;top:42%;transform:translate(-50%,-50%);width:min(360px,calc(100% - 32px));background:#fff;border-radius:16px;box-shadow:0 26px 70px rgba(0,0,0,.4);padding:18px}
   .fed-label{font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);font-weight:700;margin-bottom:8px}
-  .fed-row{display:flex;gap:10px;align-items:stretch}
-  .fed-host{flex:1;display:flex}
+  .fed-host{display:flex}
   .fed-input{flex:1;width:100%;font-size:17px;padding:12px;border:1.5px solid var(--navy);border-radius:10px;outline:none;font-family:inherit;color:var(--ink);background:#fff}
-  textarea.fed-input{min-height:96px;resize:vertical;line-height:1.4}
-  .fed-done{flex:none;background:var(--navy);color:#fff;border:none;border-radius:10px;padding:0 18px;font-family:'Archivo';font-weight:700;font-size:14px;cursor:pointer}
+  textarea.fed-input{min-height:110px;resize:vertical;line-height:1.4}
+  .fed-actions{display:flex;gap:10px;margin-top:14px}
+  .fed-cancel{flex:none;background:#fff;border:1px solid var(--line);color:var(--muted);border-radius:10px;padding:11px 16px;font-family:'Archivo';font-weight:700;font-size:14px;cursor:pointer}
+  .fed-done{flex:1;background:var(--navy);color:#fff;border:none;border-radius:10px;padding:11px 16px;font-family:'Archivo';font-weight:700;font-size:14px;cursor:pointer}
   .fed-done:active{background:var(--navy-2)}
   /* In-page confirm dialog (native confirm() is unreliable inside the iframe). */
   .ui-confirm{position:fixed;inset:0;background:rgba(15,20,40,.55);display:flex;align-items:center;justify-content:center;z-index:120;padding:24px}
@@ -402,16 +403,17 @@
   </div>
 </div>
 
-<!-- MOBILE FIELD EDITOR — focused editing bar pinned above the keyboard -->
+<!-- MOBILE FIELD EDITOR — focused editing card floating above the keyboard -->
 <div class="fed" id="fieldEditor">
   <div class="fed-backdrop" onclick="fedCommit()"></div>
-  <div class="fed-bar" id="fedBar">
+  <div class="fed-card" id="fedCard">
     <div class="fed-label" id="fedLabel"></div>
-    <div class="fed-row">
-      <div class="fed-host" id="fedHost">
-        <input id="fedInput" class="fed-input" autocomplete="off">
-        <textarea id="fedArea" class="fed-input" rows="4" style="display:none"></textarea>
-      </div>
+    <div class="fed-host" id="fedHost">
+      <input id="fedInput" class="fed-input" autocomplete="off">
+      <textarea id="fedArea" class="fed-input" rows="4" style="display:none"></textarea>
+    </div>
+    <div class="fed-actions">
+      <button type="button" class="fed-cancel" onclick="fedCancel()">Cancel</button>
       <button type="button" class="fed-done" onclick="fedCommit()">Done</button>
     </div>
   </div>
@@ -867,6 +869,7 @@ function openPriceEditor(){
   peInitEditor();
 }
 function closePriceEditor(){
+  closeFieldEditor();
   document.getElementById('priceModal').classList.remove('show');
   document.body.style.overflow='';
 }
@@ -948,16 +951,19 @@ function fedCommit(){
   }
   closeFieldEditor();
 }
+function fedCancel(){ closeFieldEditor(); }   // discard — Done (or backdrop) commits
 function closeFieldEditor(){
   fedOpen=false; fedTarget=null;
   const i=document.getElementById('fedInput'), a=document.getElementById('fedArea');
   if(i) i.blur(); if(a) a.blur();
   document.getElementById('fieldEditor').classList.remove('show');
 }
+// Centre the card in the area above the keyboard.
 function fedReposition(){
-  const bar=document.getElementById('fedBar'); if(!bar) return;
+  const card=document.getElementById('fedCard'); if(!card) return;
   const vv=window.visualViewport;
-  bar.style.transform='translateY('+(vv?Math.max(0,vv.offsetTop):0)+'px)';
+  const vh=vv?vv.height:window.innerHeight, off=vv?vv.offsetTop:0;
+  card.style.top=(off+vh*0.42)+'px';
 }
 
 function peField(kind,key,field,val,label,opts){
@@ -2264,6 +2270,7 @@ function openPreview(){
   prepareSharePdf();   // build the PDF in the background so sharing is instant
 }
 function closePreview(){
+  closeFieldEditor();
   document.getElementById('modal').classList.remove('show');
   document.body.style.overflow='';
 }
