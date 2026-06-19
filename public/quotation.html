@@ -340,6 +340,7 @@
           <label class="fld">Customer Name <input id="c_name" placeholder="Full name"></label>
           <label class="fld">IC / Company No. <input id="c_ic" placeholder="IC number"></label>
           <label class="fld">Unit / Address <input id="c_unit" placeholder="Unit no."></label>
+          <label class="fld">Project <input id="c_project" list="projectList" placeholder="Project name"><datalist id="projectList"></datalist></label>
           <label class="fld">H / Phone <input id="c_phone" placeholder="Contact no."></label>
           <label class="fld">Email <input id="c_email" type="email" placeholder="email@example.com"></label>
           <label class="fld">Prepared By <input id="c_pic" placeholder="Staff name — saved on this device"></label>
@@ -1757,6 +1758,7 @@ function buildDoc(){
       <div><b>Name:</b> ${g('c_name')||'—'}</div>
       <div><b>IC / Co.:</b> ${g('c_ic')||'—'}</div>
       <div><b>Unit:</b> ${g('c_unit')||'—'}</div>
+      <div><b>Project:</b> ${g('c_project')||'—'}</div>
       <div><b>H/Phone:</b> ${g('c_phone')||'—'}</div>
       <div style="grid-column:1/3"><b>Email:</b> ${g('c_email')||'—'}</div>
     </div>
@@ -1805,6 +1807,8 @@ let pendingNo=null;     // provisional next number, shown before saving
 let savedId=null;       // database row id, once saved
 let sourceId=null;      // the quotation this SO was converted from (if any)
 let sourceNumber=null;  // …and its number, for the printed "Ref Quote" line
+let editingId=null;     // when set, Save UPDATES this existing document (edit mode)
+let viewMode=false;     // read-only view of a saved document
 
 function docName(t){return (t||docType)==='SO'?'Sales Order':'Quotation';}
 
@@ -1830,7 +1834,7 @@ function setQnoStatus(t){const el=document.getElementById('qno_status');if(el)el
 // The "Convert to Sales Order" button only makes sense for a SAVED quotation
 // (we need its register id to link the new SO back to it). Guests never save.
 function updateConvertBtn(){
-  const show = (docType==='QT' && !!savedId && !!committedNo && !isGuestUser);
+  const show = (docType==='QT' && !!savedId && !!committedNo && !isGuestUser && !editingId && !viewMode);
   ['convertBtn','convertBtnModal'].forEach(id=>{const b=document.getElementById(id); if(b) b.style.display=show?'':'none';});
 }
 
@@ -1907,7 +1911,9 @@ function flashSaved(msg){
 
 /* Reserve the next number and store the document in the shared register. */
 async function saveQuote(){
-  if(committedNo){ flashSaved('Saved ✓ — '+committedNo); return; }
+  // In edit mode every Save re-updates the same document; otherwise a committed
+  // document is already saved and the button just re-confirms.
+  if(committedNo && !editingId){ flashSaved('Saved ✓ — '+committedNo); return; }
   const lines=collectLines();
   if(!lines.length){ alert('Add at least one item before saving.'); return; }
   const g=id=>(document.getElementById(id).value||'').trim();
@@ -1921,6 +1927,7 @@ async function saveQuote(){
   const cats=[...new Set(lines.map(l=>l.cat))].join(', ');
   const payload={
     doc_type:docType,
+    project:g('c_project'),
     customer:{name:g('c_name'),ic:g('c_ic'),unit:g('c_unit'),phone:g('c_phone'),email:g('c_email')},
     date:g('c_date'), remarks:g('c_remarks'),
     // machine-readable selection so the document can be reopened / converted
@@ -1936,6 +1943,22 @@ async function saveQuote(){
   const supa=getSupa();
   setSaving(true);
   try{
+    if(editingId){
+      if(!supa){ alert('Not connected — open this inside the app to edit.'); return; }
+      await ready(supa);
+      const {data,error}=await supa.rpc('update_document',{
+        p_id:editingId, p_payload:payload, p_customer:g('c_name'), p_phone:g('c_phone'),
+        p_unit:g('c_unit'), p_prepared_by:g('c_pic'), p_categories:cats, p_total:bal
+      });
+      if(error) throw error;
+      committedNo=data.number; savedId=data.id;
+      document.getElementById('c_qno').value=committedNo;
+      setQnoStatus('✓ Changes saved to '+committedNo);
+      if(document.getElementById('modal').classList.contains('show'))
+        document.getElementById('docBody').innerHTML=buildDoc();
+      flashSaved('Updated ✓ — '+committedNo);
+      return;
+    }
     if(supa){
       await ready(supa);
       const {data,error}=await supa.rpc('create_document',{
@@ -1964,9 +1987,12 @@ async function saveQuote(){
   }finally{ setSaving(false); }
 }
 
-/* Open the tool pre-filled from a saved document (used by "Convert to SO").
-   Restores the exact item selection from the stored payload. */
-async function loadDocument(id, asType){
+/* Open a saved document from the register. Three modes:
+     'convert' — restore items, switch to SO, link source (Convert to SO)
+     'edit'    — restore items, keep the same number; Save UPDATES the row
+     'view'    — restore items read-only and show the formatted document      */
+async function loadDocument(id, asType, mode){
+  mode = mode || 'convert';
   const supa=getSupa(); if(!supa||!id) return;
   try{
     await ready(supa);
@@ -1976,6 +2002,7 @@ async function loadDocument(id, asType){
     const c=p.customer||{};
     setVal('c_name',c.name); setVal('c_ic',c.ic); setVal('c_unit',c.unit);
     setVal('c_phone',c.phone); setVal('c_email',c.email); setVal('c_remarks',p.remarks);
+    setVal('c_project',p.project); if(p.date) setVal('c_date',p.date);
     for(const k in state) delete state[k];
     if(p.selections) Object.assign(state,p.selections);
     if(p.variants) Object.assign(activeVariant,p.variants);
@@ -1995,28 +2022,72 @@ async function loadDocument(id, asType){
       discountSel[d.id]=true;
       if(!DISCOUNTS.some(x=>x.id===d.id)) DISCOUNTS.push({id:d.id,label:d.label||'Discount',amount:+d.amount||0});
     });
-    sourceId=(asType==='SO')?data.id:null;
-    sourceNumber=(asType==='SO')?data.number:null;
-    applyDocTypeUI(asType||'SO');
-    committedNo=null;
-    updateConvertBtn();
-    renderCatalog();   // re-renders items using the restored state/variants
-    await refreshPendingNumber();
-    if(!p.selections && !(p.cabinets&&p.cabinets.length) && !(p.grills&&p.grills.length) && !(p.paints&&p.paints.length) && !(p.alucabs&&p.alucabs.length))
-      setQnoStatus('Loaded customer from '+data.number+' — items could not be restored, please re-add');
-    else
-      setQnoStatus('Converting from '+data.number+' — preview, then Save Sales Order');
+    if(p.totals){
+      document.getElementById('t_dep').value=p.totals.deposit||0;
+      document.getElementById('t_disc').value=p.totals.discount||0;
+    }
+
+    if(mode==='edit'){
+      editingId=id; savedId=data.id; sourceId=null; sourceNumber=null; committedNo=data.number;
+      applyDocTypeUI(data.doc_type||'QT');
+      document.getElementById('c_qno').value=data.number;
+      renderCatalog();
+      if(!isGuestUser) document.getElementById('saveBtn').style.display='';
+      updateConvertBtn();
+      setQnoStatus('Editing '+data.number+' — make changes, then Save');
+    }else if(mode==='view'){
+      viewMode=true; savedId=data.id; committedNo=data.number; editingId=null;
+      applyDocTypeUI(data.doc_type||'QT');
+      document.getElementById('c_qno').value=data.number;
+      renderCatalog();
+      enterViewMode(data.number);
+    }else{ // convert
+      sourceId=(asType==='SO')?data.id:null;
+      sourceNumber=(asType==='SO')?data.number:null;
+      applyDocTypeUI(asType||'SO');
+      committedNo=null; editingId=null;
+      updateConvertBtn();
+      renderCatalog();   // re-renders items using the restored state/variants
+      await refreshPendingNumber();
+      if(!p.selections && !(p.cabinets&&p.cabinets.length) && !(p.grills&&p.grills.length) && !(p.paints&&p.paints.length) && !(p.alucabs&&p.alucabs.length))
+        setQnoStatus('Loaded customer from '+data.number+' — items could not be restored, please re-add');
+      else
+        setQnoStatus('Converting from '+data.number+' — preview, then Save Sales Order');
+    }
   }catch(e){ refreshPendingNumber(); }
 }
 function setVal(id,v){const el=document.getElementById(id); if(el) el.value=v||'';}
+// Read-only view: lock the builder and show the formatted document.
+function enterViewMode(number){
+  document.body.classList.add('view-mode');
+  ['saveBtn','saveBtnModal','convertBtn','convertBtnModal','editPricesBtn'].forEach(id=>{const b=document.getElementById(id); if(b) b.style.display='none';});
+  document.querySelectorAll('.b-clear').forEach(b=>b.style.display='none');
+  document.querySelectorAll('input,select,textarea').forEach(el=>{
+    if(el.closest('#modal')||el.closest('#priceModal')) return;
+    el.disabled=true;
+  });
+  setQnoStatus('Read-only view of '+number);
+  openPreview();
+}
+// Populate the Project field's suggestions from existing units.
+async function loadProjectList(){
+  try{
+    const supa=getSupa(); if(!supa) return;
+    const {data}=await supa.from('jobs').select('project');
+    if(!data) return;
+    const seen=[...new Set(data.map(r=>(r.project||'').trim()).filter(Boolean))].sort();
+    const dl=document.getElementById('projectList'); if(!dl) return;
+    dl.innerHTML=seen.map(p=>`<option value="${String(p).replace(/"/g,'&quot;')}"></option>`).join('');
+  }catch(e){}
+}
 
 /* ---------- preview ---------- */
 function openPreview(){
   if(!collectLines().length){ alert('Add at least one item first.'); return; }
   document.getElementById('docBody').innerHTML=buildDoc();
   // The Save option only appears once a quotation has been previewed (and never
-  // for guests, who are view-only).
-  if(!isGuestUser) document.getElementById('saveBtn').style.display='';
+  // for guests or in read-only view mode).
+  if(!isGuestUser && !viewMode) document.getElementById('saveBtn').style.display='';
   document.getElementById('modal').classList.add('show');
   document.body.style.overflow='hidden';
 }
@@ -2034,11 +2105,11 @@ function newQuote(){
   grillLines.length=0;
   paintLines.length=0;
   alucabLines.length=0;
-  ['c_name','c_ic','c_unit','c_phone','c_email','c_remarks'].forEach(id=>document.getElementById(id).value='');
+  ['c_name','c_ic','c_unit','c_project','c_phone','c_email','c_remarks'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('t_dep').value=0;
   document.getElementById('t_disc').value=0;
   document.getElementById('c_date').value=new Date().toISOString().slice(0,10);
-  committedNo=null; pendingNo=null; savedId=null; sourceId=null; sourceNumber=null;
+  committedNo=null; pendingNo=null; savedId=null; sourceId=null; sourceNumber=null; editingId=null;
   setQnoStatus('');
   document.getElementById('saveBtn').style.display='none';
   updateConvertBtn();
@@ -2068,19 +2139,26 @@ function newQuote(){
   // Embedded in the app? Hide the tool's own header — the app supplies one.
   if(params.get('embed')==='1'){ const tb=document.querySelector('header.topbar'); if(tb) tb.style.display='none'; }
   const fromId=params.get('from');
+  const editId=params.get('edit');
+  const viewId=params.get('view');
   const asType=(params.get('type')||'QT').toUpperCase()==='SO'?'SO':'QT';
-  if(asType==='SO' && !fromId) applyDocTypeUI('SO');
+  if(asType==='SO' && !fromId && !editId && !viewId) applyDocTypeUI('SO');
 
   (async ()=>{
+    isGuestUser = getGuest();      // gate save/edit before any document loads
     await loadPricing();           // apply admin price overrides if any
     renderCatalog();               // re-paint with the live prices
-    // Deep-link: /quotation.html?from=<id>&type=SO converts a saved quotation.
-    if(fromId) await loadDocument(fromId, asType);
+    loadProjectList();             // fill the Project suggestions (best-effort)
+    // Deep-links from the register: view / edit / convert a saved document.
+    if(viewId) await loadDocument(viewId, null, 'view');
+    else if(editId) await loadDocument(editId, null, 'edit');
+    else if(fromId) await loadDocument(fromId, asType, 'convert');
     else await refreshPendingNumber();
-    // Reveal the price editor for admins only (DB also enforces write access).
+    // Reveal the price editor for admins only (never in read-only view).
     isAdminUser = await checkAdmin();
-    if(isAdminUser) document.getElementById('editPricesBtn').style.display='';
-    // Guests are view-only: hide the Save buttons.
+    if(isAdminUser && !viewMode) document.getElementById('editPricesBtn').style.display='';
+    // Guests are view-only: hide the Save buttons (re-read in case the parent
+    // resolved the role only after this tool initialised).
     isGuestUser = getGuest();
     if(isGuestUser){ const m=document.getElementById('saveBtnModal'); if(m) m.style.display='none'; }
   })();

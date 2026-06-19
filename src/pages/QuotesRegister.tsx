@@ -23,7 +23,8 @@ export default function QuotesRegister() {
   const [loading, setLoading] = useState(true)
   const [query, setQuery] = useState('')
   const [filter, setFilter] = useState<Filter>('all')
-  const { isAdmin } = useAuth()
+  const { isAdmin, session } = useAuth()
+  const userId = session?.user?.id ?? null
   const navigate = useNavigate()
 
   async function remove(r: Quotation) {
@@ -158,6 +159,20 @@ export default function QuotesRegister() {
                       {relativeTime(r.created_at)}
                     </p>
                     <div className="flex shrink-0 items-center gap-2">
+                      <button
+                        onClick={() => navigate(`/quote?view=${r.id}`)}
+                        className="rounded-lg border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-700 active:bg-slate-50"
+                      >
+                        View
+                      </button>
+                      {(isAdmin || (!!userId && r.created_by === userId)) && (
+                        <button
+                          onClick={() => navigate(`/quote?edit=${r.id}`)}
+                          className="rounded-lg border border-slate-400 px-2.5 py-1 text-xs font-medium text-slate-800 active:bg-slate-50"
+                        >
+                          Edit
+                        </button>
+                      )}
                       {!isSO && (
                         <button
                           onClick={() => navigate(`/quote?from=${r.id}&type=SO`)}

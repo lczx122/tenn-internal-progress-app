@@ -1,0 +1,192 @@
+-- ============================================================================
+--  Sales Order → auto-create linked unit + work · editable documents
+-- ----------------------------------------------------------------------------
+--  Run AFTER supabase/sales_orders.sql. Run ONCE in the SQL Editor. Safe to
+--  re-run.
+--
+--  This migration:
+--    1. Adds quotations.unit_id — the unit (jobs row) a Sales Order is linked to.
+--    2. update_document()       — lets the document's CREATOR or an ADMIN edit a
+--                                 saved quotation / sales order after creation.
+--    3. On INSERT of a Sales Order, auto-creates (or reuses, when the unit code
+--       matches an existing unit) a linked unit and adds one work card per
+--       quoted category. It never blocks the sales order from saving.
+-- ============================================================================
+
+alter table public.quotations
+  add column if not exists unit_id uuid references public.jobs (id);
+
+-- ---------------------------------------------------------------------------
+--  Editable documents: only the creator or an admin may update a saved row.
+--  (Numbering columns — number/seq/doc_type/yymm — are intentionally untouched.)
+-- ---------------------------------------------------------------------------
+create or replace function public.update_document(
+  p_id           uuid,
+  p_payload      jsonb,
+  p_customer     text,
+  p_phone        text,
+  p_unit         text,
+  p_prepared_by  text,
+  p_categories   text,
+  p_total        numeric
+) returns public.quotations
+language plpgsql
+security definer set search_path = public
+as $$
+declare
+  v_row public.quotations;
+begin
+  if auth.role() <> 'authenticated' then
+    raise exception 'Not authorised';
+  end if;
+
+  select * into v_row from public.quotations where id = p_id;
+  if not found then
+    raise exception 'Document not found';
+  end if;
+  if v_row.created_by is distinct from auth.uid() and not public.is_admin() then
+    raise exception 'Only the creator or an admin can edit this document';
+  end if;
+
+  update public.quotations set
+    payload        = coalesce(p_payload, '{}'::jsonb),
+    customer_name  = coalesce(p_customer, ''),
+    customer_phone = coalesce(p_phone, ''),
+    unit           = coalesce(p_unit, ''),
+    prepared_by    = coalesce(p_prepared_by, ''),
+    categories     = coalesce(p_categories, ''),
+    total          = coalesce(p_total, 0)
+  where id = p_id
+  returning * into v_row;
+
+  return v_row;
+end;
+$$;
+
+-- ---------------------------------------------------------------------------
+--  Map a quotation category label (e.g. "Kitchen Cabinet", "Iron Grill") to a
+--  unit work category (see src/lib/categories.ts). Falls back to 'Products'.
+-- ---------------------------------------------------------------------------
+create or replace function public.so_work_category(p_cat text)
+returns text language sql immutable as $$
+  select case
+    when p_cat ilike '%smart home%'        then 'Smart Home'
+    when p_cat ilike '%smart lock%'        then 'Smart Lock'
+    when p_cat ilike '%lock%'              then 'Smart Lock'
+    when p_cat ilike '%paint%'             then 'Painting'
+    when p_cat ilike '%mindhome%'          then 'Mindhome'
+    when p_cat ilike '%electric%'
+      or p_cat ilike '%wiring%'
+      or p_cat ~* '(^|[^a-z])ee([^a-z]|$)' then 'EE'
+    when p_cat ilike '%cabinet%'
+      or p_cat ilike '%grill%'
+      or p_cat ilike '%alumin%'
+      or p_cat ilike '%renovation package%'
+      or p_cat ilike '%yard%'
+      or p_cat ilike '%door%'              then 'Aluminium'
+    else 'Products'
+  end;
+$$;
+
+-- ---------------------------------------------------------------------------
+--  On Sales Order insert: create or reuse a unit, add the quoted work, and
+--  link the document to that unit. Wrapped so a failure can never roll back
+--  (and thus block) the sales order itself.
+-- ---------------------------------------------------------------------------
+create or replace function public.tg_so_create_unit()
+returns trigger
+language plpgsql
+security definer set search_path = public
+as $$
+declare
+  v_unit_norm text;
+  v_job       uuid;
+  v_project   text;
+  v_cat       text;
+  v_key       text;
+begin
+  if new.doc_type <> 'SO' or new.unit_id is not null then
+    return new;
+  end if;
+
+  v_project   := nullif(trim(coalesce(new.payload->>'project','')), '');
+  v_unit_norm := lower(regexp_replace(coalesce(new.unit,''), '[^a-z0-9]', '', 'g'));
+
+  -- Reuse a unit whose code matches; otherwise create a new one. Unit codes
+  -- often carry the full address ("A-10-06, Ambience…") while the SO unit is
+  -- just the short code ("A-10-06"), so for codes of 3+ chars we match on
+  -- prefix (unit_code starts with the SO unit). Shorter codes match exactly to
+  -- avoid over-broad hits.
+  if length(v_unit_norm) >= 3 then
+    select id into v_job from public.jobs
+      where lower(regexp_replace(coalesce(unit_code,''), '[^a-z0-9]', '', 'g')) like v_unit_norm || '%'
+      order by created_at desc
+      limit 1;
+  elsif v_unit_norm <> '' then
+    select id into v_job from public.jobs
+      where lower(regexp_replace(coalesce(unit_code,''), '[^a-z0-9]', '', 'g')) = v_unit_norm
+      order by created_at desc
+      limit 1;
+  end if;
+
+  if v_job is null then
+    insert into public.jobs
+      (customer_name, phone, project, unit_code, pic, order_total, updated_by)
+    values
+      (coalesce(nullif(trim(new.customer_name), ''), 'Sales Order ' || new.number),
+       coalesce(new.customer_phone, ''),
+       coalesce(v_project, 'Ambience Pulau Gadong'),
+       coalesce(new.unit, ''),
+       coalesce(new.prepared_by, ''),
+       coalesce(new.total, 0),
+       coalesce(nullif(new.prepared_by, ''), 'System'))
+    returning id into v_job;
+
+    insert into public.job_events (job_id, type, body, author_name)
+      values (v_job, 'created',
+              'Unit created from Sales Order ' || new.number,
+              coalesce(nullif(new.prepared_by, ''), 'System'));
+  else
+    -- Existing unit: keep its order value in step and note the new SO.
+    update public.jobs
+       set order_total = coalesce(order_total, 0) + coalesce(new.total, 0),
+           updated_by  = coalesce(nullif(new.prepared_by, ''), updated_by)
+     where id = v_job;
+
+    insert into public.job_events (job_id, type, body, author_name)
+      values (v_job, 'note',
+              'Linked Sales Order ' || new.number,
+              coalesce(nullif(new.prepared_by, ''), 'System'));
+  end if;
+
+  -- One work card per distinct quoted category (skip any already on the unit).
+  foreach v_cat in array string_to_array(coalesce(new.categories, ''), ',')
+  loop
+    v_cat := trim(v_cat);
+    continue when v_cat = '';
+    v_key := public.so_work_category(v_cat);
+    if not exists (
+      select 1 from public.job_works where job_id = v_job and category = v_key
+    ) then
+      insert into public.job_works (job_id, category, title, stage, updated_by)
+        values (v_job, v_key, '', 'booked',
+                coalesce(nullif(new.prepared_by, ''), 'System'));
+    end if;
+  end loop;
+
+  update public.quotations set unit_id = v_job where id = new.id;
+
+  return new;
+exception when others then
+  -- Never let unit creation block the sales order from being saved.
+  raise warning 'tg_so_create_unit failed for %: %', new.number, sqlerrm;
+  return new;
+end;
+$$;
+
+drop trigger if exists trg_so_create_unit on public.quotations;
+create trigger trg_so_create_unit
+  after insert on public.quotations
+  for each row
+  when (new.doc_type = 'SO')
+  execute function public.tg_so_create_unit();

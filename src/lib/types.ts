@@ -150,4 +150,5 @@ export interface Quotation {
   payload: unknown
   created_by: string | null
   created_at: string
+  unit_id?: string | null
 }
