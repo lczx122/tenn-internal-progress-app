@@ -103,12 +103,30 @@ export async function sendTest(): Promise<{ ok: boolean; sent?: number; error?: 
   return (data as { ok: boolean; sent?: number; error?: string }) ?? { ok: false, error: 'No response' }
 }
 
-// Boss-only: store an announcement (shown in the in-app banner for everyone) and
-// push it to all subscribed devices. Returns how many pushes were sent.
-export async function postAnnouncement(text: string): Promise<{ ok: boolean; sent?: number; error?: string }> {
-  const { data, error } = await supabase.functions.invoke('announce', { body: { text } })
+// Boss posts an announcement. We STORE it directly in app_settings (which drives
+// the in-app banner for everyone in real time — reliable, no edge function), then
+// best-effort PUSH via the optional `announce` function. A missing/failing push
+// never blocks the banner.
+export async function postAnnouncement(
+  text: string,
+  by: string,
+): Promise<{ ok: boolean; pushed?: number; pushError?: string; error?: string }> {
+  const value = { id: String(Date.now()), text, by, at: new Date().toISOString() }
+  const { error } = await supabase
+    .from('app_settings')
+    .upsert({ key: 'announcement', value, updated_at: new Date().toISOString() })
   if (error) return { ok: false, error: error.message }
-  return (data as { ok: boolean; sent?: number; error?: string }) ?? { ok: false, error: 'No response' }
+
+  let pushed: number | undefined
+  let pushError: string | undefined
+  try {
+    const { data, error: fnErr } = await supabase.functions.invoke('announce', { body: { text } })
+    if (fnErr) pushError = fnErr.message
+    else pushed = (data as { sent?: number } | null)?.sent
+  } catch (e) {
+    pushError = (e as Error).message
+  }
+  return { ok: true, pushed, pushError }
 }
 
 export async function disablePush(): Promise<void> {

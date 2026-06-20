@@ -9,7 +9,7 @@ type Pay = { bank_name?: string; account_name?: string; account_number?: string;
 type Announcement = { id?: string; text?: string; by?: string }
 
 export default function AdminSettings() {
-  const { isAdmin, isBoss } = useAuth()
+  const { isAdmin, isBoss, displayName } = useAuth()
   const [pay, setPay] = useState<Pay>({})
   const [paySaved, setPaySaved] = useState(false)
   const [payBusy, setPayBusy] = useState(false)
@@ -52,12 +52,16 @@ export default function AdminSettings() {
     if (!text) return
     setAnnBusy(true)
     setAnnMsg('')
-    const r = await postAnnouncement(text)
+    const r = await postAnnouncement(text, displayName)
     setAnnBusy(false)
     if (r.ok) {
-      setAnn({ text, by: 'you' })
+      setAnn({ text, by: displayName })
       setDraft('')
-      setAnnMsg(`Posted ✓ — banner is live${typeof r.sent === 'number' ? ` · ${r.sent} push${r.sent === 1 ? '' : 'es'} sent` : ''}.`)
+      const push =
+        typeof r.pushed === 'number'
+          ? ` · ${r.pushed} push${r.pushed === 1 ? '' : 'es'} sent`
+          : ' · push not set up yet'
+      setAnnMsg('Posted ✓ — banner is live' + push + '.')
     } else {
       setAnnMsg('Could not post: ' + (r.error ?? 'unknown error'))
     }

@@ -1,7 +1,8 @@
-// Tenn — announcement broadcaster (Supabase Edge Function).
-// A boss posts an announcement: store it in app_settings (key 'announcement', so
-// the in-app banner shows it for everyone in real time) and push a notification
-// to every subscribed device. A { clear:true } body empties the announcement.
+// Tenn — announcement push broadcaster (Supabase Edge Function, OPTIONAL).
+// The boss client stores the announcement in app_settings itself (that's what
+// drives the in-app banner for everyone, in real time). This function is only
+// the best-effort PUSH half: a boss broadcasts the text to every subscribed
+// device. Safe to leave undeployed — the banner works without it.
 //
 // Deploy:   supabase functions deploy announce
 // Secrets:  VAPID_PUBLIC, VAPID_PRIVATE, VAPID_SUBJECT (same as send-reminders).
@@ -37,22 +38,13 @@ Deno.serve(async (req) => {
   const { data: { user } } = await supabase.auth.getUser(token)
   if (!user) return jsonRes({ ok: false, error: 'Not signed in.' }, 401)
   const { data: prof } = await supabase
-    .from('profiles').select('role, full_name').eq('id', user.id).maybeSingle()
+    .from('profiles').select('role').eq('id', user.id).maybeSingle()
   if (prof?.role !== 'boss') return jsonRes({ ok: false, error: 'Only a boss can post announcements.' }, 403)
 
-  let body: { text?: string; clear?: boolean } = {}
+  let body: { text?: string } = {}
   try { body = await req.json() } catch (_e) { /* empty */ }
-  const clear = !!body.clear
   const text = String(body.text ?? '').trim()
-  if (!clear && !text) return jsonRes({ ok: false, error: 'Announcement text is empty.' }, 400)
-
-  const value = clear
-    ? {}
-    : { id: String(Date.now()), text, by: prof?.full_name || 'Boss', at: new Date().toISOString() }
-  await supabase.from('app_settings').upsert({
-    key: 'announcement', value, updated_by: user.id, updated_at: new Date().toISOString(),
-  })
-  if (clear) return jsonRes({ ok: true, sent: 0, cleared: true })
+  if (!text) return jsonRes({ ok: false, error: 'Announcement text is empty.' }, 400)
 
   // Best-effort push to every subscribed device.
   const { data: subs } = await supabase.from('push_subscriptions').select('endpoint,p256dh,auth')
