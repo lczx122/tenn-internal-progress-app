@@ -2,11 +2,14 @@
 --  Import: Iron / Painting / Aluminium balance work (as of 31/05/26)
 -- ----------------------------------------------------------------------------
 --  Source: BALANCE IRON, PAINTING, ALUM WORK 31 MAY 26.xls (3 sheets).
---  Creates/extends Units, adds a work card per app category (Iron+Alum ->
---  Aluminium, Painting -> Painting), backfills order totals, and logs each
---  unit's deposit under Collection. Matches existing units by unit code so it
---  is SAFE TO RE-RUN (won't duplicate units, work cards, or the deposit claim).
---  Project: Ambience Pulau Gadong.
+--  Creates/extends Units (project 'Ambience Pulau Gadong'), adds a work card per
+--  app category (Iron + Aluminium -> Aluminium, Painting -> Painting; Completed
+--  where installed, else In Progress), backfills order totals, assigns each
+--  unit's PIC from the Ref initials, and logs each unit's deposit under
+--  Collection. Matches existing units by unit code -> SAFE TO RE-RUN.
+--
+--  Ref -> PIC: WCSH=Winnie, LSL=Ah Lee, KKC=Kimchi, OPL=Billy, BCY=Sharon,
+--  JL=Joey, GES=Royce, TSL=Sally, LUCAS=Lucas. CYM left unassigned.
 --
 --  Run ONCE in Supabase -> SQL Editor.
 -- ============================================================================
@@ -123,20 +126,20 @@ insert into _imp (unit_code, customer, work_cat, amount, deposit, installed, so_
   ('A-12-10','SHAHRIZAN BINTI MOHD SHARIF','Aluminium',1625,813,true,'SO2601/080','WCSH','AL (C9)'),
   ('B-11-07','LOO CHIAN','Aluminium',2080,200,false,'SO2605/025','LUCAS','AL');
 
--- normalised unit-code matcher (codes have no unique index in the schema)
--- 1) create units that don't already exist
-with u as (
-  select unit_code, max(customer) as customer, sum(amount) as total
-  from _imp group by unit_code
-)
+create temporary table _picmap (ref text primary key, pic text) on commit drop;
+insert into _picmap (ref, pic) values
+  ('WCSH','Winnie'), ('LSL','Ah Lee'), ('KKC','Kimchi'), ('OPL','Billy'),
+  ('BCY','Sharon'), ('JL','Joey'), ('GES','Royce'), ('TSL','Sally'), ('LUCAS','Lucas');
+
+-- 1) create units that don't already exist (match by normalised unit code)
+with u as (select unit_code, max(customer) as customer, sum(amount) as total from _imp group by unit_code)
 insert into public.jobs (customer_name, unit_code, project, order_total, stage, key_holder, updated_by)
 select coalesce(nullif(trim(u.customer),''), u.unit_code), u.unit_code,
        'Ambience Pulau Gadong', u.total, 'booked', 'Office', 'Import 31/05/26'
 from u
 where not exists (
   select 1 from public.jobs j
-  where lower(regexp_replace(j.unit_code,'[^a-z0-9]','','g')) = lower(regexp_replace(u.unit_code,'[^a-z0-9]','','g'))
-);
+  where lower(regexp_replace(j.unit_code,'[^a-z0-9]','','g')) = lower(regexp_replace(u.unit_code,'[^a-z0-9]','','g')));
 
 -- 2) backfill order_total on matched units that had none
 with u as (select unit_code, sum(amount) as total from _imp group by unit_code)
@@ -145,34 +148,40 @@ from u
 where lower(regexp_replace(j.unit_code,'[^a-z0-9]','','g')) = lower(regexp_replace(u.unit_code,'[^a-z0-9]','','g'))
   and coalesce(j.order_total,0) = 0;
 
--- 3) one work card per (unit, category); Completed if all that work is installed
+-- 3) assign PIC from the dominant mapped Ref (only where currently blank)
+with ranked as (
+  select i.unit_code, p.pic,
+         row_number() over (partition by i.unit_code order by count(*) desc, p.pic) as rk
+  from _imp i join _picmap p on p.ref = i.ref
+  group by i.unit_code, p.pic)
+update public.jobs j set pic = r.pic
+from ranked r
+where r.rk = 1
+  and lower(regexp_replace(j.unit_code,'[^a-z0-9]','','g')) = lower(regexp_replace(r.unit_code,'[^a-z0-9]','','g'))
+  and coalesce(j.pic,'') = '';
+
+-- 4) one work card per (unit, category); Completed if all that work is installed
 with wc as (
-  select unit_code, work_cat,
-         bool_and(installed) as all_installed,
+  select unit_code, work_cat, bool_and(installed) as all_installed,
          string_agg(distinct nullif(detail,''), ', ') as detail,
          string_agg(distinct so_no, ', ') as sos
-  from _imp group by unit_code, work_cat
-),
+  from _imp group by unit_code, work_cat),
 j as (select id, lower(regexp_replace(unit_code,'[^a-z0-9]','','g')) as nk from public.jobs)
 insert into public.job_works (job_id, category, title, stage, remarks, updated_by)
 select j.id, wc.work_cat, '',
        case when wc.all_installed then 'completed' else 'in_progress' end,
-       'Imported: ' || coalesce(wc.detail,'') || ' (' || wc.sos || ')',
-       'Import 31/05/26'
-from wc
-join j on j.nk = lower(regexp_replace(wc.unit_code,'[^a-z0-9]','','g'))
+       'Imported: ' || coalesce(wc.detail,'') || ' (' || wc.sos || ')', 'Import 31/05/26'
+from wc join j on j.nk = lower(regexp_replace(wc.unit_code,'[^a-z0-9]','','g'))
 where not exists (select 1 from public.job_works w where w.job_id = j.id and w.category = wc.work_cat);
 
--- 4) deposit per unit -> one Collection entry (idempotent by note prefix)
+-- 5) deposit per unit -> one Collection entry (idempotent by note prefix)
 with d as (
   select unit_code, sum(deposit) as dep, string_agg(distinct so_no, ', ') as sos
-  from _imp where deposit > 0 group by unit_code
-),
+  from _imp where deposit > 0 group by unit_code),
 j as (select id, lower(regexp_replace(unit_code,'[^a-z0-9]','','g')) as nk from public.jobs)
 insert into public.claims (job_id, category, amount, note, collected_on)
 select j.id, 'Booking Fee / Deposit', d.dep, 'Imported deposit (' || d.sos || ')', null
-from d
-join j on j.nk = lower(regexp_replace(d.unit_code,'[^a-z0-9]','','g'))
+from d join j on j.nk = lower(regexp_replace(d.unit_code,'[^a-z0-9]','','g'))
 where not exists (select 1 from public.claims c where c.job_id = j.id and c.note like 'Imported deposit%');
 
 commit;
