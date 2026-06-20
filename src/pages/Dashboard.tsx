@@ -14,6 +14,16 @@ import { useAutoRefresh } from '../lib/useAutoRefresh'
 const STALE_DAYS = 7
 const DAY_MS = 86_400_000
 
+// Whole days from today until a date string (null if unset/invalid).
+function daysUntil(dateStr?: string | null): number | null {
+  if (!dateStr) return null
+  const d = new Date(dateStr + 'T00:00:00')
+  if (isNaN(d.getTime())) return null
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  return Math.round((d.getTime() - today.getTime()) / DAY_MS)
+}
+
 export default function Dashboard() {
   const [jobs, setJobs] = useState<Job[]>([])
   const [works, setWorks] = useState<JobWork[]>([])
@@ -21,8 +31,10 @@ export default function Dashboard() {
   const [appts, setAppts] = useState<Appointment[]>([])
   const [claims, setClaims] = useState<Claim[]>([])
   const [loading, setLoading] = useState(true)
-  const { session } = useAuth()
+  const [scope, setScope] = useState<'mine' | 'all' | null>(null)
+  const { session, isAdmin, staffPic } = useAuth()
   const myId = session?.user.id
+  const effectiveScope: 'mine' | 'all' = scope ?? (!isAdmin && staffPic ? 'mine' : 'all')
 
   async function load() {
     const [{ data: j }, { data: w }, { data: e }, { data: ap }, { data: cl }] = await Promise.all([
@@ -68,11 +80,12 @@ export default function Dashboard() {
     }
     return jobs
       .filter((j) => !j.is_archived)
+      .filter((j) => effectiveScope === 'all' || !staffPic || j.pic === staffPic)
       .map((j) => {
         const w = byJob.get(j.id) ?? []
         return { job: j, works: w, pct: overallPercent(w.map((x) => x.stage)) }
       })
-  }, [jobs, works])
+  }, [jobs, works, effectiveScope, staffPic])
 
   const activeWorks = useMemo(
     () => active.flatMap((u) => u.works),
@@ -94,13 +107,16 @@ export default function Dashboard() {
           u.job.target_date && new Date(u.job.target_date) < startOfToday
         const ageDays = Math.floor((now - new Date(u.job.updated_at).getTime()) / DAY_MS)
         const stale = ageDays >= STALE_DAYS
-        if (!overdue && !stale) return null
+        const dueIn = daysUntil(u.job.start_date)
+        const soon = dueIn != null && dueIn >= 0 && dueIn <= 7 // confirm modifications with client
+        if (!overdue && !stale && !soon) return null
         const reasons: string[] = []
         if (overdue) reasons.push('Overdue')
+        if (soon) reasons.push(`Starts ${dueIn === 0 ? 'today' : dueIn === 1 ? 'tmrw' : dueIn + 'd'}`)
         if (stale) reasons.push(`No update ${ageDays}d`)
-        // Sort key: overdue items first, then by staleness.
-        const rank = (overdue ? 1000 : 0) + ageDays
-        return { ...u, overdue, stale, reasons, rank }
+        // Sort key: overdue first, then starting-soon, then by staleness.
+        const rank = (overdue ? 2000 : 0) + (soon ? 1000 - (dueIn ?? 0) * 10 : 0) + ageDays
+        return { ...u, overdue, stale, soon, reasons, rank }
       })
       .filter((x): x is NonNullable<typeof x> => x !== null)
       .sort((a, b) => b.rank - a.rank)
@@ -179,6 +195,24 @@ export default function Dashboard() {
 
   return (
     <Layout title="Dashboard" bottomNav onRefresh={load}>
+      {staffPic && (
+        <div className="mb-4 flex gap-2">
+          {(['mine', 'all'] as const).map((s) => (
+            <button
+              key={s}
+              onClick={() => setScope(s)}
+              className={
+                'flex-1 rounded-lg border px-2 py-2 text-sm font-medium ' +
+                (effectiveScope === s
+                  ? 'border-slate-900 bg-slate-900 text-white'
+                  : 'border-slate-300 bg-white text-slate-600 active:bg-slate-50')
+              }
+            >
+              {s === 'mine' ? 'My units' : 'All units'}
+            </button>
+          ))}
+        </div>
+      )}
       {loading ? (
         <p className="py-10 text-center text-slate-400">Loading…</p>
       ) : (

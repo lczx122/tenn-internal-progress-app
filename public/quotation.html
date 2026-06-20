@@ -499,10 +499,13 @@ const CATALOG = [
 ];
 
 const TERMS = [
-  'Earnest Deposit (RM300.00) must be paid before signing the Agreement.',
-  'Specifications, model, materials and colours must be confirmed with the Vendor within 7 working days.',
-  'The Earnest Deposit and Balance Deposit together make up 50% of the total purchase price.',
-  'Balance Purchase Price must be paid within the stipulated period. Late payment may incur 2.5% interest after a 14-day extended period.',
+  'Booking fee must be paid before signing the agreement.',
+  '50% deposit to be paid upon confirmation of work.',
+  'First design fee is included and complimentary; subsequent design changes may be charged a design modification fee of RM 100.',
+  'Any modifications must be done 7 days prior to start of work.',
+  'Any modifications done after the work is done will be charged an extra work fee.',
+  'Booking fee and deposit paid are non-refundable once work is confirmed.',
+  'Balance Payment must be paid within 7 days of work completion. Late payment may incur 10% interest per month late.',
 ];
 
 /* ============================================================
@@ -1916,7 +1919,7 @@ function buildDoc(){
   return `
     <div class="doc-head">
       <div class="co">TENN FASTENERS (MELAKA) SDN. BHD.
-        <small>200001016684 (519291-M) · A member of the Powerdrive (Melaka) Sdn. Bhd. Group<br>
+        <small>200001016684 (519291-M)<br>
         11, 11-A, Jalan PM 1, Taman Perindustrian Merdeka, Batu Berendam, 75350 Melaka.<br>
         Tel: 06-317 9645 / 317 2645 / 317 7563 · Email: tw_tenns@yahoo.com.my · tennfasteners.com</small>
       </div>
@@ -1953,7 +1956,6 @@ function buildDoc(){
     <div class="doc-tc">
       <h4>Terms &amp; Conditions</h4>
       ${TERMS.map((t,i)=>`${i+1}) ${t}`).join('<br>')}
-      <br><br>Terms of Payment: 50% deposit to confirm order · Balance payable upon completion of work.
     </div>
 
     <div class="sign">

@@ -72,6 +72,7 @@ export interface Profile {
   id: string
   full_name: string
   role: Role
+  staff_pic?: string
 }
 
 export interface CostLine {

@@ -13,6 +13,7 @@ import Schedule from './pages/Schedule'
 import AppointmentForm from './pages/AppointmentForm'
 import StaffAdmin from './pages/StaffAdmin'
 import ProjectsAdmin from './pages/ProjectsAdmin'
+import AdminSettings from './pages/AdminSettings'
 import Claims from './pages/Claims'
 import CostingList from './pages/CostingList'
 import CostingForm from './pages/CostingForm'
@@ -65,6 +66,7 @@ export default function App() {
       <Route path="/appointment/:id" element={<AppointmentForm />} />
       <Route path="/staff" element={<StaffAdmin />} />
       <Route path="/projects" element={<ProjectsAdmin />} />
+      <Route path="/settings" element={<AdminSettings />} />
       <Route path="/costing" element={<CostingList />} />
       <Route path="/costing/new" element={<CostingForm />} />
       <Route path="/costing/:id" element={<CostingForm />} />

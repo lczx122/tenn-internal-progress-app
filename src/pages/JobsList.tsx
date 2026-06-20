@@ -18,6 +18,16 @@ function loadSet(key: string): Set<string> {
   }
 }
 
+// Whole days from today until a unit's work start_date (null if unset/invalid).
+function daysUntil(dateStr?: string | null): number | null {
+  if (!dateStr) return null
+  const start = new Date(dateStr + 'T00:00:00')
+  if (isNaN(start.getTime())) return null
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  return Math.round((start.getTime() - today.getTime()) / 86400000)
+}
+
 export default function JobsList() {
   const [jobs, setJobs] = useState<Job[]>([])
   const [works, setWorks] = useState<JobWork[]>([])
@@ -33,8 +43,11 @@ export default function JobsList() {
   const [sortBy, setSortBy] = useState<'updated' | 'name' | 'progress'>('updated')
   const [collapsed, setCollapsed] = useState<Set<string>>(() => loadSet('tenn_collapsed_projects'))
   const [pinned, setPinned] = useState<Set<string>>(() => loadSet('tenn_pinned_projects'))
-  const { isAdmin } = useAuth()
+  // null = use the role default (staff with a PIC start on "mine"; admins on "all").
+  const [scope, setScope] = useState<'mine' | 'all' | null>(null)
+  const { isAdmin, staffPic } = useAuth()
   const navigate = useNavigate()
+  const effectiveScope: 'mine' | 'all' = scope ?? (!isAdmin && staffPic ? 'mine' : 'all')
 
   function toggleIn(
     key: string,
@@ -103,6 +116,7 @@ export default function JobsList() {
     const q = query.trim().toLowerCase()
     return jobs
       .filter((j) => j.is_archived === showArchived)
+      .filter((j) => effectiveScope === 'all' || !staffPic || j.pic === staffPic)
       .filter((j) => !projectFilter || j.project === projectFilter)
       .filter(
         (j) =>
@@ -129,7 +143,7 @@ export default function JobsList() {
             (!stageFilter || x.stage === stageFilter)
         )
       })
-  }, [jobs, query, showArchived, projectFilter, worksByJob, catFilter, stageFilter])
+  }, [jobs, query, showArchived, projectFilter, worksByJob, catFilter, stageFilter, effectiveScope, staffPic])
 
   // Group the visible units under their project, sort within each group, then
   // float pinned projects to the top.
@@ -170,6 +184,30 @@ export default function JobsList() {
           + New
         </button>
       </div>
+
+      {staffPic && (
+        <div className="mb-3 flex gap-2">
+          {(['mine', 'all'] as const).map((s) => (
+            <button
+              key={s}
+              onClick={() => setScope(s)}
+              className={
+                'flex-1 rounded-lg border px-2 py-2 text-sm font-medium ' +
+                (effectiveScope === s
+                  ? 'border-slate-900 bg-slate-900 text-white'
+                  : 'border-slate-300 bg-white text-slate-600 active:bg-slate-50')
+              }
+            >
+              {s === 'mine' ? 'My units' : 'All units'}
+            </button>
+          ))}
+        </div>
+      )}
+      {!isAdmin && !staffPic && (
+        <p className="mb-3 rounded-lg bg-slate-100 px-3 py-2 text-xs text-slate-500">
+          Showing all units. Ask an admin to set your PIC name so you can see just yours.
+        </p>
+      )}
 
       {projects.length > 1 && (
         <div className="mb-3">
@@ -291,6 +329,8 @@ export default function JobsList() {
                 {g.items.map((job) => {
                   const w = worksByJob.get(job.id) ?? []
                   const pct = overallPercent(w.map((x) => x.stage))
+                  const dueIn = daysUntil(job.start_date)
+                  const showNudge = dueIn != null && dueIn >= 0 && dueIn <= 7 && pct < 100
                   return (
                     <li key={job.id}>
                       <Link
@@ -312,6 +352,12 @@ export default function JobsList() {
                             🔑 {job.key_holder}
                           </span>
                         </div>
+
+                        {showNudge && (
+                          <div className="mb-2 rounded-md bg-amber-50 px-2 py-1 text-[11px] font-medium text-amber-800">
+                            ⚠️ Work starts {dueIn === 0 ? 'today' : dueIn === 1 ? 'tomorrow' : `in ${dueIn} days`} — confirm any modifications with the client
+                          </div>
+                        )}
 
                         {/* Per-category chips, each dot coloured by its own stage. */}
                         {w.length > 0 && (

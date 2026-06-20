@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { BottomNav } from './BottomNav'
 import { Sidebar } from './Sidebar'
+import { AnnouncementBanner } from './AnnouncementBanner'
+import { PaymentButton } from './PaymentButton'
 import { usePullToRefresh, PULL_THRESHOLD } from '../lib/usePullToRefresh'
 
 // Content-width helper: phones use a comfortable single column; tablet/desktop
@@ -72,6 +74,7 @@ export function Layout({
       <Sidebar />
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         <AppHeader title={title} back={back} wide={wide} />
+        <AnnouncementBanner />
         <main ref={mainRef} className="relative flex-1 overflow-y-auto overscroll-y-contain">
           {onRefresh && (
             <div
@@ -92,6 +95,7 @@ export function Layout({
         </main>
         {bottomNav && <BottomNav />}
       </div>
+      <PaymentButton />
     </div>
   )
 }

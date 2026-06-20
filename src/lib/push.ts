@@ -103,6 +103,14 @@ export async function sendTest(): Promise<{ ok: boolean; sent?: number; error?: 
   return (data as { ok: boolean; sent?: number; error?: string }) ?? { ok: false, error: 'No response' }
 }
 
+// Boss-only: store an announcement (shown in the in-app banner for everyone) and
+// push it to all subscribed devices. Returns how many pushes were sent.
+export async function postAnnouncement(text: string): Promise<{ ok: boolean; sent?: number; error?: string }> {
+  const { data, error } = await supabase.functions.invoke('announce', { body: { text } })
+  if (error) return { ok: false, error: error.message }
+  return (data as { ok: boolean; sent?: number; error?: string }) ?? { ok: false, error: 'No response' }
+}
+
 export async function disablePush(): Promise<void> {
   const me = await uid()
   await supabase.from('notification_prefs').upsert({ user_id: me, enabled: false }, { onConflict: 'user_id' })

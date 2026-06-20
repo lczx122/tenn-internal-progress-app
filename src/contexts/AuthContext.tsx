@@ -11,6 +11,7 @@ import { supabase } from '../lib/supabase'
 interface AuthState {
   session: Session | null
   displayName: string
+  staffPic: string
   isAdmin: boolean
   isBoss: boolean
   isGuest: boolean
@@ -25,6 +26,7 @@ const AuthContext = createContext<AuthState | undefined>(undefined)
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
   const [displayName, setDisplayName] = useState('')
+  const [staffPic, setStaffPic] = useState('')
   const [isAdmin, setIsAdmin] = useState(false)
   const [isBoss, setIsBoss] = useState(false)
   const [isGuest, setIsGuest] = useState(false)
@@ -52,6 +54,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       : null
     if (!session) {
       setDisplayName('')
+      setStaffPic('')
       setIsAdmin(false)
       setIsBoss(false)
       setIsGuest(false)
@@ -63,7 +66,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setRoleReady(false)
     supabase
       .from('profiles')
-      .select('full_name, role')
+      .select('*')
       .eq('id', session.user.id)
       .single()
       .then(({ data }) => {
@@ -71,6 +74,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setDisplayName(
           data?.full_name ?? session.user.email?.split('@')[0] ?? 'Team member'
         )
+        setStaffPic((data as { staff_pic?: string } | null)?.staff_pic ?? '')
         const boss = data?.role === 'boss'
         const admin = data?.role === 'admin' || boss // boss inherits admin powers
         const guest = data?.role === 'guest'
@@ -99,7 +103,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ session, displayName, isAdmin, isBoss, isGuest, roleReady, loading, signIn, signOut }}
+      value={{ session, displayName, staffPic, isAdmin, isBoss, isGuest, roleReady, loading, signIn, signOut }}
     >
       {children}
     </AuthContext.Provider>

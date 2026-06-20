@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import type { Profile, Role } from '../lib/types'
 import { Layout } from '../components/Layout'
+import { STAFF_PICS } from '../lib/units'
 import { useAutoRefresh } from '../lib/useAutoRefresh'
 
 const ROLE_STYLE: Record<Role, string> = {
@@ -23,7 +24,7 @@ export default function StaffAdmin() {
   async function load() {
     const { data } = await supabase
       .from('profiles')
-      .select('id, full_name, role')
+      .select('*')
       .order('full_name')
     setPeople((data as Profile[]) ?? [])
     setLoading(false)
@@ -40,6 +41,15 @@ export default function StaffAdmin() {
     setError(null)
     setBusyId(p.id)
     const { error } = await supabase.rpc('set_role', { target: p.id, new_role: role })
+    if (error) setError(error.message)
+    await load()
+    setBusyId(null)
+  }
+
+  async function setPic(p: Profile, pic: string) {
+    setError(null)
+    setBusyId(p.id)
+    const { error } = await supabase.rpc('set_staff_pic', { target: p.id, pic })
     if (error) setError(error.message)
     await load()
     setBusyId(null)
@@ -75,13 +85,22 @@ export default function StaffAdmin() {
         also delete records, archive units, and edit prices. Add new staff in your Supabase dashboard
         (Authentication → Users); they appear here automatically.
       </p>
-      <Link
-        to="/projects"
-        className="mb-3 flex items-center justify-between rounded-xl bg-white p-3 shadow-sm active:bg-slate-50"
-      >
-        <span className="text-sm font-medium text-slate-700">📁 Manage projects</span>
-        <span className="text-xs font-medium text-slate-400">Add / rename / remove ›</span>
-      </Link>
+      <div className="mb-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+        <Link
+          to="/projects"
+          className="flex items-center justify-between rounded-xl bg-white p-3 shadow-sm active:bg-slate-50"
+        >
+          <span className="text-sm font-medium text-slate-700">📁 Manage projects</span>
+          <span className="text-xs font-medium text-slate-400">Add / rename ›</span>
+        </Link>
+        <Link
+          to="/settings"
+          className="flex items-center justify-between rounded-xl bg-white p-3 shadow-sm active:bg-slate-50"
+        >
+          <span className="text-sm font-medium text-slate-700">⚙️ Payment & announcements</span>
+          <span className="text-xs font-medium text-slate-400">Settings ›</span>
+        </Link>
+      </div>
 
       {error && <p className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
 
@@ -109,6 +128,23 @@ export default function StaffAdmin() {
                       Rename
                     </button>
                   </div>
+                  <label className="mt-1.5 flex items-center gap-1.5">
+                    <span className="text-[10px] font-medium uppercase tracking-wide text-slate-400">PIC</span>
+                    <select
+                      value={p.staff_pic ?? ''}
+                      onChange={(e) => setPic(p, e.target.value)}
+                      disabled={busyId === p.id}
+                      className="rounded border border-slate-300 bg-white px-1.5 py-1 text-xs text-slate-700 disabled:opacity-50"
+                      title="Which units this person sees as 'mine'"
+                    >
+                      <option value="">— none —</option>
+                      {STAFF_PICS.map((n) => (
+                        <option key={n} value={n}>
+                          {n}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
                 </div>
                 <select
                   value={p.role}
