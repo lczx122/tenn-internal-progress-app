@@ -1,18 +1,26 @@
 # Tenn Renovation
 
-A simple, mobile-first web app to replace your renovation-progress Excel file.
-Your team signs in on their phones and sees every customer's job, live —
-progress per work category, who has the keys, dates, and a running activity log
-showing **who** updated **what** and **when**.
+**Tenn's renovation business operating system — one place to run a job from
+quote to completion to collection, live on everyone's phone.** It started as a
+mobile-first replacement for the renovation-progress Excel file and has grown
+into a single, real-time home for the whole job: quoting, the on-site work, the
+schedule, and the money.
 
-- 🔐 Email + password login (admin creates accounts; add as many staff as you like)
-- 📊 Fixed renovation stages with a progress bar per job
-- 🔑 Key-holder tracking with a logged handover history
-- 🗒️ Per-job activity timeline (stage changes, key handovers, notes — all stamped with the user)
+- 🧾 Quotations & sales orders — build, share as a PDF, and convert a quote to a
+  sales order that **auto-creates the job and its work**
+- 📊 Live per-category job progress with a progress bar
+- 💰 Collection tracking per project, plus boss-only costing/margins
+- 🗓️ Schedule with appointments and reminders
+- 🔑 Key-holder tracking and a who/what/when activity log on every job
 - ⚡ Real-time: every change appears on everyone's phone within a second, no refresh
 
 Built with React + Vite + TypeScript and [Supabase](https://supabase.com)
 (database, login, real-time — all on the free tier).
+
+> **Direction & docs:** the product north star is in
+> [`docs/DIRECTION.md`](docs/DIRECTION.md), what's next is in
+> [`docs/ROADMAP.md`](docs/ROADMAP.md), and build conventions for contributors
+> (and AI assistants) are in [`CLAUDE.md`](CLAUDE.md).
 
 ---
 
