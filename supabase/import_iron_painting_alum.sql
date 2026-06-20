@@ -9,7 +9,7 @@
 --  Collection. Matches existing units by unit code -> SAFE TO RE-RUN.
 --
 --  Ref -> PIC: WCSH=Winnie, LSL=Ah Lee, KKC=Kimchi, OPL=Billy, BCY=Sharon,
---  JL=Joey, GES=Royce, TSL=Sally, LUCAS=Lucas. CYM left unassigned.
+--  JL=Joey, GES=Royce, TSL=Sally, LUCAS=Lucas, CYM=Angel.
 --
 --  Run ONCE in Supabase -> SQL Editor.
 -- ============================================================================
@@ -129,7 +129,8 @@ insert into _imp (unit_code, customer, work_cat, amount, deposit, installed, so_
 create temporary table _picmap (ref text primary key, pic text) on commit drop;
 insert into _picmap (ref, pic) values
   ('WCSH','Winnie'), ('LSL','Ah Lee'), ('KKC','Kimchi'), ('OPL','Billy'),
-  ('BCY','Sharon'), ('JL','Joey'), ('GES','Royce'), ('TSL','Sally'), ('LUCAS','Lucas');
+  ('BCY','Sharon'), ('JL','Joey'), ('GES','Royce'), ('TSL','Sally'),
+  ('LUCAS','Lucas'), ('CYM','Angel');
 
 -- 1) create units that don't already exist (match by normalised unit code)
 with u as (select unit_code, max(customer) as customer, sum(amount) as total from _imp group by unit_code)

@@ -25,6 +25,7 @@ export const STAFF_PICS = [
   'Joey',
   'Ah Lee',
   'Sharon',
+  'Angel',
   'Melissa',
   'CAM',
 ] as const
