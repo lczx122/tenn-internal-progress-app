@@ -6,6 +6,8 @@ import type { Appointment } from '../lib/types'
 import { Layout } from '../components/Layout'
 import { NotificationSettings } from '../components/NotificationSettings'
 import { useAutoRefresh } from '../lib/useAutoRefresh'
+import { cacheGet, cacheSet } from '../lib/pageCache'
+import { progressStart, progressDone } from '../lib/progress'
 import {
   APPT_TYPES,
   getApptType,
@@ -19,8 +21,9 @@ import {
 type Mode = 'agenda' | 'calendar'
 
 export default function Schedule() {
-  const [appts, setAppts] = useState<Appointment[]>([])
-  const [loading, setLoading] = useState(true)
+  const c0 = cacheGet<Appointment[]>('schedule')
+  const [appts, setAppts] = useState<Appointment[]>(c0 ?? [])
+  const [loading, setLoading] = useState(!c0)
   const [mode, setMode] = useState<Mode>('agenda')
   const [query, setQuery] = useState('')
   const [typeFilter, setTypeFilter] = useState('')
@@ -34,12 +37,19 @@ export default function Schedule() {
   const navigate = useNavigate()
 
   async function load() {
-    const { data } = await supabase
-      .from('appointments')
-      .select('*')
-      .order('starts_at', { ascending: true })
-    setAppts((data as Appointment[]) ?? [])
-    setLoading(false)
+    progressStart()
+    try {
+      const { data } = await supabase
+        .from('appointments')
+        .select('*')
+        .order('starts_at', { ascending: true })
+      const next = (data as Appointment[]) ?? []
+      setAppts(next)
+      cacheSet('schedule', next)
+      setLoading(false)
+    } finally {
+      progressDone()
+    }
   }
 
   useEffect(() => {

@@ -4,6 +4,7 @@ import { BrowserRouter } from 'react-router-dom'
 import App from './App'
 import { AuthProvider } from './contexts/AuthContext'
 import FieldEditor from './components/FieldEditor'
+import { TopProgressBar } from './components/TopProgressBar'
 import './index.css'
 
 // iOS home-screen (standalone) apps launch with a stale layout viewport:
@@ -40,6 +41,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
       <AuthProvider>
         <App />
         <FieldEditor />
+        <TopProgressBar />
       </AuthProvider>
     </BrowserRouter>
   </React.StrictMode>

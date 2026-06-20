@@ -10,6 +10,16 @@ import { getApptType, startOfDay, addDays, dayLabel, timeLabel } from '../lib/ap
 import { relativeTime, formatDateTime } from '../lib/format'
 import { collectedTotal, money } from '../lib/claims'
 import { useAutoRefresh } from '../lib/useAutoRefresh'
+import { cacheGet, cacheSet } from '../lib/pageCache'
+import { progressStart, progressDone } from '../lib/progress'
+
+type DashCache = {
+  jobs: Job[]
+  works: JobWork[]
+  events: JobEvent[]
+  appts: Appointment[]
+  claims: Claim[]
+}
 
 const STALE_DAYS = 7
 const DAY_MS = 86_400_000
@@ -25,31 +35,45 @@ function daysUntil(dateStr?: string | null): number | null {
 }
 
 export default function Dashboard() {
-  const [jobs, setJobs] = useState<Job[]>([])
-  const [works, setWorks] = useState<JobWork[]>([])
-  const [events, setEvents] = useState<JobEvent[]>([])
-  const [appts, setAppts] = useState<Appointment[]>([])
-  const [claims, setClaims] = useState<Claim[]>([])
-  const [loading, setLoading] = useState(true)
+  const c0 = cacheGet<DashCache>('dashboard')
+  const [jobs, setJobs] = useState<Job[]>(c0?.jobs ?? [])
+  const [works, setWorks] = useState<JobWork[]>(c0?.works ?? [])
+  const [events, setEvents] = useState<JobEvent[]>(c0?.events ?? [])
+  const [appts, setAppts] = useState<Appointment[]>(c0?.appts ?? [])
+  const [claims, setClaims] = useState<Claim[]>(c0?.claims ?? [])
+  const [loading, setLoading] = useState(!c0)
   const [scope, setScope] = useState<'mine' | 'all' | null>(null)
   const { session, isAdmin, staffPic } = useAuth()
   const myId = session?.user.id
   const effectiveScope: 'mine' | 'all' = scope ?? (!isAdmin && staffPic ? 'mine' : 'all')
 
   async function load() {
-    const [{ data: j }, { data: w }, { data: e }, { data: ap }, { data: cl }] = await Promise.all([
-      supabase.from('jobs').select('*').order('updated_at', { ascending: false }),
-      supabase.from('job_works').select('*'),
-      supabase.from('job_events').select('*').order('created_at', { ascending: false }).limit(20),
-      supabase.from('appointments').select('*').eq('status', 'scheduled').order('starts_at'),
-      supabase.from('claims').select('*'),
-    ])
-    setJobs((j as Job[]) ?? [])
-    setWorks((w as JobWork[]) ?? [])
-    setEvents((e as JobEvent[]) ?? [])
-    setAppts((ap as Appointment[]) ?? [])
-    setClaims((cl as Claim[]) ?? [])
-    setLoading(false)
+    progressStart()
+    try {
+      const [{ data: j }, { data: w }, { data: e }, { data: ap }, { data: cl }] = await Promise.all([
+        supabase.from('jobs').select('*').order('updated_at', { ascending: false }),
+        supabase.from('job_works').select('*'),
+        supabase.from('job_events').select('*').order('created_at', { ascending: false }).limit(20),
+        supabase.from('appointments').select('*').eq('status', 'scheduled').order('starts_at'),
+        supabase.from('claims').select('*'),
+      ])
+      const next: DashCache = {
+        jobs: (j as Job[]) ?? [],
+        works: (w as JobWork[]) ?? [],
+        events: (e as JobEvent[]) ?? [],
+        appts: (ap as Appointment[]) ?? [],
+        claims: (cl as Claim[]) ?? [],
+      }
+      setJobs(next.jobs)
+      setWorks(next.works)
+      setEvents(next.events)
+      setAppts(next.appts)
+      setClaims(next.claims)
+      cacheSet('dashboard', next)
+      setLoading(false)
+    } finally {
+      progressDone()
+    }
   }
 
   useEffect(() => {

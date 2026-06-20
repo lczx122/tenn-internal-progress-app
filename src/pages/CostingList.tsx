@@ -7,6 +7,8 @@ import { Layout } from '../components/Layout'
 import { FinanceToggle } from '../components/FinanceToggle'
 import { overallPercent } from '../lib/stages'
 import { useAutoRefresh } from '../lib/useAutoRefresh'
+import { cacheGet, cacheSet } from '../lib/pageCache'
+import { progressStart, progressDone } from '../lib/progress'
 import {
   calcCosting,
   categoryLabel,
@@ -39,9 +41,10 @@ function costVal(r: Costing, label: string): number {
 
 export default function CostingList() {
   const { isBoss } = useAuth()
-  const [rows, setRows] = useState<Costing[]>([])
+  const c0 = cacheGet<Costing[]>('costing')
+  const [rows, setRows] = useState<Costing[]>(c0 ?? [])
   const [jobProg, setJobProg] = useState<Map<string, UnitProgress>>(new Map())
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(!c0)
   const [syncing, setSyncing] = useState(false)
   const [syncMsg, setSyncMsg] = useState('')
   const [query, setQuery] = useState('')
@@ -60,13 +63,20 @@ export default function CostingList() {
     // Secondary sort on id: imported rows share one created_at, and without a
     // tiebreaker Postgres returns them in arbitrary (changing) order — rows
     // would visibly rearrange after every edit-triggered reload.
-    const { data } = await supabase
-      .from('costings')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .order('id', { ascending: true })
-    setRows((data as Costing[]) ?? [])
-    setLoading(false)
+    progressStart()
+    try {
+      const { data } = await supabase
+        .from('costings')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .order('id', { ascending: true })
+      const next = (data as Costing[]) ?? []
+      setRows(next)
+      cacheSet('costing', next)
+      setLoading(false)
+    } finally {
+      progressDone()
+    }
   }
 
   // Build the live progress map from units (work cards) so linked costings

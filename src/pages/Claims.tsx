@@ -7,23 +7,34 @@ import { CLAIM_CATEGORIES } from '../lib/units'
 import { money, sumByCategory } from '../lib/claims'
 import { useAutoRefresh } from '../lib/useAutoRefresh'
 import { FinanceToggle } from '../components/FinanceToggle'
+import { cacheGet, cacheSet } from '../lib/pageCache'
+import { progressStart, progressDone } from '../lib/progress'
 
 export default function Claims() {
-  const [jobs, setJobs] = useState<Job[]>([])
-  const [claims, setClaims] = useState<Claim[]>([])
-  const [loading, setLoading] = useState(true)
+  const c0 = cacheGet<{ jobs: Job[]; claims: Claim[] }>('collection')
+  const [jobs, setJobs] = useState<Job[]>(c0?.jobs ?? [])
+  const [claims, setClaims] = useState<Claim[]>(c0?.claims ?? [])
+  const [loading, setLoading] = useState(!c0)
   const [query, setQuery] = useState('')
   const [project, setProject] = useState('')
   const navigate = useNavigate()
 
   async function load() {
-    const [{ data: j }, { data: c }] = await Promise.all([
-      supabase.from('jobs').select('*').eq('is_archived', false).order('project'),
-      supabase.from('claims').select('*'),
-    ])
-    setJobs((j as Job[]) ?? [])
-    setClaims((c as Claim[]) ?? [])
-    setLoading(false)
+    progressStart()
+    try {
+      const [{ data: j }, { data: c }] = await Promise.all([
+        supabase.from('jobs').select('*').eq('is_archived', false).order('project'),
+        supabase.from('claims').select('*'),
+      ])
+      const nj = (j as Job[]) ?? []
+      const ncl = (c as Claim[]) ?? []
+      setJobs(nj)
+      setClaims(ncl)
+      cacheSet('collection', { jobs: nj, claims: ncl })
+      setLoading(false)
+    } finally {
+      progressDone()
+    }
   }
 
   useEffect(() => {

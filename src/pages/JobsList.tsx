@@ -9,6 +9,8 @@ import { getStage, overallPercent, STAGES } from '../lib/stages'
 import { getCategory, CATEGORIES } from '../lib/categories'
 import { relativeTime } from '../lib/format'
 import { useAutoRefresh } from '../lib/useAutoRefresh'
+import { cacheGet, cacheSet } from '../lib/pageCache'
+import { progressStart, progressDone } from '../lib/progress'
 
 function loadSet(key: string): Set<string> {
   try {
@@ -29,9 +31,10 @@ function daysUntil(dateStr?: string | null): number | null {
 }
 
 export default function JobsList() {
-  const [jobs, setJobs] = useState<Job[]>([])
-  const [works, setWorks] = useState<JobWork[]>([])
-  const [loading, setLoading] = useState(true)
+  const c0 = cacheGet<{ jobs: Job[]; works: JobWork[] }>('units')
+  const [jobs, setJobs] = useState<Job[]>(c0?.jobs ?? [])
+  const [works, setWorks] = useState<JobWork[]>(c0?.works ?? [])
+  const [loading, setLoading] = useState(!c0)
   // Filters can be seeded from the URL (e.g. the dashboard links to
   // /units?stage=installing, /units?cat=Aluminium, or /units?q=Ahmad).
   const [searchParams] = useSearchParams()
@@ -69,13 +72,21 @@ export default function JobsList() {
   const togglePin = (p: string) => toggleIn(p, setPinned, 'tenn_pinned_projects')
 
   async function load() {
-    const [{ data: j }, { data: w }] = await Promise.all([
-      supabase.from('jobs').select('*').order('updated_at', { ascending: false }),
-      supabase.from('job_works').select('*'),
-    ])
-    setJobs((j as Job[]) ?? [])
-    setWorks((w as JobWork[]) ?? [])
-    setLoading(false)
+    progressStart()
+    try {
+      const [{ data: j }, { data: w }] = await Promise.all([
+        supabase.from('jobs').select('*').order('updated_at', { ascending: false }),
+        supabase.from('job_works').select('*'),
+      ])
+      const nj = (j as Job[]) ?? []
+      const nw = (w as JobWork[]) ?? []
+      setJobs(nj)
+      setWorks(nw)
+      cacheSet('units', { jobs: nj, works: nw })
+      setLoading(false)
+    } finally {
+      progressDone()
+    }
   }
 
   useEffect(() => {

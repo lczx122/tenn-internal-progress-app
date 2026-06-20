@@ -6,6 +6,8 @@ import type { DocType, Quotation } from '../lib/types'
 import { Layout } from '../components/Layout'
 import { relativeTime } from '../lib/format'
 import { useAutoRefresh } from '../lib/useAutoRefresh'
+import { cacheGet, cacheSet } from '../lib/pageCache'
+import { progressStart, progressDone } from '../lib/progress'
 
 const money = (n: number) =>
   'RM ' + n.toLocaleString('en-MY', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
@@ -19,8 +21,9 @@ const FILTERS: { key: Filter; label: string }[] = [
 ]
 
 export default function QuotesRegister() {
-  const [rows, setRows] = useState<Quotation[]>([])
-  const [loading, setLoading] = useState(true)
+  const c0 = cacheGet<Quotation[]>('quotes')
+  const [rows, setRows] = useState<Quotation[]>(c0 ?? [])
+  const [loading, setLoading] = useState(!c0)
   const [query, setQuery] = useState('')
   const [filter, setFilter] = useState<Filter>('all')
   const { isAdmin, session } = useAuth()
@@ -33,12 +36,19 @@ export default function QuotesRegister() {
   }
 
   async function load() {
-    const { data } = await supabase
-      .from('quotations')
-      .select('*')
-      .order('created_at', { ascending: false })
-    setRows((data as Quotation[]) ?? [])
-    setLoading(false)
+    progressStart()
+    try {
+      const { data } = await supabase
+        .from('quotations')
+        .select('*')
+        .order('created_at', { ascending: false })
+      const next = (data as Quotation[]) ?? []
+      setRows(next)
+      cacheSet('quotes', next)
+      setLoading(false)
+    } finally {
+      progressDone()
+    }
   }
 
   useEffect(() => {
