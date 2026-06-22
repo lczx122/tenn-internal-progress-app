@@ -24,7 +24,7 @@ const emptyForm = {
   unit_code: '',
   project: '',
   house_types: [] as string[],
-  pic: '',
+  pics: [] as string[],
   key_holder_type: 'Office' as KeyHolderType,
   key_holder_detail: '',
   start_date: '',
@@ -58,7 +58,7 @@ export default function NewJob() {
           setForm((f) => ({
             ...f,
             project: f.project || list[0] || DEFAULT_PROJECT,
-            pic: f.pic || defaultPic(displayName),
+            pics: f.pics.length ? f.pics : defaultPic(displayName) ? [defaultPic(displayName)] : [],
           }))
         }
       })
@@ -92,7 +92,7 @@ export default function NewJob() {
           unit_code: j.unit_code || j.address || '',
           project: j.project ?? '',
           house_types: j.house_types ?? [],
-          pic: j.pic ?? '',
+          pics: j.pics?.length ? j.pics : j.pic ? [j.pic] : [],
           key_holder_type: type,
           key_holder_detail: detail,
           start_date: j.start_date ?? '',
@@ -115,6 +115,13 @@ export default function NewJob() {
     }))
   }
 
+  function togglePic(p: string) {
+    setForm((f) => ({
+      ...f,
+      pics: f.pics.includes(p) ? f.pics.filter((x) => x !== p) : [...f.pics, p],
+    }))
+  }
+
   async function onSubmit(e: FormEvent) {
     e.preventDefault()
     if (!form.customer_name.trim()) {
@@ -124,7 +131,7 @@ export default function NewJob() {
     setBusy(true)
     setError(null)
 
-    const key_holder = keyHolderLabel(form.key_holder_type, form.key_holder_detail, form.pic)
+    const key_holder = keyHolderLabel(form.key_holder_type, form.key_holder_detail, form.pics[0] ?? '')
     const record = {
       customer_name: form.customer_name.trim(),
       phone: form.phone.trim(),
@@ -133,7 +140,8 @@ export default function NewJob() {
       unit_code: form.unit_code.trim(),
       project: form.project.trim() || projects[0] || DEFAULT_PROJECT,
       house_types: form.house_types,
-      pic: form.pic.trim(),
+      pics: form.pics,
+      pic: form.pics[0] ?? '',
       key_holder_type: form.key_holder_type,
       key_holder,
       start_date: form.start_date || null,
@@ -333,19 +341,28 @@ export default function NewJob() {
         <div className={cardCls}>
           <h2 className={sectionTitle}>Assignment</h2>
           <div>
-            <label className={labelCls}>Person in charge (PIC)</label>
-            <select
-              className={field}
-              value={form.pic}
-              onChange={(e) => set('pic', e.target.value)}
-            >
-              <option value="">Select…</option>
-              {STAFF_PICS.map((p) => (
-                <option key={p} value={p}>
-                  {p}
-                </option>
-              ))}
-            </select>
+            <label className={labelCls}>Person(s) in charge (PIC)</label>
+            <div className="flex flex-wrap gap-2">
+              {STAFF_PICS.map((p) => {
+                const on = form.pics.includes(p)
+                return (
+                  <button
+                    key={p}
+                    type="button"
+                    onClick={() => togglePic(p)}
+                    className={
+                      'rounded-full border px-3 py-1.5 text-sm font-medium ' +
+                      (on
+                        ? 'border-slate-900 bg-slate-900 text-white'
+                        : 'border-slate-300 bg-white text-slate-600 active:bg-slate-50')
+                    }
+                  >
+                    {on ? '✓ ' : ''}
+                    {p}
+                  </button>
+                )
+              })}
+            </div>
           </div>
           <div>
             <label className={labelCls}>Who has the keys?</label>

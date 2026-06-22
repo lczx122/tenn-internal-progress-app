@@ -57,7 +57,6 @@ export default function App() {
       <Route path="/" element={<Dashboard />} />
       <Route path="/units" element={<JobsList />} />
       <Route path="/units/bulk" element={<UnitsBulk />} />
-      <Route path="/new" element={<NewJob />} />
       <Route path="/claims" element={<Claims />} />
       <Route path="/quote" element={<Quotation />} />
       <Route path="/quotes" element={<QuotesRegister />} />

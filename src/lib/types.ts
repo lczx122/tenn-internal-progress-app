@@ -18,6 +18,7 @@ export interface Job {
   owner_relationship: string
   house_types: string[]
   pic: string
+  pics: string[]
   key_holder_type: string
   order_total: number
 }

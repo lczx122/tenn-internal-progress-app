@@ -370,6 +370,9 @@
           </label>
           <label class="fld">Date <input id="c_date" type="date"></label>
         </div>
+        <label class="fld" style="margin-top:14px">Person(s) In Charge — assigned to the unit on Sales Order
+          <div id="c_pics" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px"></div>
+        </label>
         <label class="fld" style="margin-top:14px">Remarks <textarea id="c_remarks" placeholder="Colour selection, special notes, etc."></textarea></label>
       </div>
     </div>
@@ -389,7 +392,7 @@
         <div class="sum-line"><span>Total Package (RM)</span><span id="t_sub" class="it-amt">0.00</span></div>
         <div class="sum-line" id="t_rebate_line" hidden><span class="dim" style="font-size:13px">Less Rebates (RM)</span><span id="t_rebate" class="it-amt">0.00</span></div>
         <div class="adj"><span class="dim" style="font-size:13px">Less Deposit (RM)</span><input id="t_dep" type="number" min="0" step="0.01" value="0"></div>
-        <div class="adj"><span class="dim" style="font-size:13px">Less Discount (RM)</span><input id="t_disc" type="number" min="0" step="0.01" value="0"></div>
+        <div class="adj"><span class="dim" style="font-size:13px">Less Discount (auto · package)</span><input id="t_disc" type="number" min="0" step="0.01" value="0" disabled></div>
         <div class="sum-line" style="margin-top:8px"><span>Total Balance</span><span id="t_bal" class="grand">RM 0.00</span></div>
       </div>
       <div class="btns">
@@ -498,15 +501,37 @@ const CATALOG = [
   },
 ];
 
-const TERMS = [
-  'Booking fee must be paid before signing the agreement.',
-  '50% deposit to be paid upon confirmation of work.',
-  'First design fee is included and complimentary; subsequent design changes may be charged a design modification fee of RM 100.',
-  'Any modifications must be done 7 days prior to start of work.',
-  'Any modifications done after the work is done will be charged an extra work fee.',
-  'Booking fee and deposit paid are non-refundable once work is confirmed.',
-  'Balance Payment must be paid within 7 days of work completion. Late payment may incur 10% interest per month late.',
-];
+// Person-in-charge options. Mirror of STAFF_PICS in src/lib/units.ts — this file
+// is standalone (no bundler) so the list is duplicated here. Keep in sync.
+const STAFF_PICS = ['Lucas','Royce','Kimchi','Sally','Winnie','Billy','Joey','Ah Lee','Sharon','Angel','Melissa','CAM'];
+
+// Auto-applied, locked discount per Cabinet Package, keyed by package option id
+// (r2s/r2p/r3s/r3p). A package selection drives the "Less Discount" field; no
+// package = no discount allowed. TODO: fill in the real figures (currently 0).
+const PACKAGE_DISCOUNT = { r2s:0, r2p:0, r3s:0, r3p:0 };
+
+// Terms & Conditions: a General set (always shown) plus per-work-category sets
+// shown only when that category is part of the quote. Category keys MUST match
+// the work-category names produced by computeWorkCategories().
+const TERMS = {
+  general: [
+    'Booking fee must be paid before signing the agreement.',
+    '50% deposit to be paid upon confirmation of work.',
+    'First design fee is included and complimentary; subsequent design changes may be charged a design modification fee of RM 100.',
+    'Any modifications must be done 7 days prior to start of work.',
+    'Any modifications done after the work is done will be charged an extra work fee.',
+    'Booking fee and deposit paid are non-refundable once work is confirmed.',
+    'Balance Payment must be paid within 7 days of work completion. Late payment may incur 10% interest per month late.',
+  ],
+  // Per-category terms — fill these in; empty lists are simply not printed.
+  'Aluminium':  [],
+  'Painting':   [],
+  'Mindhome':   [],
+  'EE':         [],
+  'Smart Home': [],
+  'Smart Lock': [],
+  'Products':   [],
+};
 
 /* ============================================================
    CABINET MODULE — measurement-based, AREA pricing
@@ -1811,6 +1836,10 @@ function computeWorkCategories(){
   if(alucabLines.length) add('alucab');
   return [...set];
 }
+// The PIC(s) ticked in the form — assigned to the unit when an SO is created.
+function selectedPics(){
+  return [...document.querySelectorAll('#c_pics .pic-chk:checked')].map(c=>c.value);
+}
 
 /* ---------- totals + summary ---------- */
 function collectLines(){
@@ -1871,7 +1900,14 @@ function recalc(){
   const sub=lines.reduce((s,l)=>s+l.amount,0);
   const reb=discountTotal();
   const dep=parseFloat(document.getElementById('t_dep').value)||0;
-  const disc=parseFloat(document.getElementById('t_disc').value)||0;
+  // Discount is driven entirely by the Cabinet Package: auto-applied & locked
+  // when a package is selected; disabled (no discount) when none is.
+  const pkg=cabinetLines.find(l=>l.gid==='paket');
+  const disc=pkg?(PACKAGE_DISCOUNT[pkg.oid]||0):0;
+  const discEl=document.getElementById('t_disc');
+  discEl.value=disc; discEl.disabled=true;
+  discEl.closest('.adj').style.opacity=pkg?'1':'.45';
+  discEl.title=pkg?'Auto-applied Cabinet Package discount (locked)':'Select a Cabinet Package to apply a discount';
   const bal=sub-reb-dep-disc;
   document.getElementById('t_sub').textContent=fmt(sub);
   const rebLine=document.getElementById('t_rebate_line');
@@ -1955,7 +1991,8 @@ function buildDoc(){
 
     <div class="doc-tc">
       <h4>Terms &amp; Conditions</h4>
-      ${TERMS.map((t,i)=>`${i+1}) ${t}`).join('<br>')}
+      ${TERMS.general.map((t,i)=>`${i+1}) ${t}`).join('<br>')}
+      ${computeWorkCategories().filter(c=>(TERMS[c]||[]).length).map(c=>`<div style="margin-top:8px"><b>${c} — Terms</b><br>${TERMS[c].map((t,i)=>`${i+1}) ${t}`).join('<br>')}</div>`).join('')}
     </div>
 
     <div class="sign">
@@ -2114,6 +2151,8 @@ async function saveQuote(){
     variants:Object.assign({},activeVariant),
     // Explicit unit work cards to open when this becomes a Sales Order.
     work_categories:computeWorkCategories(),
+    // Person(s) in charge — written to the unit's pics[] by the SO trigger.
+    pics:selectedPics(),
     lines, totals:{sub,rebates:reb,deposit:dep,discount:disc,balance:bal}
   };
   const supa=getSupa();
@@ -2192,6 +2231,7 @@ async function loadDocument(id, asType, mode){
     if(Array.isArray(p.paints)) p.paints.forEach(l=>paintLines.push(Object.assign({},l)));
     alucabLines.length=0;
     if(Array.isArray(p.alucabs)) p.alucabs.forEach(l=>alucabLines.push(Object.assign({},l)));
+    document.querySelectorAll('#c_pics .pic-chk').forEach(c=>{ c.checked=Array.isArray(p.pics)&&p.pics.includes(c.value); });
     // Restore applied discounts; re-add any the admin has since deleted so the
     // reopened document still reflects exactly what was quoted.
     for(const k in discountSel) delete discountSel[k];
@@ -2393,6 +2433,7 @@ async function newQuote(){
   paintLines.length=0;
   alucabLines.length=0;
   ['c_name','c_ic','c_unit','c_project','c_phone','c_email','c_remarks'].forEach(id=>document.getElementById(id).value='');
+  document.querySelectorAll('#c_pics .pic-chk').forEach(c=>{ c.checked=false; });
   document.getElementById('t_dep').value=0;
   document.getElementById('t_disc').value=0;
   document.getElementById('c_date').value=new Date().toISOString().slice(0,10);
@@ -2437,6 +2478,9 @@ async function newQuote(){
   if(staff.name) document.getElementById('c_pic').value=staff.name;
   document.getElementById('c_qno').value='';
   document.getElementById('c_pic').addEventListener('input',saveStaff);
+  // PIC checkboxes (assigned to the unit on Sales Order creation)
+  const picBox=document.getElementById('c_pics');
+  if(picBox) picBox.innerHTML=STAFF_PICS.map(p=>`<label style="display:inline-flex;align-items:center;gap:5px;font-size:13px;font-weight:600;background:#f1f5f9;padding:5px 9px;border-radius:8px;cursor:pointer"><input type="checkbox" class="pic-chk" value="${p}">${p}</label>`).join('');
   renderCatalog(); // instant paint with coded defaults
 
   const params=new URLSearchParams(location.search);

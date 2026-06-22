@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type Dispatch, type SetStateAction } from 'react'
-import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import type { Job, JobWork } from '../lib/types'
@@ -49,7 +49,6 @@ export default function JobsList() {
   // null = use the role default (staff with a PIC start on "mine"; admins on "all").
   const [scope, setScope] = useState<'mine' | 'all' | null>(null)
   const { isAdmin, staffPic } = useAuth()
-  const navigate = useNavigate()
   const effectiveScope: 'mine' | 'all' = scope ?? (!isAdmin && staffPic ? 'mine' : 'all')
 
   function toggleIn(
@@ -127,7 +126,7 @@ export default function JobsList() {
     const q = query.trim().toLowerCase()
     return jobs
       .filter((j) => j.is_archived === showArchived)
-      .filter((j) => effectiveScope === 'all' || !staffPic || j.pic === staffPic)
+      .filter((j) => effectiveScope === 'all' || !staffPic || j.pics?.includes(staffPic) || j.pic === staffPic)
       .filter((j) => !projectFilter || j.project === projectFilter)
       .filter(
         (j) =>
@@ -188,12 +187,6 @@ export default function JobsList() {
           placeholder="Search unit, address, category, key holder…"
           className="flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-slate-900"
         />
-        <button
-          onClick={() => navigate('/new')}
-          className="shrink-0 rounded-lg bg-slate-900 px-3 py-2 text-sm font-medium text-white active:bg-slate-700"
-        >
-          + New
-        </button>
       </div>
 
       {staffPic && (

@@ -204,7 +204,9 @@ export default function JobDetail() {
         <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
           <div className="rounded-lg bg-slate-50 p-2">
             <div className="text-slate-400">PIC</div>
-            <div className="font-medium text-slate-700">{job.pic || '—'}</div>
+            <div className="font-medium text-slate-700">
+              {job.pics?.length ? job.pics.join(', ') : job.pic || '—'}
+            </div>
           </div>
           <div className="rounded-lg bg-amber-50 p-2">
             <div className="text-amber-700/70">🔑 Keys</div>

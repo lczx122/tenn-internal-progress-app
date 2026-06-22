@@ -84,6 +84,7 @@ declare
   v_project   text;
   v_key       text;
   v_added     int := 0;
+  v_pics      text[] := '{}';
 begin
   if new.doc_type <> 'SO' or new.unit_id is not null then
     return new;
@@ -91,6 +92,18 @@ begin
 
   v_project   := nullif(trim(coalesce(new.payload->>'project','')), '');
   v_unit_norm := lower(regexp_replace(coalesce(new.unit,''), '[^a-z0-9]', '', 'g'));
+
+  -- Person(s) in charge: the quote tool sends payload.pics (an array). Fall back
+  -- to the preparer's name when none were ticked.
+  if jsonb_typeof(new.payload->'pics') = 'array' then
+    select coalesce(array_agg(value), '{}')
+      into v_pics
+      from jsonb_array_elements_text(new.payload->'pics')
+     where trim(value) <> '';
+  end if;
+  if cardinality(v_pics) = 0 and coalesce(new.prepared_by,'') <> '' then
+    v_pics := array[new.prepared_by];
+  end if;
 
   -- Reuse a unit whose code matches; otherwise create a new one. Unit codes
   -- often carry the full address ("A-10-06, Ambience…") while the SO unit is
@@ -111,13 +124,14 @@ begin
 
   if v_job is null then
     insert into public.jobs
-      (customer_name, phone, project, unit_code, pic, order_total, updated_by)
+      (customer_name, phone, project, unit_code, pic, pics, order_total, updated_by)
     values
       (coalesce(nullif(trim(new.customer_name), ''), 'Sales Order ' || new.number),
        coalesce(new.customer_phone, ''),
        coalesce(v_project, 'Ambience Pulau Gadong'),
        coalesce(new.unit, ''),
-       coalesce(new.prepared_by, ''),
+       coalesce(v_pics[1], new.prepared_by, ''),
+       v_pics,
        coalesce(new.total, 0),
        coalesce(nullif(new.prepared_by, ''), 'System'))
     returning id into v_job;
@@ -127,10 +141,12 @@ begin
               'Unit created from Sales Order ' || new.number,
               coalesce(nullif(new.prepared_by, ''), 'System'));
   else
-    -- Existing unit: keep its order value in step and note the new SO.
+    -- Existing unit: keep its order value in step, note the new SO, and seed the
+    -- PIC list if it didn't have one yet.
     update public.jobs
        set order_total = coalesce(order_total, 0) + coalesce(new.total, 0),
-           updated_by  = coalesce(nullif(new.prepared_by, ''), updated_by)
+           updated_by  = coalesce(nullif(new.prepared_by, ''), updated_by),
+           pics        = case when cardinality(coalesce(pics, '{}')) = 0 then v_pics else pics end
      where id = v_job;
 
     insert into public.job_events (job_id, type, body, author_name)

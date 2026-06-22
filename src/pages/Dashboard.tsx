@@ -104,7 +104,7 @@ export default function Dashboard() {
     }
     return jobs
       .filter((j) => !j.is_archived)
-      .filter((j) => effectiveScope === 'all' || !staffPic || j.pic === staffPic)
+      .filter((j) => effectiveScope === 'all' || !staffPic || j.pics?.includes(staffPic) || j.pic === staffPic)
       .map((j) => {
         const w = byJob.get(j.id) ?? []
         return { job: j, works: w, pct: overallPercent(w.map((x) => x.stage)) }
