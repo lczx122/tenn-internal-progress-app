@@ -169,7 +169,11 @@
   /* ---------- customer form ---------- */
   .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px 16px}
   @media(max-width:560px){.grid2{grid-template-columns:1fr}}
-  label.fld{display:flex;flex-direction:column;gap:5px;font-size:11.5px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.6px}
+  .fld{display:flex;flex-direction:column;gap:5px;font-size:11.5px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.6px}
+  #c_pics{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+  #c_pics label{display:inline-flex;align-items:center;gap:7px;white-space:nowrap;text-transform:none;letter-spacing:0;font-size:13px;font-weight:600;color:#475569;background:#f1f5f9;border:1.5px solid #e2e8f0;padding:8px 13px;border-radius:999px;cursor:pointer;transition:background .12s,border-color .12s,color .12s}
+  #c_pics label.on{background:#0f172a;border-color:#0f172a;color:#fff}
+  #c_pics .pic-chk{position:absolute;opacity:0;width:0;height:0}
   input,select,textarea{
     font-family:inherit;font-size:14px;color:var(--ink);background:#fff;
     border:1px solid var(--line);border-radius:9px;padding:9px 11px;width:100%;outline:none;transition:.15s;
@@ -370,9 +374,9 @@
           </label>
           <label class="fld">Date <input id="c_date" type="date"></label>
         </div>
-        <label class="fld" style="margin-top:14px">Person(s) In Charge — assigned to the unit on Sales Order
-          <div id="c_pics" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px"></div>
-        </label>
+        <div class="fld" style="margin-top:14px">Person(s) In Charge — assigned to the unit on Sales Order
+          <div id="c_pics"></div>
+        </div>
         <label class="fld" style="margin-top:14px">Remarks <textarea id="c_remarks" placeholder="Colour selection, special notes, etc."></textarea></label>
       </div>
     </div>
@@ -1840,6 +1844,12 @@ function computeWorkCategories(){
 function selectedPics(){
   return [...document.querySelectorAll('#c_pics .pic-chk:checked')].map(c=>c.value);
 }
+// Reflect each pill's checked state in its highlight (after programmatic changes).
+function syncPicChips(){
+  document.querySelectorAll('#c_pics label').forEach(l=>{
+    const cb=l.querySelector('.pic-chk'); l.classList.toggle('on', !!(cb&&cb.checked));
+  });
+}
 
 /* ---------- totals + summary ---------- */
 function collectLines(){
@@ -2232,6 +2242,7 @@ async function loadDocument(id, asType, mode){
     alucabLines.length=0;
     if(Array.isArray(p.alucabs)) p.alucabs.forEach(l=>alucabLines.push(Object.assign({},l)));
     document.querySelectorAll('#c_pics .pic-chk').forEach(c=>{ c.checked=Array.isArray(p.pics)&&p.pics.includes(c.value); });
+    syncPicChips();
     // Restore applied discounts; re-add any the admin has since deleted so the
     // reopened document still reflects exactly what was quoted.
     for(const k in discountSel) delete discountSel[k];
@@ -2434,6 +2445,7 @@ async function newQuote(){
   alucabLines.length=0;
   ['c_name','c_ic','c_unit','c_project','c_phone','c_email','c_remarks'].forEach(id=>document.getElementById(id).value='');
   document.querySelectorAll('#c_pics .pic-chk').forEach(c=>{ c.checked=false; });
+  syncPicChips();
   document.getElementById('t_dep').value=0;
   document.getElementById('t_disc').value=0;
   document.getElementById('c_date').value=new Date().toISOString().slice(0,10);
@@ -2478,9 +2490,12 @@ async function newQuote(){
   if(staff.name) document.getElementById('c_pic').value=staff.name;
   document.getElementById('c_qno').value='';
   document.getElementById('c_pic').addEventListener('input',saveStaff);
-  // PIC checkboxes (assigned to the unit on Sales Order creation)
+  // PIC pills (assigned to the unit on Sales Order creation)
   const picBox=document.getElementById('c_pics');
-  if(picBox) picBox.innerHTML=STAFF_PICS.map(p=>`<label style="display:inline-flex;align-items:center;gap:5px;font-size:13px;font-weight:600;background:#f1f5f9;padding:5px 9px;border-radius:8px;cursor:pointer"><input type="checkbox" class="pic-chk" value="${p}">${p}</label>`).join('');
+  if(picBox){
+    picBox.innerHTML=STAFF_PICS.map(p=>`<label><input type="checkbox" class="pic-chk" value="${p}"><span>${p}</span></label>`).join('');
+    picBox.addEventListener('change',e=>{ if(e.target.classList.contains('pic-chk')) e.target.closest('label').classList.toggle('on',e.target.checked); });
+  }
   renderCatalog(); // instant paint with coded defaults
 
   const params=new URLSearchParams(location.search);
