@@ -8,8 +8,8 @@
 --  unit's PIC from the Ref initials, and logs each unit's deposit under
 --  Collection. Matches existing units by unit code -> SAFE TO RE-RUN.
 --
---  Ref -> PIC: WCSH=Winnie, LSL=Ah Lee, KKC=Kimchi, OPL=Billy, BCY=Sharon,
---  JL=Joey, GES=Royce, TSL=Sally, LUCAS=Lucas, CYM=Angel.
+--  Ref -> PIC: WCSH=Winnie Chai, LSL=Lian Sock Lee, KKC=Kimchi, OPL=Billy,
+--  BCY=Sharon, JL=Joey, GES=Royce, TSL=Sally, LUCAS=Lucas, CYM=Angel.
 --
 --  Run ONCE in Supabase -> SQL Editor.
 -- ============================================================================
@@ -128,7 +128,7 @@ insert into _imp (unit_code, customer, work_cat, amount, deposit, installed, so_
 
 create temporary table _picmap (ref text primary key, pic text) on commit drop;
 insert into _picmap (ref, pic) values
-  ('WCSH','Winnie'), ('LSL','Ah Lee'), ('KKC','Kimchi'), ('OPL','Billy'),
+  ('WCSH','Winnie Chai'), ('LSL','Lian Sock Lee'), ('KKC','Kimchi'), ('OPL','Billy'),
   ('BCY','Sharon'), ('JL','Joey'), ('GES','Royce'), ('TSL','Sally'),
   ('LUCAS','Lucas'), ('CYM','Angel');
 
