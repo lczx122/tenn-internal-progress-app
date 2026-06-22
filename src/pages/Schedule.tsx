@@ -358,7 +358,7 @@ export function ApptRow({ a, overdue }: { a: Appointment; overdue?: boolean }) {
               </p>
             )}
           </div>
-          <div className="flex shrink-0 flex-col items-end gap-1">
+          <div className="flex shrink-0 flex-col items-end gap-1 max-w-[45%]">
             {overdue && (
               <span className="rounded-full bg-rose-100 px-2 py-0.5 text-[11px] font-medium text-rose-700">Overdue</span>
             )}
@@ -368,7 +368,9 @@ export function ApptRow({ a, overdue }: { a: Appointment; overdue?: boolean }) {
             {a.status === 'cancelled' && (
               <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[11px] font-medium text-slate-600">Cancelled</span>
             )}
-            {a.who && <span className="text-xs text-slate-400">{a.who}</span>}
+            {a.who && (
+              <span className="line-clamp-2 break-words text-right text-xs text-slate-400">{a.who}</span>
+            )}
           </div>
         </div>
       </Link>
