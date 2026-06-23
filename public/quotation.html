@@ -812,9 +812,9 @@ function grillCardHtml(){
         <label class="fld">Item <select id="grl-option" onchange="grillOptionChange()">${optOpts}</select></label>
       </div>
       <div class="cab-grid3">
-        <label class="fld" id="grl-wrap-W">Width (<span class="ulin">ft</span>) <input id="grl-W" type="number" min="0" step="0.1" oninput="grillPreview()"></label>
-        <label class="fld" id="grl-wrap-H">Height (<span class="ulin">ft</span>) <input id="grl-H" type="number" min="0" step="0.1" oninput="grillPreview()"></label>
-        <label class="fld" id="grl-wrap-L">Run (<span class="ulin">ft</span>) <input id="grl-L" type="number" min="0" step="0.1" oninput="grillPreview()"></label>
+        <label class="fld" id="grl-wrap-W"><span>Width (<span class="ulin">ft</span>)</span> <input id="grl-W" type="number" min="0" step="0.1" oninput="grillPreview()"></label>
+        <label class="fld" id="grl-wrap-H"><span>Height (<span class="ulin">ft</span>)</span> <input id="grl-H" type="number" min="0" step="0.1" oninput="grillPreview()"></label>
+        <label class="fld" id="grl-wrap-L"><span>Run (<span class="ulin">ft</span>)</span> <input id="grl-L" type="number" min="0" step="0.1" oninput="grillPreview()"></label>
       </div>
       <div class="cab-grid">
         <label class="fld" id="grl-wrap-color">Colour (Iron Grill) <input id="grl-color" list="grlColorList" placeholder="Black"><datalist id="grlColorList"><option>Black</option><option>White</option></datalist></label>
@@ -1611,8 +1611,8 @@ function paintCardHtml(){
         <label class="fld">Area (sqft) <input id="pnt-area" type="number" min="0" step="0.1" oninput="paintPreview()"></label>
       </div>
       <div class="cab-grid3">
-        <label class="fld">Width (<span class="ulin">ft</span>) <input id="pnt-W" type="number" min="0" step="0.1" oninput="paintCalcArea()"></label>
-        <label class="fld">Height (<span class="ulin">ft</span>) <input id="pnt-H" type="number" min="0" step="0.1" oninput="paintCalcArea()"></label>
+        <label class="fld"><span>Width (<span class="ulin">ft</span>)</span> <input id="pnt-W" type="number" min="0" step="0.1" oninput="paintCalcArea()"></label>
+        <label class="fld"><span>Height (<span class="ulin">ft</span>)</span> <input id="pnt-H" type="number" min="0" step="0.1" oninput="paintCalcArea()"></label>
         <label class="fld">Storeys <input id="pnt-storey" type="number" min="1" step="1" value="1" oninput="paintPreview()"></label>
       </div>
       <div class="cab-preview" id="pnt-preview"></div>
@@ -1678,7 +1678,7 @@ function alucabCardHtml(){
       <div class="cab-note">Aluminium kitchen cabinets are priced per <b>linear foot</b> of length. Pick a type and enter the length — depth &amp; height are fixed per type.</div>
       <div class="cab-grid">
         <label class="fld">Cabinet Type <select id="alu-option" onchange="alucabOptionChange()">${optOpts}</select></label>
-        <label class="fld">Length (<span class="ulin">ft</span>) <input id="alu-L" type="number" min="0" step="0.1" oninput="alucabPreview()"></label>
+        <label class="fld"><span>Length (<span class="ulin">ft</span>)</span> <input id="alu-L" type="number" min="0" step="0.1" oninput="alucabPreview()"></label>
       </div>
       <div class="cab-preview" id="alu-preview"></div>
       <button class="act b-primary" style="padding:11px 16px;font-size:13px" onclick="alucabAdd()">+ Add Aluminium Cabinet to Quote</button>
@@ -1802,9 +1802,9 @@ function cabinetCardHtml(){
           <select id="cab-option" onchange="cabOptionChange()">${optOpts}</select></label>
       </div>
       <div class="cab-grid3">
-        <label class="fld">Length (<span class="ulin">ft</span>) <input id="cab-L" type="number" min="0" step="0.01" oninput="cabPreview()"></label>
-        <label class="fld">Height (<span class="ulin">ft</span>) <input id="cab-H" type="number" min="0" step="0.01" oninput="cabPreview()"></label>
-        <label class="fld">Depth (<span class="ulin">ft</span>) <input id="cab-D" type="number" min="0" step="0.01" placeholder="optional"></label>
+        <label class="fld"><span>Length (<span class="ulin">ft</span>)</span> <input id="cab-L" type="number" min="0" step="0.01" oninput="cabPreview()"></label>
+        <label class="fld"><span>Height (<span class="ulin">ft</span>)</span> <input id="cab-H" type="number" min="0" step="0.01" oninput="cabPreview()"></label>
+        <label class="fld"><span>Depth (<span class="ulin">ft</span>)</span> <input id="cab-D" type="number" min="0" step="0.01" placeholder="optional"></label>
       </div>
       <div class="cab-grid">
         <label class="fld">Light Strip (m) <input id="cab-ls" type="number" min="0" step="0.1" value="0" oninput="cabPreview()"></label>
