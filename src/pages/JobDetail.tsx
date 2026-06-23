@@ -156,7 +156,7 @@ export default function JobDetail() {
   const usedCategories = new Set(works.map((w) => w.category))
 
   return (
-    <Layout title={job.customer_name} back={<BackLink />} onRefresh={loadAll}>
+    <Layout title={job.unit_code || job.address || job.customer_name} back={<BackLink />} onRefresh={loadAll}>
       <div className="xl:columns-2 xl:gap-6 xl:[&>div]:break-inside-avoid xl:[&>section]:mb-4 xl:[&>section]:mt-0 xl:[&>section]:break-inside-avoid">
       {/* Summary card */}
       <section className="rounded-xl bg-white p-4 shadow-sm">
@@ -179,8 +179,9 @@ export default function JobDetail() {
           </Link>
         </div>
 
+        <p className="text-base font-semibold text-slate-900">👤 {job.customer_name}</p>
         {(job.unit_code || job.address) && (
-          <p className="text-slate-700">🏠 {job.unit_code || job.address}</p>
+          <p className="mt-1 text-slate-700">🏠 {job.unit_code || job.address}</p>
         )}
         {job.phone && (
           <p className="mt-1 text-slate-700">
