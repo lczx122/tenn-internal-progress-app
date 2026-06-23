@@ -344,11 +344,11 @@ export default function JobsList() {
                         <div className="mb-2 flex items-start justify-between gap-2">
                           <div className="min-w-0">
                             <p className="truncate font-semibold text-slate-900">
-                              {job.customer_name}
+                              {job.unit_code || job.address || job.customer_name}
                             </p>
-                            {(job.unit_code || job.address) && (
+                            {job.customer_name && (job.unit_code || job.address) && (
                               <p className="truncate text-sm text-slate-500">
-                                {job.unit_code || job.address}
+                                {job.customer_name}
                               </p>
                             )}
                           </div>
