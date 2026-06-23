@@ -8,7 +8,7 @@ export function BottomNav() {
   const tabs = useNavTabs()
   const { pathname } = useLocation()
   return (
-    <nav className="shrink-0 border-t border-slate-200 bg-white pb-[env(safe-area-inset-bottom)] lg:hidden">
+    <nav className="shrink-0 border-t border-slate-200 bg-white pb-[max(0.25rem,calc(env(safe-area-inset-bottom)-0.85rem))] lg:hidden">
       <div className="mx-auto flex max-w-lg">
         {tabs.map((t) => (
           <NavLink
@@ -16,7 +16,7 @@ export function BottomNav() {
             to={t.to}
             end={t.end}
             className={
-              'flex flex-1 flex-col items-center gap-1 py-2 text-[11px] font-medium ' +
+              'flex flex-1 flex-col items-center gap-1 pb-1 pt-2 text-[11px] font-medium ' +
               (isTabActive(pathname, t) ? 'text-slate-900' : 'text-slate-400 active:text-slate-600')
             }
           >
