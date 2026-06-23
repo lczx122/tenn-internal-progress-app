@@ -382,7 +382,7 @@
     </div>
 
     <div class="card">
-      <div class="hd" style="justify-content:space-between"><h2>Select Products</h2><div style="display:flex;gap:8px"><button id="unitToggleBtn" class="edit-prices-btn" onclick="toggleUnit()" title="Switch measurement units">Units: FT</button><button id="editPricesBtn" class="edit-prices-btn" style="display:none" onclick="openPriceEditor()">✏️ Edit Prices</button></div></div>
+      <div class="hd" style="justify-content:space-between"><h2>Select Products</h2><button id="editPricesBtn" class="edit-prices-btn" style="display:none" onclick="openPriceEditor()">✏️ Edit Prices</button></div>
       <div class="bd" id="catalog"><!-- categories injected here --></div>
     </div>
   </div>
@@ -575,34 +575,42 @@ const TERMS = {
 };
 
 /* ============================================================
-   MEASUREMENT UNITS — global mm <-> ft toggle (default ft).
-   Linear dimensions are entered & shown in UNIT. Each module stores its lines
-   in a canonical unit (cabinets: mm; grill/paint/alu: ft) so prices are
-   unit-independent — toggling only converts the live input fields & re-labels.
-   1 ft = 304.8 mm. */
-let UNIT = 'ft';
+   MEASUREMENT UNITS — per-category mm <-> ft toggle.
+   Each category toggles independently (a button inside its card). Cabinets are
+   mm-native (default mm); grills / paint / aluminium are ft-native (default ft).
+   Lines are stored in a canonical unit (cabinets: mm; grill/paint/alu: ft) so
+   prices are unit-independent — toggling only converts the live input fields,
+   re-labels, and re-renders that one category. 1 ft = 304.8 mm. */
+const UNITS = { cab:'mm', grill:'ft', paint:'ft', alu:'ft' };
 const FT_MM = 304.8;
-function unitLabel(){ return UNIT; }
+function unitLabel(cat){ return UNITS[cat]; }
 // cabinet canonical = mm
-function mmFromInput(v){ v=+v||0; return UNIT==='ft' ? v*FT_MM : v; }
-function dispFromMM(v){ v=+v||0; return UNIT==='ft' ? +(v/FT_MM).toFixed(2) : Math.round(v); }
-// grill / paint / aluminium-cabinet canonical = ft
-function ftFromInput(v){ v=+v||0; return UNIT==='ft' ? v : v/FT_MM; }
-function dispFromFt(v){ v=+v||0; return UNIT==='ft' ? +(+v).toFixed(2) : Math.round(v*FT_MM); }
-function relabelUnits(){ document.querySelectorAll('.ulin').forEach(s=>{ s.textContent=UNIT; }); }
-function toggleUnit(){
-  const to = UNIT==='ft' ? 'mm' : 'ft';
-  // Convert whatever is currently typed into the entry fields to the new unit.
-  ['cab-L','cab-H','cab-D','grl-W','grl-H','grl-L','pnt-W','pnt-H','alu-L'].forEach(id=>{
+function mmFromInput(v){ v=+v||0; return UNITS.cab==='ft' ? v*FT_MM : v; }
+function dispFromMM(v){ v=+v||0; return UNITS.cab==='ft' ? +(v/FT_MM).toFixed(2) : Math.round(v); }
+// grill / paint / aluminium-cabinet canonical = ft (pass the category key)
+function ftFromInput(v,cat){ v=+v||0; return UNITS[cat]==='ft' ? v : v/FT_MM; }
+function dispFromFt(v,cat){ v=+v||0; return UNITS[cat]==='ft' ? +(+v).toFixed(2) : Math.round(v*FT_MM); }
+function relabelUnits(){
+  ['cab','grill','paint','alu'].forEach(cat=>{
+    document.querySelectorAll('.ulin-'+cat).forEach(s=>{ s.textContent=UNITS[cat]; });
+    const btn=document.getElementById('unitBtn-'+cat); if(btn) btn.textContent='Units: '+UNITS[cat].toUpperCase();
+  });
+}
+const UNIT_FIELDS = { cab:['cab-L','cab-H','cab-D'], grill:['grl-W','grl-H','grl-L'], paint:['pnt-W','pnt-H'], alu:['alu-L'] };
+function toggleUnit(cat){
+  const to = UNITS[cat]==='ft' ? 'mm' : 'ft';
+  // Convert whatever is currently typed into this category's entry fields.
+  (UNIT_FIELDS[cat]||[]).forEach(id=>{
     const el=document.getElementById(id); if(!el||el.value==='') return;
     const v=parseFloat(el.value); if(!isFinite(v)) return;
     el.value = to==='mm' ? Math.round(v*FT_MM) : +(v/FT_MM).toFixed(2);
   });
-  UNIT = to;
-  const btn=document.getElementById('unitToggleBtn'); if(btn) btn.textContent='Units: '+UNIT.toUpperCase();
+  UNITS[cat] = to;
   relabelUnits();
-  cabPreview(); grillPreview(); paintPreview(); alucabPreview();
-  renderCabLines(); renderGrillLines(); renderPaintLines(); renderAlucabLines();
+  if(cat==='cab'){ cabPreview(); renderCabLines(); }
+  else if(cat==='grill'){ grillPreview(); renderGrillLines(); }
+  else if(cat==='paint'){ paintPreview(); renderPaintLines(); }
+  else if(cat==='alu'){ alucabPreview(); renderAlucabLines(); }
 }
 
 /* ============================================================
@@ -737,9 +745,9 @@ function grillCompute(o,W,H,L){
   return {amount:(+o.rate||0)}; // flat
 }
 function grillDimStr(l){
-  const u=unitLabel(), col=l.colour?` · ${l.colour}`:'';
-  if(l.unit==='sqft'){ const a=(+l.W||0)*(+l.H||0); return `${dispFromFt(l.W)} × ${dispFromFt(l.H)} ${u} = ${a.toFixed(2)} sqft${col}`; }
-  if(l.unit==='ftrun'){ return `${dispFromFt(l.L)} ${u} run${col}`; }
+  const u=unitLabel('grill'), col=l.colour?` · ${l.colour}`:'';
+  if(l.unit==='sqft'){ const a=(+l.W||0)*(+l.H||0); return `${dispFromFt(l.W,'grill')} × ${dispFromFt(l.H,'grill')} ${u} = ${a.toFixed(2)} sqft${col}`; }
+  if(l.unit==='ftrun'){ return `${dispFromFt(l.L,'grill')} ${u} run${col}`; }
   return 'Addon'+col;
 }
 function grillGroupChange(){
@@ -760,24 +768,24 @@ function grillOptionChange(){
 }
 function grillPreview(){
   const {o}=grillSel();
-  const u=unitLabel();
-  const W=ftFromInput(document.getElementById('grl-W').value);
-  const H=ftFromInput(document.getElementById('grl-H').value);
-  const L=ftFromInput(document.getElementById('grl-L').value);
+  const u=unitLabel('grill');
+  const W=ftFromInput(document.getElementById('grl-W').value,'grill');
+  const H=ftFromInput(document.getElementById('grl-H').value,'grill');
+  const L=ftFromInput(document.getElementById('grl-L').value,'grill');
   const c=grillCompute(o,W,H,L);
   let html='';
   if(o.unit==='flat'){ html=`<div class="cab-calc">Flat price → <b>RM ${fmt(+o.rate||0)}</b></div>`; }
-  else if(o.unit==='sqft'){ html=`<div class="cab-tiers"><b>RM ${fmt(+o.rate||0)}</b> / sqft</div>`; if(W>0&&H>0) html+=`<div class="cab-calc">${dispFromFt(W)} × ${dispFromFt(H)} ${u} = ${(W*H).toFixed(2)} sqft → <b>RM ${fmt(c.amount)}</b></div>`; }
-  else { const tn=o.tier?` · >${o.tier.overFt}ft: RM ${fmt(+o.tier.overRate||0)}/ft`:''; html=`<div class="cab-tiers"><b>RM ${fmt(+o.rate||0)}</b> / ft run${tn}</div>`; if(L>0) html+=`<div class="cab-calc">${dispFromFt(L)} ${u} run → <b>RM ${fmt(c.amount)}</b></div>`; }
+  else if(o.unit==='sqft'){ html=`<div class="cab-tiers"><b>RM ${fmt(+o.rate||0)}</b> / sqft</div>`; if(W>0&&H>0) html+=`<div class="cab-calc">${dispFromFt(W,'grill')} × ${dispFromFt(H,'grill')} ${u} = ${(W*H).toFixed(2)} sqft → <b>RM ${fmt(c.amount)}</b></div>`; }
+  else { const tn=o.tier?` · >${o.tier.overFt}ft: RM ${fmt(+o.tier.overRate||0)}/ft`:''; html=`<div class="cab-tiers"><b>RM ${fmt(+o.rate||0)}</b> / ft run${tn}</div>`; if(L>0) html+=`<div class="cab-calc">${dispFromFt(L,'grill')} ${u} run → <b>RM ${fmt(c.amount)}</b></div>`; }
   document.getElementById('grl-preview').innerHTML=html;
 }
 function grillAdd(){
   const {g,o}=grillSel();
-  const W=ftFromInput(document.getElementById('grl-W').value);
-  const H=ftFromInput(document.getElementById('grl-H').value);
-  const L=ftFromInput(document.getElementById('grl-L').value);
-  if(o.unit==='sqft' && !(W>0 && H>0)){ alert('Enter Width & Height ('+unitLabel()+').'); return; }
-  if(o.unit==='ftrun' && !(L>0)){ alert('Enter Run ('+unitLabel()+').'); return; }
+  const W=ftFromInput(document.getElementById('grl-W').value,'grill');
+  const H=ftFromInput(document.getElementById('grl-H').value,'grill');
+  const L=ftFromInput(document.getElementById('grl-L').value,'grill');
+  if(o.unit==='sqft' && !(W>0 && H>0)){ alert('Enter Width & Height ('+unitLabel('grill')+').'); return; }
+  if(o.unit==='ftrun' && !(L>0)){ alert('Enter Run ('+unitLabel('grill')+').'); return; }
   const colEl=document.getElementById('grl-color');
   const colour=(g.id==='iron' && colEl) ? (colEl.value||'').trim() : '';
   const c=grillCompute(o,W,H,L);
@@ -807,14 +815,15 @@ function grillCardHtml(){
     </div>
     <div class="cat-bd">
       <div class="cab-note">Pick a grill type & item, enter the measurements, the price is auto-calculated. Area items: W × H → sqft; doors by run.</div>
+      <div style="display:flex;justify-content:flex-end;margin:-4px 0 8px"><button type="button" class="edit-prices-btn" id="unitBtn-grill" onclick="toggleUnit('grill')">Units: FT</button></div>
       <div class="cab-grid">
         <label class="fld">Grill Type <select id="grl-group" onchange="grillGroupChange()">${groupOpts}</select></label>
         <label class="fld">Item <select id="grl-option" onchange="grillOptionChange()">${optOpts}</select></label>
       </div>
       <div class="cab-grid3">
-        <label class="fld" id="grl-wrap-W"><span>Width (<span class="ulin">ft</span>)</span> <input id="grl-W" type="number" min="0" step="0.1" oninput="grillPreview()"></label>
-        <label class="fld" id="grl-wrap-H"><span>Height (<span class="ulin">ft</span>)</span> <input id="grl-H" type="number" min="0" step="0.1" oninput="grillPreview()"></label>
-        <label class="fld" id="grl-wrap-L"><span>Run (<span class="ulin">ft</span>)</span> <input id="grl-L" type="number" min="0" step="0.1" oninput="grillPreview()"></label>
+        <label class="fld" id="grl-wrap-W"><span>Width (<span class="ulin-grill">ft</span>)</span> <input id="grl-W" type="number" min="0" step="0.1" oninput="grillPreview()"></label>
+        <label class="fld" id="grl-wrap-H"><span>Height (<span class="ulin-grill">ft</span>)</span> <input id="grl-H" type="number" min="0" step="0.1" oninput="grillPreview()"></label>
+        <label class="fld" id="grl-wrap-L"><span>Run (<span class="ulin-grill">ft</span>)</span> <input id="grl-L" type="number" min="0" step="0.1" oninput="grillPreview()"></label>
       </div>
       <div class="cab-grid">
         <label class="fld" id="grl-wrap-color">Colour (Iron Grill) <input id="grl-color" list="grlColorList" placeholder="Black"><datalist id="grlColorList"><option>Black</option><option>White</option></datalist></label>
@@ -1556,8 +1565,8 @@ const PAINT = [
 function paintSel(){ return PAINT[+document.getElementById('pnt-option').value]; }
 function paintStoreys(){ return Math.max(1, parseInt(document.getElementById('pnt-storey').value)||1); }
 function paintCalcArea(){
-  const W=ftFromInput(document.getElementById('pnt-W').value);
-  const H=ftFromInput(document.getElementById('pnt-H').value);
+  const W=ftFromInput(document.getElementById('pnt-W').value,'paint');
+  const H=ftFromInput(document.getElementById('pnt-H').value,'paint');
   if(W>0&&H>0) document.getElementById('pnt-area').value=(W*H).toFixed(2);
   paintPreview();
 }
@@ -1571,11 +1580,11 @@ function paintPreview(){
 }
 function paintAdd(){
   const o=paintSel();
-  const W=ftFromInput(document.getElementById('pnt-W').value);
-  const H=ftFromInput(document.getElementById('pnt-H').value);
+  const W=ftFromInput(document.getElementById('pnt-W').value,'paint');
+  const H=ftFromInput(document.getElementById('pnt-H').value,'paint');
   const area=parseFloat(document.getElementById('pnt-area').value)||0;
   const st=paintStoreys();
-  if(!(area>0)){ alert('Enter area (sqft) or Width × Height ('+unitLabel()+').'); return; }
+  if(!(area>0)){ alert('Enter area (sqft) or Width × Height ('+unitLabel('paint')+').'); return; }
   paintLines.push({oid:o.id,oname:o.name,W,H,sqft:area,storeys:st,price:area*st*(+o.rate||0)});
   document.getElementById('pnt-W').value=''; document.getElementById('pnt-H').value=''; document.getElementById('pnt-area').value=''; document.getElementById('pnt-storey').value='1';
   paintPreview(); renderPaintLines(); recalc();
@@ -1583,7 +1592,7 @@ function paintAdd(){
 function paintRemove(i){ paintLines.splice(i,1); renderPaintLines(); recalc(); }
 function paintDimStr(l){
   const st=(+l.storeys>1)?` × ${l.storeys} storeys`:'';
-  if(l.W>0 && l.H>0) return `${dispFromFt(l.W)} × ${dispFromFt(l.H)} ${unitLabel()} = ${(+l.sqft).toFixed(2)} sqft${st}`;
+  if(l.W>0 && l.H>0) return `${dispFromFt(l.W,'paint')} × ${dispFromFt(l.H,'paint')} ${unitLabel('paint')} = ${(+l.sqft).toFixed(2)} sqft${st}`;
   return `${(+l.sqft).toFixed(2)} sqft${st}`;
 }
 function renderPaintLines(){
@@ -1606,13 +1615,14 @@ function paintCardHtml(){
     </div>
     <div class="cat-bd">
       <div class="cab-note">Pick a paint area, enter the area (sqft) or Width × Height — the price is auto-calculated. Set <b>Storeys</b> to 2 for a double-storey house (price ×2). House type / lot can be noted in Remarks.</div>
+      <div style="display:flex;justify-content:flex-end;margin:-4px 0 8px"><button type="button" class="edit-prices-btn" id="unitBtn-paint" onclick="toggleUnit('paint')">Units: FT</button></div>
       <div class="cab-grid">
         <label class="fld">Paint Area <select id="pnt-option" onchange="paintPreview()">${optOpts}</select></label>
         <label class="fld">Area (sqft) <input id="pnt-area" type="number" min="0" step="0.1" oninput="paintPreview()"></label>
       </div>
       <div class="cab-grid3">
-        <label class="fld"><span>Width (<span class="ulin">ft</span>)</span> <input id="pnt-W" type="number" min="0" step="0.1" oninput="paintCalcArea()"></label>
-        <label class="fld"><span>Height (<span class="ulin">ft</span>)</span> <input id="pnt-H" type="number" min="0" step="0.1" oninput="paintCalcArea()"></label>
+        <label class="fld"><span>Width (<span class="ulin-paint">ft</span>)</span> <input id="pnt-W" type="number" min="0" step="0.1" oninput="paintCalcArea()"></label>
+        <label class="fld"><span>Height (<span class="ulin-paint">ft</span>)</span> <input id="pnt-H" type="number" min="0" step="0.1" oninput="paintCalcArea()"></label>
         <label class="fld">Storeys <input id="pnt-storey" type="number" min="1" step="1" value="1" oninput="paintPreview()"></label>
       </div>
       <div class="cab-preview" id="pnt-preview"></div>
@@ -1640,22 +1650,22 @@ function alucabOptionChange(){ document.getElementById('alu-L').value=''; alucab
 function alucabPreview(){
   const o=alucabSel();
   const Lin=parseFloat(document.getElementById('alu-L').value)||0;
-  const Lft=ftFromInput(Lin);
+  const Lft=ftFromInput(Lin,'alu');
   let html=`<div class="cab-tiers"><b>RM ${fmt(+o.rate||0)}</b> / ft <span style="color:#6b7280">· ${o.spec}</span></div>`;
-  if(Lin>0) html+=`<div class="cab-calc">${Lin} ${unitLabel()} → <b>RM ${fmt(Lft*(+o.rate||0))}</b></div>`;
+  if(Lin>0) html+=`<div class="cab-calc">${Lin} ${unitLabel('alu')} → <b>RM ${fmt(Lft*(+o.rate||0))}</b></div>`;
   document.getElementById('alu-preview').innerHTML=html;
 }
 function alucabAdd(){
   const o=alucabSel();
   const Lin=parseFloat(document.getElementById('alu-L').value)||0;
-  if(!(Lin>0)){ alert('Enter the cabinet length ('+unitLabel()+').'); return; }
-  const Lft=ftFromInput(Lin);
+  if(!(Lin>0)){ alert('Enter the cabinet length ('+unitLabel('alu')+').'); return; }
+  const Lft=ftFromInput(Lin,'alu');
   alucabLines.push({oid:o.id,oname:o.name,spec:o.spec,L:Lft,price:Lft*(+o.rate||0)});
   document.getElementById('alu-L').value='';
   alucabPreview(); renderAlucabLines(); recalc();
 }
 function alucabRemove(i){ alucabLines.splice(i,1); renderAlucabLines(); recalc(); }
-function alucabDimStr(l){ return `${dispFromFt(l.L)} ${unitLabel()}${l.spec?` · ${l.spec}`:''}`; }
+function alucabDimStr(l){ return `${dispFromFt(l.L,'alu')} ${unitLabel('alu')}${l.spec?` · ${l.spec}`:''}`; }
 function renderAlucabLines(){
   const box=document.getElementById('alu-lines'); if(!box) return;
   if(!alucabLines.length){ box.innerHTML='<div class="cab-empty">No aluminium cabinet added yet.</div>'; return; }
@@ -1676,9 +1686,10 @@ function alucabCardHtml(){
     </div>
     <div class="cat-bd">
       <div class="cab-note">Aluminium kitchen cabinets are priced per <b>linear foot</b> of length. Pick a type and enter the length — depth &amp; height are fixed per type.</div>
+      <div style="display:flex;justify-content:flex-end;margin:-4px 0 8px"><button type="button" class="edit-prices-btn" id="unitBtn-alu" onclick="toggleUnit('alu')">Units: FT</button></div>
       <div class="cab-grid">
         <label class="fld">Cabinet Type <select id="alu-option" onchange="alucabOptionChange()">${optOpts}</select></label>
-        <label class="fld"><span>Length (<span class="ulin">ft</span>)</span> <input id="alu-L" type="number" min="0" step="0.1" oninput="alucabPreview()"></label>
+        <label class="fld"><span>Length (<span class="ulin-alu">ft</span>)</span> <input id="alu-L" type="number" min="0" step="0.1" oninput="alucabPreview()"></label>
       </div>
       <div class="cab-preview" id="alu-preview"></div>
       <button class="act b-primary" style="padding:11px 16px;font-size:13px" onclick="alucabAdd()">+ Add Aluminium Cabinet to Quote</button>
@@ -1795,6 +1806,7 @@ function cabinetCardHtml(){
     <div class="cat-bd">
       ${warn}
       <div class="cab-note">Price = <b>area (Length × Height) × RM ${fmt(CABINET_RATE)}/m²</b>. Depth does not affect price; <b>height is at least 1 m</b>. Optional add-ons: light strip (RM ${fmt(LIGHTSTRIP_RATE)}/m) &amp; AC power supply (RM ${fmt(ACPOWER_RATE)}/pcs).</div>
+      <div style="display:flex;justify-content:flex-end;margin:-4px 0 8px"><button type="button" class="edit-prices-btn" id="unitBtn-cab" onclick="toggleUnit('cab')">Units: MM</button></div>
       <div class="cab-grid">
         <label class="fld">Cabinet Type
           <select id="cab-group" onchange="cabGroupChange()">${groupOpts}</select></label>
@@ -1802,9 +1814,9 @@ function cabinetCardHtml(){
           <select id="cab-option" onchange="cabOptionChange()">${optOpts}</select></label>
       </div>
       <div class="cab-grid3">
-        <label class="fld"><span>Length (<span class="ulin">ft</span>)</span> <input id="cab-L" type="number" min="0" step="0.01" oninput="cabPreview()"></label>
-        <label class="fld"><span>Height (<span class="ulin">ft</span>)</span> <input id="cab-H" type="number" min="0" step="0.01" oninput="cabPreview()"></label>
-        <label class="fld"><span>Depth (<span class="ulin">ft</span>)</span> <input id="cab-D" type="number" min="0" step="0.01" placeholder="optional"></label>
+        <label class="fld"><span>Length (<span class="ulin-cab">mm</span>)</span> <input id="cab-L" type="number" min="0" step="0.01" oninput="cabPreview()"></label>
+        <label class="fld"><span>Height (<span class="ulin-cab">mm</span>)</span> <input id="cab-H" type="number" min="0" step="0.01" oninput="cabPreview()"></label>
+        <label class="fld"><span>Depth (<span class="ulin-cab">mm</span>)</span> <input id="cab-D" type="number" min="0" step="0.01" placeholder="optional"></label>
       </div>
       <div class="cab-grid">
         <label class="fld">Light Strip (m) <input id="cab-ls" type="number" min="0" step="0.1" value="0" oninput="cabPreview()"></label>
@@ -1863,7 +1875,7 @@ function cabPreview(){
   if(Lin>0 && Hin>0){
     const m2=cabArea(Lmm,Hmm);
     const cab=cabinetPrice(o,Lmm,Hmm);
-    html+=`<div class="cab-calc">${Lin} × ${Hin} ${unitLabel()} = ${m2.toFixed(2)} m² → RM ${fmt(cab)}${addStr} → <b>RM ${fmt(cab+addon)}</b></div>`;
+    html+=`<div class="cab-calc">${Lin} × ${Hin} ${unitLabel('cab')} = ${m2.toFixed(2)} m² → RM ${fmt(cab)}${addStr} → <b>RM ${fmt(cab+addon)}</b></div>`;
   } else if(addon>0){
     html+=`<div class="cab-calc">Add-ons only → <b>RM ${fmt(addon)}</b></div>`;
   }
@@ -1881,8 +1893,8 @@ function cabAdd(){
   const Lin=parseFloat(document.getElementById('cab-L').value)||0;
   const Hin=parseFloat(document.getElementById('cab-H').value)||0;
   const Din=parseFloat(document.getElementById('cab-D').value)||0;
-  if(!(Lin>0)){ alert('Please enter a Length ('+unitLabel()+').'); return; }
-  if(!(Hin>0)){ alert('Height ('+unitLabel()+') is required.'); document.getElementById('cab-H').focus(); return; }
+  if(!(Lin>0)){ alert('Please enter a Length ('+unitLabel('cab')+').'); return; }
+  if(!(Hin>0)){ alert('Height ('+unitLabel('cab')+') is required.'); document.getElementById('cab-H').focus(); return; }
   const Lmm=mmFromInput(Lin), Hmm=mmFromInput(Hin), Dmm=mmFromInput(Din);
   cabinetLines.push({gid:g.id,gname:g.name,oid:o.id,oname:o.name,L:Lmm,H:Hmm,D:Dmm,ls,ac,addon,price:cabinetPrice(o,Lmm,Hmm)+addon});
   document.getElementById('cab-D').value='';
@@ -1900,7 +1912,7 @@ function cabAddonStr(l){
 function dimStr(l){
   const ad=cabAddonStr(l);
   if(l.fixed) return ad;
-  return `L ${dispFromMM(l.L)} × H ${dispFromMM(l.H)} × D ${dispFromMM(l.D)} ${unitLabel()}${ad?` · ${ad}`:''}`;
+  return `L ${dispFromMM(l.L)} × H ${dispFromMM(l.H)} × D ${dispFromMM(l.D)} ${unitLabel('cab')}${ad?` · ${ad}`:''}`;
 }
 function renderCabLines(){
   const box=document.getElementById('cab-lines');
@@ -2291,7 +2303,7 @@ async function saveQuote(){
     work_categories:computeWorkCategories(),
     // Person(s) in charge — written to the unit's pics[] by the SO trigger.
     pics:selectedPics(),
-    unit:UNIT, ver:2,
+    units:{cab:UNITS.cab,grill:UNITS.grill,paint:UNITS.paint,alu:UNITS.alu}, ver:2,
     lines, totals:{sub,rebates:reb,deposit:dep,discount:disc,balance:bal}
   };
   const supa=getSupa();
@@ -2372,11 +2384,14 @@ async function loadDocument(id, asType, mode){
     if(Array.isArray(p.alucabs)) p.alucabs.forEach(l=>alucabLines.push(Object.assign({},l)));
     document.querySelectorAll('#c_pics .pic-chk').forEach(c=>{ c.checked=Array.isArray(p.pics)&&p.pics.includes(c.value); });
     syncPicChips();
-    // Restore the measurement unit; legacy (ver<2) grill area lines were stored
-    // in inches, so convert them to the ft canonical the new code expects.
+    // Restore per-category measurement units. Legacy (ver<2) grill area lines
+    // were stored in inches, so convert them to the ft canonical the new code
+    // expects; legacy docs also stored a single `unit` for all categories.
     if(!(p.ver>=2)){ grillLines.forEach(l=>{ if(l.unit==='sqft'){ l.W=(+l.W||0)/12; l.H=(+l.H||0)/12; } }); }
-    UNIT=(p.unit==='mm'||p.unit==='ft')?p.unit:'ft';
-    const _ub=document.getElementById('unitToggleBtn'); if(_ub) _ub.textContent='Units: '+UNIT.toUpperCase();
+    UNITS.cab='mm'; UNITS.grill='ft'; UNITS.paint='ft'; UNITS.alu='ft';   // reset to defaults
+    const _setU=(c,v)=>{ if(v==='mm'||v==='ft') UNITS[c]=v; };
+    if(p.units && typeof p.units==='object'){ _setU('cab',p.units.cab); _setU('grill',p.units.grill); _setU('paint',p.units.paint); _setU('alu',p.units.alu); }
+    else if(p.unit==='mm'||p.unit==='ft'){ ['cab','grill','paint','alu'].forEach(c=>{ UNITS[c]=p.unit; }); }
     relabelUnits();
     // Restore applied discounts; re-add any the admin has since deleted so the
     // reopened document still reflects exactly what was quoted.
