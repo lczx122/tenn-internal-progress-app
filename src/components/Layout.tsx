@@ -70,7 +70,7 @@ export function Layout({
   const progress = Math.min(1, pull / PULL_THRESHOLD)
 
   return (
-    <div id="app-shell" className="flex h-[var(--app-h,100dvh)] min-h-full flex-col overflow-hidden lg:flex-row">
+    <div className="flex h-[var(--app-h,100dvh)] min-h-full flex-col overflow-hidden lg:flex-row">
       <Sidebar />
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         <AppHeader title={title} back={back} wide={wide} />

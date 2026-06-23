@@ -5,7 +5,6 @@ import App from './App'
 import { AuthProvider } from './contexts/AuthContext'
 import FieldEditor from './components/FieldEditor'
 import { TopProgressBar } from './components/TopProgressBar'
-import { DebugViewport } from './components/DebugViewport'
 import './index.css'
 
 // Pin the app shell to the TRUE visible viewport height. iOS browsers and
@@ -49,7 +48,6 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
         <App />
         <FieldEditor />
         <TopProgressBar />
-        <DebugViewport />
       </AuthProvider>
     </BrowserRouter>
   </React.StrictMode>
