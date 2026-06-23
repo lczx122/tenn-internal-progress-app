@@ -514,10 +514,19 @@ const STAFF_PICS = ['Lucas','Royce','Kimchi','Sally','Winnie Chai','Winnie Chong
 // package = no discount allowed. Flat RM 5,000 off any Cabinet Package.
 const PACKAGE_DISCOUNT = { r2s:5000, r2p:5000, r3s:5000, r3p:5000 };
 
-// Terms & Conditions: a General set (always shown) plus per-work-category sets
-// shown only when that category is part of the quote. Category keys MUST match
-// the work-category names produced by computeWorkCategories().
+// Terms & Conditions.
+//
+// HOW THIS WORKS
+//   • general[]            → always printed, numbered, at the top.
+//   • '<Category>': [ … ]  → printed under "<Category> — Terms" ONLY when that
+//                            work category is on the quote AND its list is
+//                            non-empty. Empty lists are silently skipped.
+//   • Each string is one numbered line. Keep them short; plain text only.
+//
+// CATEGORY KEYS must exactly match the names from computeWorkCategories()
+// (see WORK_MAP). The "Triggered by" notes below say what puts each on a quote.
 const TERMS = {
+  // ── ALWAYS SHOWN ────────────────────────────────────────────────────────
   general: [
     '50% deposit to be paid upon confirmation of work.',
     'Prices quoted are valid for one month from the date of this document.',
@@ -526,14 +535,43 @@ const TERMS = {
     'If the order is cancelled, 20% of the total amount will be retained as a service fee.',
     'Balance Payment must be paid within 7 days of work completion. Late payment may incur 10% interest per month late.',
   ],
-  // Per-category terms — fill these in; empty lists are simply not printed.
-  'Aluminium':  [],
-  'Painting':   [],
-  'Mindhome':   [],
-  'EE':         [],
-  'Smart Home': [],
-  'Smart Lock': [],
-  'Products':   [],
+
+  // ── PER-CATEGORY ────────────────────────────────────────────────────────
+  // Fill these in. Uncomment an example or add your own lines.
+
+  // Triggered by: Kitchen / TV / Wardrobe / Dining / Package cabinets.
+  'Mindhome': [
+    // 'Cabinet structure carries a 1-year workmanship warranty.',
+  ],
+
+  // Triggered by: Shoe cabinet · Aluminium cabinet · Grills · "Other" items.
+  'Aluminium': [
+    // 'Colour shade may vary slightly from samples.',
+  ],
+
+  // Triggered by: Painting work.
+  'Painting': [
+    // 'Wall cracks and surface defects are patched, not structurally repaired.',
+  ],
+
+  // Triggered by: Smart Home items (also adds the EE block below).
+  'Smart Home': [
+    // 'Smart devices are covered by their manufacturer warranty.',
+  ],
+
+  // Triggered by: Smart Home items (electrical works).
+  'EE': [
+    // 'Existing wiring is reused where serviceable; rewiring is quoted separately.',
+  ],
+
+  // Triggered by: Smart Lock items.
+  'Smart Lock': [
+    // 'Smart lock firmware and app support are provided by the manufacturer.',
+  ],
+
+  // NOTE: not currently triggered by anything in WORK_MAP — wire it up there
+  // first if you want these to appear, or delete this key.
+  'Products': [],
 };
 
 /* ============================================================
