@@ -14,21 +14,20 @@ import './index.css'
 // the "two zones" feel). The visual viewport always reports what's actually on
 // screen, so track it into --app-h; the shells use it ahead of 100dvh.
 {
-  const standalone = (navigator as { standalone?: boolean }).standalone
   const set = () => {
-    const vv = window.visualViewport
-    // Standalone keeps a stable layout viewport, so prefer the larger of the two
-    // (the shell shouldn't shrink when the keyboard opens). In a browser, the
-    // visual viewport is the source of truth for what is actually visible.
-    const h = standalone ? Math.max(vv?.height ?? 0, window.innerHeight) : (vv?.height ?? window.innerHeight)
+    // Some in-app webviews under-report visualViewport.height (leaving a dead
+    // band under the nav); others report a stale innerHeight at launch. Take the
+    // larger so the shell always fills the screen — the body is locked, so a few
+    // px of overshoot just sits under the nav rather than creating a scroll.
+    const h = Math.max(window.visualViewport?.height ?? 0, window.innerHeight)
     document.documentElement.style.setProperty('--app-h', `${Math.round(h)}px`)
   }
   set()
   window.addEventListener('resize', set)
   window.addEventListener('orientationchange', set)
   window.visualViewport?.addEventListener('resize', set)
-  // In a browser the toolbar grows/shrinks the visible area as you scroll.
-  if (!standalone) window.visualViewport?.addEventListener('scroll', set)
+  // The browser toolbar grows/shrinks the visible area as you scroll.
+  window.visualViewport?.addEventListener('scroll', set)
   // WebKit sometimes corrects the viewport shortly after launch with no event.
   setTimeout(set, 250)
   setTimeout(set, 1000)
