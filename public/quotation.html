@@ -467,7 +467,7 @@
    ============================================================ */
 const CATALOG = [
   {
-    id:'smarthome', name:'Smart Home & Plug Point',
+    id:'smarthome', name:'Smart Home',
     variants:[],
     items:[
       {v:0,label:'Aqara Smart Home Package',sub:'Wall Switch (1/2/3 gang) ×5 · Hub M2 ×1 · Presence Multi-Sensor FP300 ×1 · Smart Door Lock A100 ×1',price:0},
@@ -481,8 +481,6 @@ const CATALOG = [
       {v:0,label:'Aqara Door Lock D100 (Zigbee)',sub:'Black',price:2899},
       {v:0,label:'Aqara Smart Facial Recognition Door Lock D200i',sub:'Gold',price:3599},
       {v:0,label:'ADDON CCTV',sub:'Price by specification',price:0},
-      {v:0,label:'ADDON Standard Plug Point',sub:'Includes wiring & casing',price:200},
-      {v:0,label:'ADDON Air-Cond & Water Heater Plug',sub:'Includes wiring & casing',price:450},
     ]
   },
   {
@@ -491,6 +489,17 @@ const CATALOG = [
     items:[
       {v:0,label:'Aqara Smart Lock U200 (Standard)',sub:'Colours: Black / Silver / White',price:1399},
       {v:0,label:'Aqara Smart Door Lock D200i (Premium)',sub:'Facial Recognition · Gold',price:3599},
+    ]
+  },
+  {
+    id:'ee', name:'Electrical Work & Electronics (EE)',
+    note:'Electrical wiring works; some items priced by specification.',
+    variants:[],
+    items:[
+      {v:0,label:'New DB Box',sub:'',price:700},
+      {v:0,label:'Other Services',sub:'Price by specification',price:0},
+      {v:0,label:'ADDON Standard Plug Point',sub:'Includes wiring & casing',price:200},
+      {v:0,label:'ADDON Air-Cond & Water Heater Plug',sub:'Includes wiring & casing',price:450},
     ]
   },
   {
@@ -554,12 +563,12 @@ const TERMS = {
     // 'Wall cracks and surface defects are patched, not structurally repaired.',
   ],
 
-  // Triggered by: Smart Home items (also adds the EE block below).
+  // Triggered by: Smart Home items.
   'Smart Home': [
     // 'Smart devices are covered by their manufacturer warranty.',
   ],
 
-  // Triggered by: Smart Home items (electrical works).
+  // Triggered by: Electrical Work & Electronics (EE) items.
   'EE': [
     // 'Existing wiring is reused where serviceable; rewiring is quoted separately.',
   ],
@@ -1705,13 +1714,13 @@ function renderCatalog(){
   root.insertAdjacentHTML('beforeend', cabinetCardHtml());
   cabGroupChange();           // populate option select for first group
   renderCabLines();
+  root.insertAdjacentHTML('beforeend', alucabCardHtml());
+  renderAlucabLines();
   root.insertAdjacentHTML('beforeend', grillCardHtml());
   grillGroupChange();         // populate grill option select
   renderGrillLines();
   root.insertAdjacentHTML('beforeend', paintCardHtml());
   renderPaintLines();
-  root.insertAdjacentHTML('beforeend', alucabCardHtml());
-  renderAlucabLines();
   CATALOG.forEach((cat,ci)=>{
     if(activeVariant[cat.id]===undefined) activeVariant[cat.id]=0;
     const wrap = document.createElement('div');
@@ -1955,8 +1964,9 @@ function setQty(catId,idx,val){
    cabinet groups use 'cab:'+id; grill groups use 'grill:'+id; plus 'paint'
    and 'alucab'. */
 const WORK_MAP = {
-  'smarthome': ['Smart Home', 'EE'],
+  'smarthome': ['Smart Home'],
   'smartlock': ['Smart Lock'],
+  'ee':        ['EE'],
   'other':     ['Aluminium'],
   'cab:dapur':  ['Mindhome'],
   'cab:tv':     ['Mindhome'],
@@ -2081,7 +2091,7 @@ function buildDoc(){
 
   // group lines by category (cabinet groups first, then catalog categories)
   let rowsHtml='';
-  const order=[...CABINET.map(gp=>gp.name), ...GRILL.map(gp=>gp.name), PAINT_CAT, ALUCAB_CAT, ...CATALOG.map(c=>c.name)];
+  const order=[...CABINET.map(gp=>gp.name), ALUCAB_CAT, ...GRILL.map(gp=>gp.name), PAINT_CAT, ...CATALOG.map(c=>c.name)];
   const seen=new Set();
   order.forEach(cname=>{
     if(seen.has(cname)) return; seen.add(cname);
