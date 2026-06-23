@@ -150,17 +150,6 @@ Deno.serve(async (req) => {
   // ── LIST ───────────────────────────────────────────────────────────────
   if (action === 'list') {
     const { start, end, label } = rangeFor(String(body.when ?? 'today'))
-    // Diagnostic echo of exactly what the server treats as "now"/today and the
-    // window it is querying — both as the MYT wall clock it actually uses.
-    const mytStr = (d: Date) =>
-      new Intl.DateTimeFormat('en-CA', { timeZone: TZ, dateStyle: 'full', timeStyle: 'short' }).format(d)
-    const debug = {
-      server_now_myt: mytStr(new Date()),
-      window_from_myt: mytStr(start),
-      window_to_myt: mytStr(end),
-      window_from_utc: start.toISOString(),
-      window_to_utc: end.toISOString(),
-    }
     const { data: rows, error } = await supabase
       .from('appointments')
       .select('type,customer_name,location,starts_at,status')
@@ -169,10 +158,10 @@ Deno.serve(async (req) => {
       .lt('starts_at', end.toISOString())
       .order('starts_at', { ascending: true })
       .limit(12)
-    if (error) return jsonRes({ ok: false, speech: 'Sorry, I could not check the schedule.', debug }, 500)
+    if (error) return jsonRes({ ok: false, speech: 'Sorry, I could not check the schedule.' }, 500)
 
     const list = rows ?? []
-    if (!list.length) return jsonRes({ ok: true, count: 0, speech: `You have no appointments ${label}.`, debug })
+    if (!list.length) return jsonRes({ ok: true, count: 0, speech: `You have no appointments ${label}.` })
 
     const withDay = label === 'in the next 7 days' || label === 'coming up'
     const items = list.map((r) => {
@@ -184,7 +173,7 @@ Deno.serve(async (req) => {
     })
     const n = list.length
     const speech = `You have ${n} appointment${n === 1 ? '' : 's'} ${label}: ${items.join('; ')}.`
-    return jsonRes({ ok: true, count: n, speech, appointments: list, debug })
+    return jsonRes({ ok: true, count: n, speech, appointments: list })
   }
 
   return jsonRes({ ok: false, speech: 'I did not understand that request.' }, 400)
