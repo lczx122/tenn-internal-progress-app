@@ -606,25 +606,31 @@ function toggleUnit(){
 }
 
 /* ============================================================
-   CABINET MODULE — measurement-based, AREA pricing
+   CABINET MODULE — measurement-based, flat AREA pricing
    All cabinets record Length / Height / Depth in MILLIMETRES (mm).
-   PRICE depends on AREA = Length × Height (in m²). The Depth (width)
-   does NOT affect the price. Each dimension is clamped to a 1 m
-   minimum: anything shorter than 1 m is priced as 1 m.
+   PRICE = AREA (Length × Height, in m²) × CABINET_RATE. Depth does NOT
+   affect the price. Height is clamped to a 1 m minimum (anything shorter
+   is priced as 1 m); length is used exactly as entered.
 
-   Price = basePrice × (1 + uplift), where the uplift comes from the
-   global AREA_TIERS — the highest tier whose minimum area ≤ the
-   cabinet's area. basePrice is the price at the 1 m² minimum.
-   Example tiers: ≤1.3 m² = base · ≥1.3 m² = +20% · ≥1.4 m² = +50%.
+   Optional per-cabinet add-ons: light strips (RM/m) and AC power supply
+   (RM/pcs). All three rates are admin-editable in Edit Prices.
 
-   Each option is defined with cabOpt(basePrice, defL, defH):
-     - basePrice : price at the 1 m² minimum
-     - defL/defH : length & height pre-filled in the form (mm)
+   Fixed-price packages (id 'paket') ignore measurement and use a flat
+   basePrice. cabOpt(basePrice, defL, defH) still seeds each measured
+   option's pre-filled form dimensions (defL/defH, in mm); basePrice is
+   no longer used for measured cabinets.
 
-   ⚠️ THE BASE PRICES BELOW ARE EXAMPLES — replace with your real
-   rates. Set CABINET_PRICES_SET to true once done to hide the warning.
+   NOTE: AREA_TIERS / areaUplift below are retained (unused by pricing)
+   only so older saved price overlays load without error.
    ============================================================ */
 const CABINET_PRICES_SET = true;
+
+// Flat cabinet pricing: every measured cabinet = area (m²) × CABINET_RATE.
+// Optional per-cabinet add-ons: light strips (RM per metre) and AC power supply
+// (RM per piece). All three rates are admin-editable in Edit Prices.
+let CABINET_RATE = 850;     // RM per m²
+let LIGHTSTRIP_RATE = 70;   // RM per metre of light strip
+let ACPOWER_RATE = 60;      // RM per AC power supply (pcs)
 
 // Global area-pricing tiers (admin-editable, shared by all cabinets).
 const DEFAULT_AREA_TIERS = [
@@ -634,10 +640,11 @@ const DEFAULT_AREA_TIERS = [
 ];
 let AREA_TIERS = DEFAULT_AREA_TIERS.map((t) => ({ ...t }));
 
-// Area in m² from mm dimensions, each clamped to a 1 m minimum.
+// Area in m² from mm dimensions. Height is clamped to a 1 m minimum (anything
+// shorter is priced as 1 m); length is used exactly as entered.
 function cabArea(Lmm, Hmm){
-  const L = Math.max(1000, +Lmm || 0) / 1000;
-  const H = Math.max(1000, +Hmm || 0) / 1000;
+  const L = (+Lmm || 0) / 1000;
+  const H = Math.max(1000, +Hmm || 0) / 1000;   // height: minimum 1 m
   return L * H;
 }
 // % uplift for an area: the highest tier whose minimum area ≤ the area.
@@ -820,9 +827,14 @@ function grillCardHtml(){
 }
 
 
-function cabinetPrice(o, Lmm, Hmm, tiers){
-  const m2 = cabArea(Lmm, Hmm);
-  return (+o.basePrice || 0) * (1 + areaUplift(m2, tiers) / 100);
+// Measured cabinets: area × flat rate. Fixed packages keep their flat price.
+function cabinetPrice(o, Lmm, Hmm){
+  if(o.fixed) return (+o.basePrice || 0);
+  return cabArea(Lmm, Hmm) * CABINET_RATE;
+}
+// Add-on cost from light-strip metres + AC-power pieces.
+function cabAddonCost(ls, ac){
+  return (Math.max(0, +ls || 0) * LIGHTSTRIP_RATE) + (Math.max(0, +ac || 0) * ACPOWER_RATE);
 }
 // Human-readable area-tier table (uses the live/admin tiers when given).
 function areaTierTableHtml(tiers){
@@ -890,6 +902,13 @@ function applyOverrides(ov){
     const v=cabs[g.id+':'+o.id];
     if(v && v.basePrice!=null && !isNaN(+v.basePrice)) o.basePrice=+v.basePrice;
   }));
+  // Global cabinet + add-on rates.
+  const cabRates=cabs['__rates'];
+  if(cabRates){
+    if(cabRates.cabinetRate!=null && !isNaN(+cabRates.cabinetRate)) CABINET_RATE=+cabRates.cabinetRate;
+    if(cabRates.lightstripRate!=null && !isNaN(+cabRates.lightstripRate)) LIGHTSTRIP_RATE=+cabRates.lightstripRate;
+    if(cabRates.acpowerRate!=null && !isNaN(+cabRates.acpowerRate)) ACPOWER_RATE=+cabRates.acpowerRate;
+  }
   // Global area tiers (shared by all cabinets).
   if(Array.isArray(ov.areaTiers) && ov.areaTiers.length){
     const t=ov.areaTiers.map(x=>({minM2:+x.minM2, pct:+x.pct}))
@@ -957,6 +976,7 @@ function capturePriceDefaults(){
   CATALOG.forEach(cat=>cat.items.forEach(it=>{ PRICE_DEFAULTS.items[itemKey(cat,it)]=it.price; }));
   CATALOG.forEach(cat=>{ PRICE_DEFAULTS.catalog[cat.id]=cat.items.map(it=>({id:it.id,label:it.label,sub:it.sub||'',price:it.price,hidden:false})); });
   CABINET.forEach(g=>g.options.forEach(o=>{ PRICE_DEFAULTS.cabinets[g.id+':'+o.id]={basePrice:o.basePrice}; }));
+  PRICE_DEFAULTS.cabinets['__rates']={cabinetRate:CABINET_RATE, lightstripRate:LIGHTSTRIP_RATE, acpowerRate:ACPOWER_RATE};
   GRILL.forEach(g=>g.options.forEach(o=>{ PRICE_DEFAULTS.grills[g.id+':'+o.id]={rate:o.rate,overRate:(o.tier?o.tier.overRate:null)}; }));
   PAINT.forEach(o=>{ PRICE_DEFAULTS.paints[o.id]={rate:o.rate}; });
   ALUCAB.forEach(o=>{ PRICE_DEFAULTS.alucabs[o.id]={rate:o.rate}; });
@@ -1179,32 +1199,24 @@ function buildPriceEditorHtml(){
   });
   h+='</div>';
 
-  // Cabinet — global area tiers + per-cabinet base price (price at 1 m²)
+  // Cabinet — one flat RM/m² rate + add-on rates; fixed packages keep flat prices.
   h+=`<div class="pe-panel" data-panel="cab"><div class="pe-noresults">No matching cabinets.</div>
-    <div class="pe-cat">${peSectionHead('Cabinet — area pricing')}`;
-  let tierRows='';
-  const tierN=Math.max(AREA_TIERS.length, PRICE_DEFAULTS.areaTiers.length)+2;
-  for(let i=0;i<tierN;i++){
-    const cur=AREA_TIERS[i]||{}, def=PRICE_DEFAULTS.areaTiers[i]||{};
-    tierRows+=peTierRow(i, cur.minM2, cur.pct, def.minM2, def.pct);
-  }
-  h+=`<div class="pe-cab" data-search="area tiers uplift cabinet pricing">${peCardHead('Area tiers (m²) — shared by all cabinets')}
-      <p class="pe-note">Price = base × (1 + uplift). Uplift = the highest tier whose min area ≤ the cabinet's area (length × height, each min 1 m). Leave a row blank to remove it.</p>
-      <div class="pe-areatiers"><div class="pe-areatier-hd"><span>Min area (m²)</span><span>Uplift %</span></div>${tierRows}</div></div>`;
+    <div class="pe-cat">${peSectionHead('Cabinet — rates')}`;
+  const rd=PRICE_DEFAULTS.cabinets['__rates']||{};
+  h+=`<div class="pe-cab" data-search="cabinet rate per m2 square metre light strip ac power add-on add on">${peCardHead('Cabinet & add-on rates')}
+      <p class="pe-note">Every measured cabinet = area (Length × Height, height min 1 m) × RM/m². Add-ons are optional per cabinet.</p>
+      <div class="pe-cab-grid">
+        ${peField('cab','__rates','cabinetRate',CABINET_RATE,'Cabinet RM / m²',{money:true,def:rd.cabinetRate})}
+        ${peField('cab','__rates','lightstripRate',LIGHTSTRIP_RATE,'Light strip RM / m',{money:true,def:rd.lightstripRate})}
+        ${peField('cab','__rates','acpowerRate',ACPOWER_RATE,'AC power RM / pcs',{money:true,def:rd.acpowerRate})}
+      </div></div>`;
   CABINET.forEach(g=>g.options.forEach(o=>{
+    if(!o.fixed) return; // measured cabinets all use the global rate above
     const k=g.id+':'+o.id, d=PRICE_DEFAULTS.cabinets[k]||{};
-    if(o.fixed){ // flat-price package — single price field, no area tiers
-      h+=`<div class="pe-cab" data-search="${peSafe(g.name+' '+o.name)}">${peCardHead(g.name+' · '+o.name)}
-        <div class="pe-cab-grid" style="grid-template-columns:minmax(0,200px)">
-          ${peField('cab',k,'basePrice',o.basePrice,'Fixed price (RM)',{money:true,def:d.basePrice})}
-        </div></div>`;
-      return;
-    }
     h+=`<div class="pe-cab" data-search="${peSafe(g.name+' '+o.name)}">${peCardHead(g.name+' · '+o.name)}
       <div class="pe-cab-grid" style="grid-template-columns:minmax(0,200px)">
-        ${peField('cab',k,'basePrice',o.basePrice,'Base RM (at 1 m²)',{money:true,def:d.basePrice})}
-      </div>
-      <div class="pe-tier-preview" data-cab="${k}"></div></div>`;
+        ${peField('cab',k,'basePrice',o.basePrice,'Fixed price (RM)',{money:true,def:d.basePrice})}
+      </div></div>`;
   }));
   h+='</div></div>';
 
@@ -1782,7 +1794,7 @@ function cabinetCardHtml(){
     </div>
     <div class="cat-bd">
       ${warn}
-      <div class="cab-note">Enter Length × Height × Depth in <b class="ulin">ft</b>. Price is by <b>area = Length × Height</b> (depth does not affect price); each side is treated as at least <b>1 m</b>.</div>
+      <div class="cab-note">Price = <b>area (Length × Height) × RM ${fmt(CABINET_RATE)}/m²</b>. Depth does not affect price; <b>height is at least 1 m</b>. Optional add-ons: light strip (RM ${fmt(LIGHTSTRIP_RATE)}/m) &amp; AC power supply (RM ${fmt(ACPOWER_RATE)}/pcs).</div>
       <div class="cab-grid">
         <label class="fld">Cabinet Type
           <select id="cab-group" onchange="cabGroupChange()">${groupOpts}</select></label>
@@ -1793,6 +1805,10 @@ function cabinetCardHtml(){
         <label class="fld">Length (<span class="ulin">ft</span>) <input id="cab-L" type="number" min="0" step="0.01" oninput="cabPreview()"></label>
         <label class="fld">Height (<span class="ulin">ft</span>) <input id="cab-H" type="number" min="0" step="0.01" oninput="cabPreview()"></label>
         <label class="fld">Depth (<span class="ulin">ft</span>) <input id="cab-D" type="number" min="0" step="0.01" placeholder="optional"></label>
+      </div>
+      <div class="cab-grid">
+        <label class="fld">Light Strip (m) <input id="cab-ls" type="number" min="0" step="0.1" value="0" oninput="cabPreview()"></label>
+        <label class="fld">AC Power Supply (pcs) <input id="cab-ac" type="number" min="0" step="1" value="0" oninput="cabPreview()"></label>
       </div>
       <div class="cab-preview" id="cab-preview"></div>
       <button class="act b-primary" style="padding:11px 16px;font-size:13px" onclick="cabAdd()">+ Add Cabinet to Quote</button>
@@ -1821,28 +1837,45 @@ function cabSel(){
   const oi=+document.getElementById('cab-option').value;
   return {gi,oi,g:CABINET[gi],o:CABINET[gi].options[oi]};
 }
+function cabAddonInputs(){
+  return {
+    ls: Math.max(0, parseFloat(document.getElementById('cab-ls').value)||0),
+    ac: Math.max(0, parseFloat(document.getElementById('cab-ac').value)||0),
+  };
+}
+function resetCabAddons(){
+  const ls=document.getElementById('cab-ls'), ac=document.getElementById('cab-ac');
+  if(ls) ls.value='0'; if(ac) ac.value='0';
+}
 function cabPreview(){
   const {o}=cabSel();
+  const {ls,ac}=cabAddonInputs();
+  const addon=cabAddonCost(ls,ac);
+  const addStr=addon>0?` + add-ons RM ${fmt(addon)}`:'';
   if(o.fixed){
-    document.getElementById('cab-preview').innerHTML=`<div class="cab-calc">Fixed package price → <b>RM ${fmt(+o.basePrice||0)}</b></div>`;
+    document.getElementById('cab-preview').innerHTML=`<div class="cab-calc">Fixed package RM ${fmt(+o.basePrice||0)}${addStr} → <b>RM ${fmt((+o.basePrice||0)+addon)}</b></div>`;
     return;
   }
   const Lin=parseFloat(document.getElementById('cab-L').value)||0;
   const Hin=parseFloat(document.getElementById('cab-H').value)||0;
   const Lmm=mmFromInput(Lin), Hmm=mmFromInput(Hin);
-  let html=`<div class="cab-tiers"><b>Area tiers:</b> ${areaTierTableHtml()} <span style="color:#6b7280">· base RM ${fmt(+o.basePrice||0)}</span></div>`;
+  let html=`<div class="cab-tiers"><b>RM ${fmt(CABINET_RATE)}</b> / m² · height min 1 m${addon>0?` · light strip RM ${fmt(LIGHTSTRIP_RATE)}/m · AC power RM ${fmt(ACPOWER_RATE)}/pcs`:''}</div>`;
   if(Lin>0 && Hin>0){
     const m2=cabArea(Lmm,Hmm);
-    const up=areaUplift(m2);
-    html+=`<div class="cab-calc">${Lin} × ${Hin} ${unitLabel()} = ${m2.toFixed(2)} m² → <b>RM ${fmt(cabinetPrice(o,Lmm,Hmm))}</b> <span style="font-weight:400;color:#6b7280">(${up>0?'+'+up+'%':'base'})</span></div>`;
+    const cab=cabinetPrice(o,Lmm,Hmm);
+    html+=`<div class="cab-calc">${Lin} × ${Hin} ${unitLabel()} = ${m2.toFixed(2)} m² → RM ${fmt(cab)}${addStr} → <b>RM ${fmt(cab+addon)}</b></div>`;
+  } else if(addon>0){
+    html+=`<div class="cab-calc">Add-ons only → <b>RM ${fmt(addon)}</b></div>`;
   }
   document.getElementById('cab-preview').innerHTML=html;
 }
 function cabAdd(){
   const {g,o}=cabSel();
+  const {ls,ac}=cabAddonInputs();
+  const addon=cabAddonCost(ls,ac);
   if(o.fixed){ // flat-price package — no measurement required
-    cabinetLines.push({gid:g.id,gname:g.name,oid:o.id,oname:o.name,L:0,H:0,D:0,price:(+o.basePrice||0),fixed:true});
-    renderCabLines(); recalc();
+    cabinetLines.push({gid:g.id,gname:g.name,oid:o.id,oname:o.name,L:0,H:0,D:0,ls,ac,addon,price:(+o.basePrice||0)+addon,fixed:true});
+    resetCabAddons(); renderCabLines(); recalc();
     return;
   }
   const Lin=parseFloat(document.getElementById('cab-L').value)||0;
@@ -1851,15 +1884,23 @@ function cabAdd(){
   if(!(Lin>0)){ alert('Please enter a Length ('+unitLabel()+').'); return; }
   if(!(Hin>0)){ alert('Height ('+unitLabel()+') is required.'); document.getElementById('cab-H').focus(); return; }
   const Lmm=mmFromInput(Lin), Hmm=mmFromInput(Hin), Dmm=mmFromInput(Din);
-  cabinetLines.push({gid:g.id,gname:g.name,oid:o.id,oname:o.name,L:Lmm,H:Hmm,D:Dmm,price:cabinetPrice(o,Lmm,Hmm)});
+  cabinetLines.push({gid:g.id,gname:g.name,oid:o.id,oname:o.name,L:Lmm,H:Hmm,D:Dmm,ls,ac,addon,price:cabinetPrice(o,Lmm,Hmm)+addon});
   document.getElementById('cab-D').value='';
   cabOptionChange(); // reset measurements back to the option's defaults
+  resetCabAddons();
   renderCabLines(); recalc();
 }
 function cabRemove(i){ cabinetLines.splice(i,1); renderCabLines(); recalc(); }
+function cabAddonStr(l){
+  const a=[];
+  if(+l.ls>0) a.push(`light strip ${+l.ls} m`);
+  if(+l.ac>0) a.push(`AC power ${+l.ac} pcs`);
+  return a.join(' · ');
+}
 function dimStr(l){
-  if(l.fixed) return '';
-  return `L ${dispFromMM(l.L)} × H ${dispFromMM(l.H)} × D ${dispFromMM(l.D)} ${unitLabel()}`;
+  const ad=cabAddonStr(l);
+  if(l.fixed) return ad;
+  return `L ${dispFromMM(l.L)} × H ${dispFromMM(l.H)} × D ${dispFromMM(l.D)} ${unitLabel()}${ad?` · ${ad}`:''}`;
 }
 function renderCabLines(){
   const box=document.getElementById('cab-lines');
