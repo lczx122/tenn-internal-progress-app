@@ -75,7 +75,7 @@ export function Layout({
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         <AppHeader title={title} back={back} wide={wide} />
         <AnnouncementBanner />
-        <main ref={mainRef} className="relative flex-1 overflow-y-auto overscroll-y-contain">
+        <main ref={mainRef} className="relative flex-1 overflow-y-auto overscroll-y-contain bg-slate-100">
           {onRefresh && (
             <div
               className="pointer-events-none absolute inset-x-0 top-0 z-10 flex items-end justify-center overflow-hidden"

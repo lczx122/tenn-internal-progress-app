@@ -19,7 +19,12 @@ body {
 
 body {
   margin: 0;
-  background: #f1f5f9;
+  /* White, not slate: iOS paints the strip around the standalone web view (below
+     the bottom nav / under the home indicator) with the BODY background colour.
+     Keeping it white makes that strip blend into the white nav instead of
+     showing an ugly slate band. The scrolling content area carries the slate
+     tint itself (see <main> in Layout). */
+  background: #ffffff;
   -webkit-font-smoothing: antialiased;
   font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   /* Notch / home-indicator insets are handled by the header and bottom nav
