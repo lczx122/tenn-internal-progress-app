@@ -8,6 +8,15 @@ body,
   height: 100%;
 }
 
+/* Lock the document so the page itself never scrolls — only the in-app content
+   area (<main>) scrolls. Without this, an oversized shell lets the body scroll
+   independently, so dragging the bottom nav drags the whole page ("two zones"). */
+html,
+body {
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
 body {
   margin: 0;
   background: #f1f5f9;

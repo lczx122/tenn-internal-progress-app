@@ -7,21 +7,28 @@ import FieldEditor from './components/FieldEditor'
 import { TopProgressBar } from './components/TopProgressBar'
 import './index.css'
 
-// iOS home-screen (standalone) apps launch with a stale layout viewport:
-// WebKit still reserves space for Safari's toolbar until the first scroll, so
-// 100dvh comes up short and the bottom nav floats above the home indicator.
-// The visual viewport reports the true height from the start, so track the
-// larger of the two in --app-h; the app shells use it ahead of 100dvh.
-// (innerHeight wins while the keyboard is open, keeping the shell stable.)
-if ((navigator as { standalone?: boolean }).standalone) {
+// Pin the app shell to the TRUE visible viewport height. iOS browsers and
+// in-app webviews report an unreliable 100dvh — sometimes too short (a dead
+// band of page background shows under the bottom nav) or too tall (the document
+// scrolls separately from the content, so dragging the nav moves the page —
+// the "two zones" feel). The visual viewport always reports what's actually on
+// screen, so track it into --app-h; the shells use it ahead of 100dvh.
+{
+  const standalone = (navigator as { standalone?: boolean }).standalone
   const set = () => {
-    const h = Math.max(window.visualViewport?.height ?? 0, window.innerHeight)
+    const vv = window.visualViewport
+    // Standalone keeps a stable layout viewport, so prefer the larger of the two
+    // (the shell shouldn't shrink when the keyboard opens). In a browser, the
+    // visual viewport is the source of truth for what is actually visible.
+    const h = standalone ? Math.max(vv?.height ?? 0, window.innerHeight) : (vv?.height ?? window.innerHeight)
     document.documentElement.style.setProperty('--app-h', `${Math.round(h)}px`)
   }
   set()
   window.addEventListener('resize', set)
   window.addEventListener('orientationchange', set)
   window.visualViewport?.addEventListener('resize', set)
+  // In a browser the toolbar grows/shrinks the visible area as you scroll.
+  if (!standalone) window.visualViewport?.addEventListener('scroll', set)
   // WebKit sometimes corrects the viewport shortly after launch with no event.
   setTimeout(set, 250)
   setTimeout(set, 1000)
