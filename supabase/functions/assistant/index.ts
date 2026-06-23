@@ -73,18 +73,22 @@ function mytStartOfToday(): Date {
   const y = myt.getUTCFullYear(), m = myt.getUTCMonth(), d = myt.getUTCDate()
   return new Date(Date.UTC(y, m, d, 0, 0, 0) - MYT_OFFSET_MS)
 }
+// Listing windows. "today" and the forward windows start at NOW so already-
+// passed appointments aren't read back; "tomorrow" is the whole next MYT day.
 function rangeFor(when: string): { start: Date; end: Date; label: string } {
   const day = 24 * 60 * 60 * 1000
+  const now = new Date()
   const start0 = mytStartOfToday()
+  const endOfToday = new Date(start0.getTime() + day)
   switch ((when || 'today').toLowerCase()) {
     case 'tomorrow':
-      return { start: new Date(start0.getTime() + day), end: new Date(start0.getTime() + 2 * day), label: 'tomorrow' }
+      return { start: endOfToday, end: new Date(endOfToday.getTime() + day), label: 'tomorrow' }
     case 'week':
-      return { start: start0, end: new Date(start0.getTime() + 7 * day), label: 'this week' }
+      return { start: now, end: new Date(now.getTime() + 7 * day), label: 'in the next 7 days' }
     case 'all':
-      return { start: start0, end: new Date(start0.getTime() + 365 * day), label: 'coming up' }
-    default:
-      return { start: start0, end: new Date(start0.getTime() + day), label: 'today' }
+      return { start: now, end: new Date(now.getTime() + 365 * day), label: 'coming up' }
+    default: // today → from now until the end of today
+      return { start: now, end: endOfToday, label: 'today' }
   }
 }
 
@@ -159,7 +163,7 @@ Deno.serve(async (req) => {
     const list = rows ?? []
     if (!list.length) return jsonRes({ ok: true, count: 0, speech: `You have no appointments ${label}.` })
 
-    const withDay = label === 'this week' || label === 'coming up'
+    const withDay = label === 'in the next 7 days' || label === 'coming up'
     const items = list.map((r) => {
       const t = TYPE_LABEL[r.type] || 'appointment'
       const when = withDay ? `${fmtDate(r.starts_at)} at ${fmtTime(r.starts_at)}` : fmtTime(r.starts_at)
