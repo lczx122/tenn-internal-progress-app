@@ -879,8 +879,21 @@ function aluminiumWorkCardHtml(){
       <span class="cname">Aluminium Work</span>
       <span class="count zero" id="cnt-aluwork">0</span>
     </div>
-    <div class="cat-bd">${grillBodyHtml('alu')}</div>
+    <div class="cat-bd">
+      <div class="cab-grid">
+        <label class="fld">Type <select id="aw-mode" onchange="awModeChange()">
+          <option value="g_alu">Aluminium Grill</option>
+          <option value="pg_yard">PG Yard (Aluminium / Polycarbonate / Acrylic) Package</option>
+        </select></label>
+      </div>
+      <div id="aw-body-g_alu" class="aw-body">${grillBodyHtml('alu')}</div>
+      <div id="aw-body-pg_yard" class="aw-body" style="display:none">${pgBodyHtml('yard')}</div>
+    </div>
   </div>`;
+}
+function awModeChange(){
+  const m=(document.getElementById('aw-mode')||{}).value||'g_alu';
+  ['g_alu','pg_yard'].forEach(k=>{ const el=document.getElementById('aw-body-'+k); if(el) el.style.display=(k===m)?'':'none'; });
 }
 
 /* ============================================================
@@ -933,6 +946,34 @@ const PG_PACKAGES = [
       ]},
     ],
   },
+  {
+    id:'yard', name:'PG Yard (Aluminium / Polycarbonate / Acrylic) Package', cat:'Aluminium Work',
+    note:'Pick the floor & material, set options (colour for Moru only) and an optional exhaust-fan opening, then add it.',
+    colour:false, exhaust:true, codeLabels:false, colourLabel:'Colour (Moru)',
+    typeLabel:'Floor', productLabel:'Material',
+    groups:[
+      { id:'gf', name:'Ground Floor', items:[
+        { id:'alu',  name:'Aluminium',     spec:'80" × 107"H', p2:2350, p3:null },
+        { id:'poly', name:'Polycarbonate', spec:'80" × 107"H', p2:1750, p3:null },
+        { id:'moru', name:'Moru Acrylic',  spec:'80" × 107"H', p2:2200, p3:null, colours:['White','Transparent'] },
+      ]},
+      { id:'1f', name:'1st Floor', items:[
+        { id:'alu',  name:'Aluminium',     spec:'80" × 100"H', p2:2150, p3:null },
+        { id:'poly', name:'Polycarbonate', spec:'80" × 100"H', p2:1650, p3:null },
+        { id:'moru', name:'Moru Acrylic',  spec:'80" × 100"H', p2:2000, p3:null, colours:['White','Transparent'] },
+      ]},
+      { id:'2f', name:'2nd Floor', items:[
+        { id:'alu',  name:'Aluminium',     spec:'80" × 159"H', p2:3350, p3:null },
+        { id:'poly', name:'Polycarbonate', spec:'80" × 159"H', p2:2250, p3:null },
+        { id:'moru', name:'Moru Acrylic',  spec:'80" × 159"H', p2:2650, p3:null, colours:['White','Transparent'] },
+      ]},
+      { id:'3f', name:'3rd Floor & Above', items:[
+        { id:'alu',  name:'Aluminium',     spec:'80" × 77"H', p2:1850, p3:null },
+        { id:'poly', name:'Polycarbonate', spec:'80" × 77"H', p2:1400, p3:null },
+        { id:'moru', name:'Moru Acrylic',  spec:'80" × 77"H', p2:1750, p3:null, colours:['White','Transparent'] },
+      ]},
+    ],
+  },
 ];
 const pgRoom = {};   // {pkgId:'2'|'3'}
 const pgLines = {};  // {pkgId:[lines]}
@@ -959,17 +1000,20 @@ function pgHoleTableHtml(pid){
   const cell=i=>`<td id="pg-${pid}-hole-${i}" class="${pgHole[pid][i]?'on':''}" onclick="pgHoleToggle('${pid}',${i})">${pgHole[pid][i]?'●':''}</td>`;
   return `<table class="pg-holetbl"><tbody><tr>${cell(0)}${cell(1)}${cell(2)}</tr><tr>${cell(3)}${cell(4)}${cell(5)}</tr></tbody></table>`;
 }
-// Package entry body (embedded under the Iron Work card's Type selector).
+// Effective colour options for the selected item: item-level overrides the
+// package-level set (e.g. Yard package shows colours for Moru items only).
+function pgColours(P,o){ return (o&&o.colours) ? o.colours : (P.colour ? (P.colours||[]) : null); }
+function pgOptLabel(P,o){ return P.codeLabels===false ? o.name : (o.id+') '+o.name); }
+function pgLineLabel(pid,l){ const P=pgPkg(pid); return (P.codeLabels===false?'':(l.code+') '))+l.name; }
+// Package entry body (embedded under the Iron / Aluminium Work Type selector).
 function pgBodyHtml(pid){
   const P=pgPkg(pid);
   const groupOpts=P.groups.map((g,i)=>`<option value="${i}">${g.name}</option>`).join('');
-  const optOpts=P.groups[0].items.map((o,i)=>`<option value="${i}">${o.id}) ${o.name}</option>`).join('');
-  let optRow='';
-  if(P.colour||P.exhaust){
-    const colSel=P.colour?`<label class="fld">Powder Coat Colour <select id="pg-${pid}-colour">${P.colours.map(c=>`<option>${c}</option>`).join('')}</select></label>`:'';
-    const exSel=P.exhaust?`<label class="fld">Prepare exhaust-fan opening? <select id="pg-${pid}-exhaust" onchange="pgExhaustChange('${pid}')"><option value="no">No</option><option value="yes">Yes</option></select></label>`:'';
-    optRow=`<div class="cab-grid">${colSel}${exSel}</div>`;
-  }
+  const optOpts=P.groups[0].items.map((o,i)=>`<option value="${i}">${pgOptLabel(P,o)}</option>`).join('');
+  const pkgHasColour = P.colour || P.groups.some(g=>g.items.some(it=>it.colours));
+  const colSel = pkgHasColour ? `<label class="fld" id="pg-${pid}-colour-wrap">${P.colourLabel||'Powder Coat Colour'} <select id="pg-${pid}-colour"></select></label>` : '';
+  const exSel = P.exhaust ? `<label class="fld">Prepare exhaust-fan opening? <select id="pg-${pid}-exhaust" onchange="pgExhaustChange('${pid}')"><option value="no">No</option><option value="yes">Yes</option></select></label>` : '';
+  const optRow = (colSel||exSel) ? `<div class="cab-grid">${colSel}${exSel}</div>` : '';
   const holeWrap=P.exhaust?`<div id="pg-${pid}-hole-wrap" style="display:none;margin-bottom:10px"><div style="font-size:11.5px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px">Exhaust hole location — tap a cell (grill face, L × H)</div>${pgHoleTableHtml(pid)}</div>`:'';
   return `
       <div class="cab-note">${P.note} Prices follow the Room type.</div>
@@ -979,8 +1023,8 @@ function pgBodyHtml(pid){
         <button type="button" class="pg-room-btn${pgRoom[pid]==='3'?' on':''}" data-room="3" data-pid="${pid}" onclick="pgSetRoom('${pid}','3')">3 Room</button>
       </div>
       <div class="cab-grid">
-        <label class="fld">Type <select id="pg-${pid}-group" onchange="pgGroupChange('${pid}')">${groupOpts}</select></label>
-        <label class="fld">Product <select id="pg-${pid}-option" onchange="pgPreview('${pid}')">${optOpts}</select></label>
+        <label class="fld">${P.typeLabel||'Type'} <select id="pg-${pid}-group" onchange="pgGroupChange('${pid}')">${groupOpts}</select></label>
+        <label class="fld">${P.productLabel||'Product'} <select id="pg-${pid}-option" onchange="pgProductChange('${pid}')">${optOpts}</select></label>
       </div>
       ${optRow}
       ${holeWrap}
@@ -991,7 +1035,18 @@ function pgBodyHtml(pid){
 function pgGroupChange(pid){
   const P=pgPkg(pid);
   const gi=+document.getElementById('pg-'+pid+'-group').value;
-  document.getElementById('pg-'+pid+'-option').innerHTML=P.groups[gi].items.map((o,i)=>`<option value="${i}">${o.id}) ${o.name}</option>`).join('');
+  document.getElementById('pg-'+pid+'-option').innerHTML=P.groups[gi].items.map((o,i)=>`<option value="${i}">${pgOptLabel(P,o)}</option>`).join('');
+  pgProductChange(pid);
+}
+// Refresh the colour selector for the chosen item (shown only when it has colours).
+function pgProductChange(pid){
+  const P=pgPkg(pid); const {o}=pgSel(pid);
+  const wrap=document.getElementById('pg-'+pid+'-colour-wrap'), sel=document.getElementById('pg-'+pid+'-colour');
+  const cols=pgColours(P,o);
+  if(wrap){
+    if(cols&&cols.length){ if(sel) sel.innerHTML=cols.map(c=>`<option>${c}</option>`).join(''); wrap.style.display=''; }
+    else wrap.style.display='none';
+  }
   pgPreview(pid);
 }
 function pgSetRoom(pid,r){
@@ -1023,7 +1078,8 @@ function pgPreview(pid){
 function pgAdd(pid){
   const P=pgPkg(pid); const {g,o}=pgSel(pid);
   const cEl=document.getElementById('pg-'+pid+'-colour');
-  const colour=(P.colour&&cEl)?(cEl.value||'').trim():'';
+  const cols=pgColours(P,o);
+  const colour=(cols&&cols.length&&cEl)?(cEl.value||'').trim():'';
   const eEl=document.getElementById('pg-'+pid+'-exhaust');
   const exhaust=(P.exhaust&&eEl)?eEl.value==='yes':false;
   const hole=exhaust?pgHole[pid].map((v,i)=>v?i:-1).filter(i=>i>=0):[];
@@ -1048,7 +1104,7 @@ function renderPgLines(pid){
     const price=pgLinePrice(pid,l);
     const note=(pgRoom[pid]==='3'&&l.p3==null)?' <span style="color:#b45309;font-weight:400">(3-Room price not set)</span>':'';
     return `<div class="cab-line">
-      <div class="cab-line-info"><b>${l.code}) ${l.name}</b><br><span class="cab-dim">${pgDimStr(l)}</span></div>
+      <div class="cab-line-info"><b>${pgLineLabel(pid,l)}</b><br><span class="cab-dim">${pgDimStr(l)}</span></div>
       <div class="cab-amt">RM ${fmt(price)}${note}</div>
       <button class="cab-x" title="Remove" onclick="pgRemove('${pid}',${i})">✕</button>
     </div>`;
@@ -1965,6 +2021,8 @@ function renderCatalog(){
   iwModeChange();
   root.insertAdjacentHTML('beforeend', aluminiumWorkCardHtml());
   grillOptionChange('alu'); renderGrillLines('alu');
+  pgGroupChange('yard'); renderPgLines('yard');
+  awModeChange();
   root.insertAdjacentHTML('beforeend', paintCardHtml());
   renderPaintLines();
   CATALOG.forEach((cat,ci)=>{
@@ -2261,7 +2319,7 @@ function collectLines(){
   PG_PACKAGES.forEach(P=>{
     (pgLines[P.id]||[]).forEach(l=>{
       const amt=pgLinePrice(P.id,l);
-      lines.push({cat:P.cat,variantName:'',label:`${l.code}) ${l.name}`,sub:pgDimStr(l),price:amt,qty:1,amount:amt});
+      lines.push({cat:P.cat,variantName:'',label:pgLineLabel(P.id,l),sub:pgDimStr(l),price:amt,qty:1,amount:amt});
     });
   });
   paintLines.forEach(l=>{
@@ -2295,7 +2353,7 @@ function recalc(){
   if(cabEl){cabEl.textContent=cabinetLines.length;cabEl.classList.toggle('zero',cabinetLines.length===0);}
   const ironN=grillLines.filter(l=>l.gid==='iron').length+(pgLines.iron||[]).length+(pgLines.invisible||[]).length;
   const iwEl=document.getElementById('cnt-ironwork'); if(iwEl){ iwEl.textContent=ironN; iwEl.classList.toggle('zero',ironN===0); }
-  const awN=grillLines.filter(l=>l.gid==='alu').length;
+  const awN=grillLines.filter(l=>l.gid==='alu').length+(pgLines.yard||[]).length;
   const awEl=document.getElementById('cnt-aluwork'); if(awEl){ awEl.textContent=awN; awEl.classList.toggle('zero',awN===0); }
   const pntEl=document.getElementById('cnt-paint');
   if(pntEl){pntEl.textContent=paintLines.length;pntEl.classList.toggle('zero',paintLines.length===0);}
