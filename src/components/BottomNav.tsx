@@ -1,14 +1,17 @@
 import { NavLink, useLocation } from 'react-router-dom'
 import { TabIcon, useNavTabs, isTabActive } from './navItems'
 
-// Bottom tab bar for the top-level screens on phones. In-flow (not fixed) so it
-// sits at the bottom of the shell, with safe-area padding to clear the home
-// indicator. Hidden on lg+ where the Sidebar takes over.
+// Bottom tab bar for the top-level screens on phones. Pinned with fixed bottom:0
+// — on this device the in-flow shell stops ~62px short of the physical screen
+// (the visible viewport reports 894 of 956px), but a fixed element reaches the
+// true bottom edge, so this removes the dead space. safe-area padding lifts the
+// labels above the home indicator. Hidden on lg+ where the Sidebar takes over.
+// (Layout pads <main> by this bar's height so content isn't hidden behind it.)
 export function BottomNav() {
   const tabs = useNavTabs()
   const { pathname } = useLocation()
   return (
-    <nav className="shrink-0 border-t border-slate-200 bg-white pb-1 lg:hidden">
+    <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white pb-[env(safe-area-inset-bottom)] lg:hidden">
       <div className="mx-auto flex max-w-lg">
         {tabs.map((t) => (
           <NavLink
