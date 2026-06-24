@@ -617,7 +617,7 @@ function relabelUnits(){
     document.querySelectorAll('.unitBtn-'+cat).forEach(b=>{ b.textContent=lbl; });            // multi-button (grill: iron + alu)
   });
 }
-const UNIT_FIELDS = { cab:['cab-L','cab-H','cab-D'], grill:['grl-iron-W','grl-iron-H','grl-iron-L','grl-alu-W','grl-alu-H','grl-alu-L'], paint:['pnt-W','pnt-H'], alu:['alu-L'] };
+const UNIT_FIELDS = { cab:['cab-L','cab-H','cab-D'], grill:['grl-iron-W','grl-iron-H','grl-iron-L'], paint:['pnt-W','pnt-H'], alu:['alu-L'] };
 function toggleUnit(cat){
   const to = UNITS[cat]==='ft' ? 'mm' : 'ft';
   // Convert whatever is currently typed into this category's entry fields.
@@ -629,7 +629,7 @@ function toggleUnit(cat){
   UNITS[cat] = to;
   relabelUnits();
   if(cat==='cab'){ cabPreview(); renderCabLines(); }
-  else if(cat==='grill'){ grillPreview('iron'); grillPreview('alu'); renderGrillLines('iron'); renderGrillLines('alu'); }
+  else if(cat==='grill'){ grillPreview('iron'); renderGrillLines('iron'); }
   else if(cat==='paint'){ paintPreview(); renderPaintLines(); }
   else if(cat==='alu'){ alucabPreview(); renderAlucabLines(); }
 }
@@ -739,19 +739,6 @@ const GRILL = [
       { id:'awnpu',    name:'Awning — PU Metal Roofing',  unit:'sqft',  rate:49 },
       { id:'awnstd',   name:'Awning Standard',            unit:'sqft',  rate:17 },
   ]},
-  { id:'alu', name:'Aluminium Work', options:[
-      { id:'pagar',    name:'Main Gate',                  unit:'sqft',  rate:0 },
-      { id:'automoto', name:'ADDON Gate — Auto Motor',    unit:'flat',  rate:0 },
-      { id:'depan',    name:'Front Door',                 unit:'ftrun', rate:0, tier:{overFt:12, overRate:0} },
-      { id:'balkoni',  name:'Balcony',                    unit:'sqft',  rate:0 },
-      { id:'tutama',   name:'Master Bedroom Window',      unit:'sqft',  rate:0 },
-      { id:'t1',       name:'Bedroom 1 Window',           unit:'sqft',  rate:0 },
-      { id:'t2',       name:'Bedroom 2 Window',           unit:'sqft',  rate:0 },
-      { id:'t3',       name:'Bedroom 3 Window',           unit:'sqft',  rate:0 },
-      { id:'belakang', name:'Back Door',                  unit:'sqft',  rate:0 },
-      { id:'awnpu',    name:'Awning — PU Metal Roofing',  unit:'sqft',  rate:0 },
-      { id:'awnstd',   name:'Awning Standard',            unit:'sqft',  rate:0 },
-  ]},
 ];
 
 function grillGrp(gid){ return GRILL.find(g=>g.id===gid) || GRILL[0]; }
@@ -809,7 +796,7 @@ function grillAdd(gid){
   ['W','H','L'].forEach(k=>{ const el=document.getElementById('grl-'+gid+'-'+k); if(el) el.value=''; });
   grillPreview(gid); renderGrillLines(gid); recalc();
 }
-function grillRemove(i){ grillLines.splice(i,1); renderGrillLines('iron'); renderGrillLines('alu'); recalc(); }
+function grillRemove(i){ grillLines.splice(i,1); renderGrillLines('iron'); recalc(); }
 function renderGrillLines(gid){
   const box=document.getElementById('grl-'+gid+'-lines'); if(!box) return;
   const rows=grillLines.map((l,i)=>({l,i})).filter(x=>x.l.gid===gid);
@@ -870,8 +857,11 @@ function iwModeChange(){
   const m=(document.getElementById('iw-mode')||{}).value||'g_iron';
   ['g_iron','pg_iron','pg_invisible'].forEach(k=>{ const el=document.getElementById('iw-body-'+k); if(el) el.style.display=(k===m)?'':'none'; });
 }
-// ALUMINIUM WORK card — the aluminium grill.
+// ALUMINIUM WORK card — Type selector: PG Yard package + aluminium products.
+function aluCat(){ return CATALOG.find(c=>c.id==='other'); }
 function aluminiumWorkCardHtml(){
+  const oc=aluCat();
+  const products=oc?`${oc.note?`<div class="cat-note">${oc.note}</div>`:''}<div id="tbl-${oc.id}"></div>`:'<div class="cab-empty">No products.</div>';
   return `
   <div class="cat" data-cat="aluwork">
     <div class="cat-hd" onclick="this.parentElement.classList.toggle('open')">
@@ -882,18 +872,18 @@ function aluminiumWorkCardHtml(){
     <div class="cat-bd">
       <div class="cab-grid">
         <label class="fld">Type <select id="aw-mode" onchange="awModeChange()">
-          <option value="g_alu">Aluminium Grill</option>
           <option value="pg_yard">PG Yard (Aluminium / Polycarbonate / Acrylic) Package</option>
+          <option value="products">Aluminium Products</option>
         </select></label>
       </div>
-      <div id="aw-body-g_alu" class="aw-body">${grillBodyHtml('alu')}</div>
-      <div id="aw-body-pg_yard" class="aw-body" style="display:none">${pgBodyHtml('yard')}</div>
+      <div id="aw-body-pg_yard" class="aw-body">${pgBodyHtml('yard')}</div>
+      <div id="aw-body-products" class="aw-body" style="display:none">${products}</div>
     </div>
   </div>`;
 }
 function awModeChange(){
-  const m=(document.getElementById('aw-mode')||{}).value||'g_alu';
-  ['g_alu','pg_yard'].forEach(k=>{ const el=document.getElementById('aw-body-'+k); if(el) el.style.display=(k===m)?'':'none'; });
+  const m=(document.getElementById('aw-mode')||{}).value||'pg_yard';
+  ['pg_yard','products'].forEach(k=>{ const el=document.getElementById('aw-body-'+k); if(el) el.style.display=(k===m)?'':'none'; });
 }
 
 /* ============================================================
@@ -2049,12 +2039,13 @@ function renderCatalog(){
   pgGroupChange('invisible'); renderPgLines('invisible');
   iwModeChange();
   root.insertAdjacentHTML('beforeend', aluminiumWorkCardHtml());
-  grillOptionChange('alu'); renderGrillLines('alu');
   pgGroupChange('yard'); renderPgLines('yard');
+  { const oc=aluCat(); if(oc){ if(activeVariant[oc.id]===undefined) activeVariant[oc.id]=0; renderItems(oc); } }
   awModeChange();
   root.insertAdjacentHTML('beforeend', paintCardHtml());
   renderPaintLines();
   CATALOG.forEach((cat,ci)=>{
+    if(cat.id==='other') return; // 'Aluminium Work' products are rendered inside the Aluminium Work card
     if(activeVariant[cat.id]===undefined) activeVariant[cat.id]=0;
     const wrap = document.createElement('div');
     wrap.className='cat';
@@ -2353,7 +2344,6 @@ const WORK_MAP = {
   'cab:kasut':  ['Aluminium Work'],
   'cab:paket':  ['Mindhome'],
   'grill:iron': ['Iron Work'],
-  'grill:alu':  ['Aluminium Work'],
   'paint':      ['Painting'],
   'alucab':     ['Aluminium Work'],
 };
@@ -2429,7 +2419,8 @@ function recalc(){
   if(cabEl){cabEl.textContent=cabinetLines.length;cabEl.classList.toggle('zero',cabinetLines.length===0);}
   const ironN=grillLines.filter(l=>l.gid==='iron').length+(pgLines.iron||[]).length+(pgLines.invisible||[]).length;
   const iwEl=document.getElementById('cnt-ironwork'); if(iwEl){ iwEl.textContent=ironN; iwEl.classList.toggle('zero',ironN===0); }
-  const awN=grillLines.filter(l=>l.gid==='alu').length+(pgLines.yard||[]).length;
+  const _oc=aluCat(); let _othSel=0; if(_oc) _oc.items.forEach((it,idx)=>{ if((state[_oc.id+':'+idx]||0)>0) _othSel++; });
+  const awN=(pgLines.yard||[]).length+_othSel;
   const awEl=document.getElementById('cnt-aluwork'); if(awEl){ awEl.textContent=awN; awEl.classList.toggle('zero',awN===0); }
   const pntEl=document.getElementById('cnt-paint');
   if(pntEl){pntEl.textContent=paintLines.length;pntEl.classList.toggle('zero',paintLines.length===0);}
@@ -2482,7 +2473,7 @@ function buildDoc(){
 
   // group lines by category (cabinet groups first, then catalog categories)
   let rowsHtml='';
-  const order=[...CABINET.map(gp=>gp.name), ALUCAB_CAT, ...GRILL.map(gp=>gp.name), PAINT_CAT, ...CATALOG.map(c=>c.name), 'Other Services'];
+  const order=[...CABINET.map(gp=>gp.name), ALUCAB_CAT, 'Iron Work', 'Aluminium Work', PAINT_CAT, ...CATALOG.map(c=>c.name), 'Other Services'];
   const seen=new Set();
   order.forEach(cname=>{
     if(seen.has(cname)) return; seen.add(cname);
