@@ -1067,10 +1067,13 @@ function pgHoleToggle(pid,i){
   pgPreview(pid);
 }
 function pgRefreshHole(pid){ for(let i=0;i<6;i++){ const td=document.getElementById('pg-'+pid+'-hole-'+i); if(td){ td.classList.toggle('on',pgHole[pid][i]); td.textContent=pgHole[pid][i]?'●':''; } } }
+// Size shown depends on the room (2-Room and 3-Room sizes differ).
+function pgSpec(pid,o){ return pgRoom[pid]==='2' ? (o.spec||'') : (o.spec3||''); }
+function pgLineSpec(pid,l){ return pgRoom[pid]==='2' ? (l.spec||'') : (l.spec3||''); }
 function pgPreview(pid){
   const {o}=pgSel(pid);
-  const price=pgPrice(pid,o);
-  let html=`<div class="cab-tiers">${o.spec?`<b>${o.spec}</b> · `:''}${pgRoomLabel(pid)}</div>`;
+  const price=pgPrice(pid,o); const sz=pgSpec(pid,o);
+  let html=`<div class="cab-tiers">${sz?`<b>${sz}</b> · `:''}${pgRoomLabel(pid)}</div>`;
   if(price==null) html+=`<div class="cab-calc" style="color:#b45309">${o.name} — 3-Room price not set yet → <b>RM 0.00</b></div>`;
   else html+=`<div class="cab-calc">${o.name} → <b>RM ${fmt(price)}</b></div>`;
   const pv=document.getElementById('pg-'+pid+'-preview'); if(pv) pv.innerHTML=html;
@@ -1083,15 +1086,15 @@ function pgAdd(pid){
   const eEl=document.getElementById('pg-'+pid+'-exhaust');
   const exhaust=(P.exhaust&&eEl)?eEl.value==='yes':false;
   const hole=exhaust?pgHole[pid].map((v,i)=>v?i:-1).filter(i=>i>=0):[];
-  pgLines[pid].push({grp:g.name,code:o.id,name:o.name,spec:o.spec,p2:o.p2,p3:o.p3,colour,exhaust,hole});
+  pgLines[pid].push({grp:g.name,code:o.id,name:o.name,spec:(o.spec||''),spec3:(o.spec3||''),p2:o.p2,p3:o.p3,colour,exhaust,hole});
   if(P.exhaust&&eEl){ eEl.value='no'; const w=document.getElementById('pg-'+pid+'-hole-wrap'); if(w) w.style.display='none'; pgHole[pid]=[false,false,false,false,false,false]; pgRefreshHole(pid); }
   pgPreview(pid); renderPgLines(pid); recalc();
 }
 function pgRemove(pid,i){ pgLines[pid].splice(i,1); renderPgLines(pid); recalc(); }
-function pgDimStr(l){
+function pgDimStr(l,pid){
   const parts=[];
   if(l.grp) parts.push(l.grp);
-  if(l.spec) parts.push(l.spec);
+  const sz=pgLineSpec(pid,l); if(sz) parts.push(sz);
   if(l.colour) parts.push(l.colour);
   if(l.exhaust){ const h=pgHoleLabel(l.hole); parts.push('exhaust opening'+(h?` (${h})`:'')); }
   return parts.join(' · ');
@@ -1104,7 +1107,7 @@ function renderPgLines(pid){
     const price=pgLinePrice(pid,l);
     const note=(pgRoom[pid]==='3'&&l.p3==null)?' <span style="color:#b45309;font-weight:400">(3-Room price not set)</span>':'';
     return `<div class="cab-line">
-      <div class="cab-line-info"><b>${pgLineLabel(pid,l)}</b><br><span class="cab-dim">${pgDimStr(l)}</span></div>
+      <div class="cab-line-info"><b>${pgLineLabel(pid,l)}</b><br><span class="cab-dim">${pgDimStr(l,pid)}</span></div>
       <div class="cab-amt">RM ${fmt(price)}${note}</div>
       <button class="cab-x" title="Remove" onclick="pgRemove('${pid}',${i})">✕</button>
     </div>`;
@@ -1186,8 +1189,9 @@ function applyOverrides(ov){
     }
   });
   CABINET.forEach(g=>g.options.forEach(o=>{
-    const v=cabs[g.id+':'+o.id];
-    if(v && v.basePrice!=null && !isNaN(+v.basePrice)) o.basePrice=+v.basePrice;
+    const v=cabs[g.id+':'+o.id]; if(!v) return;
+    if(v.basePrice!=null && !isNaN(+v.basePrice)) o.basePrice=+v.basePrice;
+    if(v.name) o.name=v.name;
   }));
   // Global cabinet + add-on rates.
   const cabRates=cabs['__rates'];
@@ -1200,6 +1204,9 @@ function applyOverrides(ov){
   const pgo=ov.pg||{};
   PG_PACKAGES.forEach(P=>P.groups.forEach(g=>g.items.forEach(o=>{
     const v=pgo[P.id+':'+g.id+':'+o.id]; if(!v) return;
+    if(v.name) o.name=v.name;
+    if(v.spec!=null) o.spec=v.spec;
+    if(v.spec3!=null) o.spec3=v.spec3;
     if(v.p2!=null && !isNaN(+v.p2)) o.p2=+v.p2;
     if('p3' in v) o.p3=(v.p3==null||v.p3===''||isNaN(+v.p3))?null:+v.p3;
   })));
@@ -1213,17 +1220,21 @@ function applyOverrides(ov){
   GRILL.forEach(g=>g.options.forEach(o=>{
     const v=grls[g.id+':'+o.id];
     if(!v) return;
+    if(v.name) o.name=v.name;
     if(v.rate!=null) o.rate=+v.rate;
     if(o.tier && v.overRate!=null) o.tier.overRate=+v.overRate;
   }));
   PAINT.forEach(o=>{
     const v=pnts[o.id];
-    if(v && v.rate!=null) o.rate=+v.rate;
+    if(!v) return;
+    if(v.name) o.name=v.name;
+    if(v.rate!=null) o.rate=+v.rate;
   });
   const alus=ov.alucabs||{};
   ALUCAB.forEach(o=>{
-    const v=alus[o.id];
-    if(v && v.rate!=null && !isNaN(+v.rate)) o.rate=+v.rate;
+    const v=alus[o.id]; if(!v) return;
+    if(v.name) o.name=v.name;
+    if(v.rate!=null && !isNaN(+v.rate)) o.rate=+v.rate;
   });
   // Discounts are fully admin-managed: the saved list (if any) replaces the
   // default seed so add/edit/delete in Edit Prices is authoritative.
@@ -1269,13 +1280,13 @@ function capturePriceDefaults(){
   PRICE_DEFAULTS.discounts=DEFAULT_DISCOUNTS.map(d=>({...d}));
   CATALOG.forEach(cat=>cat.items.forEach(it=>{ PRICE_DEFAULTS.items[itemKey(cat,it)]=it.price; }));
   CATALOG.forEach(cat=>{ PRICE_DEFAULTS.catalog[cat.id]=cat.items.map(it=>({id:it.id,label:it.label,sub:it.sub||'',price:it.price,hidden:false})); });
-  CABINET.forEach(g=>g.options.forEach(o=>{ PRICE_DEFAULTS.cabinets[g.id+':'+o.id]={basePrice:o.basePrice}; }));
+  CABINET.forEach(g=>g.options.forEach(o=>{ PRICE_DEFAULTS.cabinets[g.id+':'+o.id]={basePrice:o.basePrice,name:o.name}; }));
   PRICE_DEFAULTS.cabinets['__rates']={cabinetRate:CABINET_RATE, lightstripRate:LIGHTSTRIP_RATE, acpowerRate:ACPOWER_RATE};
   PRICE_DEFAULTS.pg={};
-  PG_PACKAGES.forEach(P=>P.groups.forEach(g=>g.items.forEach(o=>{ PRICE_DEFAULTS.pg[P.id+':'+g.id+':'+o.id]={p2:o.p2,p3:o.p3}; })));
-  GRILL.forEach(g=>g.options.forEach(o=>{ PRICE_DEFAULTS.grills[g.id+':'+o.id]={rate:o.rate,overRate:(o.tier?o.tier.overRate:null)}; }));
-  PAINT.forEach(o=>{ PRICE_DEFAULTS.paints[o.id]={rate:o.rate}; });
-  ALUCAB.forEach(o=>{ PRICE_DEFAULTS.alucabs[o.id]={rate:o.rate}; });
+  PG_PACKAGES.forEach(P=>P.groups.forEach(g=>g.items.forEach(o=>{ PRICE_DEFAULTS.pg[P.id+':'+g.id+':'+o.id]={name:o.name,spec:(o.spec||''),spec3:(o.spec3||''),p2:o.p2,p3:o.p3}; })));
+  GRILL.forEach(g=>g.options.forEach(o=>{ PRICE_DEFAULTS.grills[g.id+':'+o.id]={rate:o.rate,overRate:(o.tier?o.tier.overRate:null),name:o.name}; }));
+  PAINT.forEach(o=>{ PRICE_DEFAULTS.paints[o.id]={rate:o.rate,name:o.name}; });
+  ALUCAB.forEach(o=>{ PRICE_DEFAULTS.alucabs[o.id]={rate:o.rate,name:o.name}; });
   PRICE_DEFAULTS.areaTiers=DEFAULT_AREA_TIERS.map(t=>({minM2:t.minM2,pct:t.pct}));
 }
 
@@ -1401,6 +1412,13 @@ function peField(kind,key,field,val,label,opts){
   return `<label class="pe-f"><span>${label}</span>${wrapped}</label>`;
 }
 const peAttr = s => String(s==null?'':s).replace(/&/g,'&amp;').replace(/"/g,'&quot;');
+// Editable free-text field (e.g. product name / size). Skipped by peValidate;
+// saved as a string. Blank is allowed. `def` = code default (drives Reset).
+function peTextField(kind,key,field,val,label,def){
+  const vv=peAttr(val==null?'':val);
+  const dv=peAttr(def==null?(val==null?'':val):def);
+  return `<label class="pe-f"><span>${label}</span><input type="text" data-kind="${kind}" data-key="${key}" data-field="${field}" data-text="1" data-default="${dv}" value="${vv}"></label>`;
+}
 // An editable product row: name + description + price. Every row carries its
 // stable id and hidden state; built-ins can be hidden (reversible) but only
 // admin-added custom rows can be permanently deleted.
@@ -1508,11 +1526,12 @@ function buildPriceEditorHtml(){
         ${peField('cab','__rates','acpowerRate',ACPOWER_RATE,'AC power RM / pcs',{money:true,def:rd.acpowerRate})}
       </div></div>`;
   CABINET.forEach(g=>g.options.forEach(o=>{
-    if(!o.fixed) return; // measured cabinets all use the global rate above
     const k=g.id+':'+o.id, d=PRICE_DEFAULTS.cabinets[k]||{};
+    const priceField=o.fixed?peField('cab',k,'basePrice',o.basePrice,'Fixed price (RM)',{money:true,def:d.basePrice}):'';
     h+=`<div class="pe-cab" data-search="${peSafe(g.name+' '+o.name)}">${peCardHead(g.name+' · '+o.name)}
-      <div class="pe-cab-grid" style="grid-template-columns:minmax(0,200px)">
-        ${peField('cab',k,'basePrice',o.basePrice,'Fixed price (RM)',{money:true,def:d.basePrice})}
+      <div class="pe-cab-grid">
+        ${peTextField('cab',k,'name',o.name,'Name',d.name)}
+        ${priceField}
       </div></div>`;
   }));
   h+='</div></div>';
@@ -1525,6 +1544,7 @@ function buildPriceEditorHtml(){
     const ul=o.unit==='sqft'?'RM/sqft':(o.unit==='ftrun'?'RM/ft':'RM');
     h+=`<div class="pe-cab" data-search="${peSafe(g.name+' '+o.name)}">${peCardHead(g.name+' · '+o.name)}
       <div class="pe-cab-grid">
+        ${peTextField('grill',k,'name',o.name,'Name',d.name)}
         ${peField('grill',k,'rate',o.rate,ul,{money:true,def:d.rate})}
         ${o.unit==='ftrun'?peField('grill',k,'overRate',(o.tier?o.tier.overRate:0),'RM/ft >12ft',{money:true,def:(d.overRate!=null?d.overRate:0)}):''}
       </div></div>`;
@@ -1532,12 +1552,15 @@ function buildPriceEditorHtml(){
   h+='</div>';
   // PG packages — per-product 2-Room / 3-Room prices.
   PG_PACKAGES.forEach(P=>{
-    h+=`<div class="pe-cat" data-search="${peSafe(P.name+' package iron work 2 room 3 room')}">${peSectionHead(P.name+' — prices')}<p class="pe-note">Per product: 2-Room &amp; 3-Room (RM). Leave the 3-Room field blank to keep it unset.</p>`;
+    h+=`<div class="pe-cat" data-search="${peSafe(P.name+' package iron work 2 room 3 room')}">${peSectionHead(P.name+' — products & prices')}<p class="pe-note">Edit each product's name, size &amp; price per room. 2-Room and 3-Room are separate (different sizes); leave a 3-Room field blank to keep it unset.</p>`;
     P.groups.forEach(g=>g.items.forEach(o=>{
       const k=P.id+':'+g.id+':'+o.id, d=(PRICE_DEFAULTS.pg||{})[k]||{};
-      h+=`<div class="pe-cab" data-search="${peSafe(P.name+' '+g.name+' '+o.name+' '+o.id)}">${peCardHead(g.name+' · '+o.id+') '+o.name+(o.spec?' · '+o.spec:''))}
+      h+=`<div class="pe-cab" data-search="${peSafe(P.name+' '+g.name+' '+o.name+' '+o.id)}">${peCardHead(g.name+' · '+o.name)}
         <div class="pe-cab-grid">
+          ${peTextField('pg',k,'name',o.name,'Name',d.name)}
+          ${peTextField('pg',k,'spec',(o.spec||''),'2-Room Size',d.spec)}
           ${peField('pg',k,'p2',o.p2,'2-Room RM',{money:true,def:d.p2})}
+          ${peTextField('pg',k,'spec3',(o.spec3||''),'3-Room Size',d.spec3)}
           ${peField('pg',k,'p3',o.p3,'3-Room RM',{money:true,def:d.p3})}
         </div></div>`;
     }));
@@ -1551,7 +1574,7 @@ function buildPriceEditorHtml(){
   PAINT.forEach(o=>{
     const d=PRICE_DEFAULTS.paints[o.id]||{};
     h+=`<div class="pe-cab" data-search="${peSafe(o.name)}">${peCardHead(o.name)}
-      <div class="pe-cab-grid">${peField('paint',o.id,'rate',o.rate,'RM/sqft',{money:true,def:d.rate})}</div></div>`;
+      <div class="pe-cab-grid">${peTextField('paint',o.id,'name',o.name,'Name',d.name)}${peField('paint',o.id,'rate',o.rate,'RM/sqft',{money:true,def:d.rate})}</div></div>`;
   });
   h+='</div></div>';
 
@@ -1561,7 +1584,7 @@ function buildPriceEditorHtml(){
   ALUCAB.forEach(o=>{
     const d=PRICE_DEFAULTS.alucabs[o.id]||{};
     h+=`<div class="pe-cab" data-search="${peSafe(o.name+' '+o.spec)}">${peCardHead(o.name+' · '+o.spec)}
-      <div class="pe-cab-grid" style="grid-template-columns:minmax(0,200px)">${peField('alucab',o.id,'rate',o.rate,'RM/ft',{money:true,def:d.rate})}</div></div>`;
+      <div class="pe-cab-grid">${peTextField('alucab',o.id,'name',o.name,'Name',d.name)}${peField('alucab',o.id,'rate',o.rate,'RM/ft',{money:true,def:d.rate})}</div></div>`;
   });
   h+='</div></div>';
 
@@ -1737,6 +1760,7 @@ function peValidate(){
   document.querySelectorAll('#priceBody input[data-kind]').forEach(inp=>{
     // Product & discount rows are free-form (text name; blank amount = 0) — skip.
     if(inp.dataset.kind==='catitem' || inp.dataset.kind==='discitem'){ inp.classList.remove('pe-invalid'); return; }
+    if(inp.dataset.text){ inp.classList.remove('pe-invalid'); return; }   // free-text (name / size)
     const v=parseFloat(inp.value);
     let invalid;
     if(inp.dataset.kind==='areatier' || (inp.dataset.kind==='pg' && inp.dataset.field==='p3')){
@@ -1784,8 +1808,9 @@ async function savePrices(){
     overlay.catalog[catEl.dataset.cat]=list;
   });
   document.querySelectorAll('#priceBody input[data-kind="cab"]').forEach(inp=>{
-    const k=inp.dataset.key,f=inp.dataset.field,v=parseFloat(inp.value);
-    (overlay.cabinets[k]=overlay.cabinets[k]||{})[f]=isNaN(v)?0:v;
+    const k=inp.dataset.key,f=inp.dataset.field;
+    let v; if(inp.dataset.text){ v=(inp.value||'').trim(); } else { v=parseFloat(inp.value); v=isNaN(v)?0:v; }
+    (overlay.cabinets[k]=overlay.cabinets[k]||{})[f]=v;
   });
   // Global cabinet area tiers (skip blank rows).
   const tierByIdx={};
@@ -1798,21 +1823,25 @@ async function savePrices(){
     .map(t=>({minM2:t.minM2, pct:t.pct==null?0:t.pct}))
     .sort((a,b)=>a.minM2-b.minM2);
   document.querySelectorAll('#priceBody input[data-kind="grill"]').forEach(inp=>{
-    const k=inp.dataset.key,f=inp.dataset.field,v=parseFloat(inp.value);
-    (overlay.grills[k]=overlay.grills[k]||{})[f]=isNaN(v)?0:v;
+    const k=inp.dataset.key,f=inp.dataset.field;
+    let v; if(inp.dataset.text){ v=(inp.value||'').trim(); } else { v=parseFloat(inp.value); v=isNaN(v)?0:v; }
+    (overlay.grills[k]=overlay.grills[k]||{})[f]=v;
   });
   document.querySelectorAll('#priceBody input[data-kind="paint"]').forEach(inp=>{
-    const k=inp.dataset.key,f=inp.dataset.field,v=parseFloat(inp.value);
-    (overlay.paints[k]=overlay.paints[k]||{})[f]=isNaN(v)?0:v;
+    const k=inp.dataset.key,f=inp.dataset.field;
+    let v; if(inp.dataset.text){ v=(inp.value||'').trim(); } else { v=parseFloat(inp.value); v=isNaN(v)?0:v; }
+    (overlay.paints[k]=overlay.paints[k]||{})[f]=v;
   });
   document.querySelectorAll('#priceBody input[data-kind="alucab"]').forEach(inp=>{
-    const k=inp.dataset.key,f=inp.dataset.field,v=parseFloat(inp.value);
-    (overlay.alucabs[k]=overlay.alucabs[k]||{})[f]=isNaN(v)?0:v;
+    const k=inp.dataset.key,f=inp.dataset.field;
+    let v; if(inp.dataset.text){ v=(inp.value||'').trim(); } else { v=parseFloat(inp.value); v=isNaN(v)?0:v; }
+    (overlay.alucabs[k]=overlay.alucabs[k]||{})[f]=v;
   });
   document.querySelectorAll('#priceBody input[data-kind="pg"]').forEach(inp=>{
     const k=inp.dataset.key,f=inp.dataset.field,raw=(inp.value||'').trim(),v=parseFloat(raw);
-    // blank 3-Room price stays unset (null); other blanks fall back to 0
-    (overlay.pg[k]=overlay.pg[k]||{})[f]=(f==='p3'&&raw==='')?null:(isNaN(v)?0:v);
+    // text fields (name / sizes) saved as strings; blank 3-Room price stays unset (null)
+    let out; if(inp.dataset.text){ out=raw; } else if(f==='p3'&&raw===''){ out=null; } else { out=isNaN(v)?0:v; }
+    (overlay.pg[k]=overlay.pg[k]||{})[f]=out;
   });
   const supa=getSupa();
   if(!supa){ alert('Not connected — open this inside the app to save prices.'); return; }
@@ -2365,7 +2394,7 @@ function collectLines(){
   PG_PACKAGES.forEach(P=>{
     (pgLines[P.id]||[]).forEach(l=>{
       const amt=pgLinePrice(P.id,l);
-      lines.push({cat:P.cat,variantName:'',label:pgLineLabel(P.id,l),sub:pgDimStr(l),price:amt,qty:1,amount:amt});
+      lines.push({cat:P.cat,variantName:'',label:pgLineLabel(P.id,l),sub:pgDimStr(l,P.id),price:amt,qty:1,amount:amt});
     });
   });
   paintLines.forEach(l=>{
