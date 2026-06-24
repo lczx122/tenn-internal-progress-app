@@ -201,6 +201,12 @@
   .cab-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px 16px}
   .cab-grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px 16px;margin-top:12px}
   @media(max-width:560px){.cab-grid,.cab-grid3{grid-template-columns:1fr}}
+  /* PG Iron Work Package: room toggle + exhaust-hole grid */
+  .pg-room-btn{padding:6px 13px;border:1px solid var(--line);border-radius:8px;background:#fff;font-size:12px;font-weight:600;color:#64748b;cursor:pointer}
+  .pg-room-btn.on{background:var(--navy);color:#fff;border-color:var(--navy)}
+  .pg-holetbl{border-collapse:collapse;width:min(240px,100%);table-layout:fixed}
+  .pg-holetbl td{border:1px solid #94a3b8;height:38px;text-align:center;cursor:pointer;font-size:13px;color:#cbd5e1;user-select:none}
+  .pg-holetbl td.on{background:#fde68a;color:#92400e;font-weight:700}
   .cab-preview{background:#f7fbff;border:1px solid var(--line);border-radius:9px;padding:11px 13px;margin:14px 0;font-size:12.5px;color:var(--muted);min-height:20px}
   .cab-preview .cab-tiers{line-height:1.7}
   .cab-preview .cab-calc{margin-top:7px;color:var(--navy);font-size:14.5px;font-family:'Archivo'}
@@ -847,6 +853,148 @@ function grillCardHtml(){
       <div id="grl-lines" style="margin-top:14px"></div>
     </div>
   </div>`;
+}
+
+/* ============================================================
+   PG IRON WORK PACKAGE — pick a product, set powder-coat colour &
+   optional exhaust-fan opening (with a 3×2 hole-location grid),
+   then add to the quote (like the cabinet section). Prices follow
+   a 2-Room / 3-Room toggle; 3-Room prices (p3) are placeholders
+   (null) — fill them in below when ready. Lines group under "Iron Work".
+   ============================================================ */
+const PG_COLOURS = ['White - Rough Surface', 'White'];
+const PG_GROUPS = [
+  { id:'grill', name:'Grills', items:[
+    { id:'A',  name:'Balcony — 2 Leaf Sliding Door', spec:'95" × 88½"',  p2:1400, p3:null },
+    { id:'B',  name:'Main Door',                      spec:'34½" × 79¼"', p2:850,  p3:null },
+    { id:'C1', name:'Yard Grill — Ground Floor',      spec:'80" × 107"H', p2:1200, p3:null },
+    { id:'C2', name:'Yard Grill — 1st Floor',         spec:'80" × 100"H', p2:1200, p3:null },
+    { id:'C3', name:'Yard Grill — 2nd Floor',         spec:'80" × 159"H', p2:1850, p3:null },
+    { id:'C4', name:'Yard Grill — 3rd Floor & Above', spec:'80" × 77"H',  p2:850,  p3:null },
+  ]},
+  { id:'window', name:'Window Grill ADDON (Type A)', items:[
+    { id:'WA1', name:'Master Room', spec:"6' × 4'", p2:500, p3:null },
+    { id:'WA2', name:'Room 2',      spec:"4' × 4'", p2:330, p3:null },
+  ]},
+];
+let PG_ROOM = '2';                                   // '2' or '3'
+const pgLines = [];                                  // configured package items
+let pgHole = [false,false,false,false,false,false];  // current entry's 3×2 hole grid
+
+function pgSel(){
+  const gi=+document.getElementById('pg-group').value;
+  const oi=+document.getElementById('pg-option').value;
+  const g=PG_GROUPS[gi]||PG_GROUPS[0]; const o=g.items[oi]||g.items[0];
+  return {gi,oi,g,o};
+}
+function pgRoomLabel(){ return PG_ROOM==='2'?'2 Room':'3 Room'; }
+function pgPrice(o){ return PG_ROOM==='2' ? (+o.p2||0) : (o.p3==null?null:(+o.p3||0)); }
+function pgLinePrice(l){ return PG_ROOM==='2' ? (+l.p2||0) : (l.p3==null?0:(+l.p3||0)); }
+function pgHoleLabel(hole){
+  if(!hole||!hole.length) return '';
+  const rows=['Top','Bottom'], cols=['Left','Centre','Right'];
+  return hole.map(i=>`${rows[Math.floor(i/3)]}-${cols[i%3]}`).join(', ');
+}
+function pgHoleTableHtml(){
+  const cell=i=>`<td id="pg-hole-${i}" class="${pgHole[i]?'on':''}" onclick="pgHoleToggle(${i})">${pgHole[i]?'●':''}</td>`;
+  return `<table class="pg-holetbl"><tbody><tr>${cell(0)}${cell(1)}${cell(2)}</tr><tr>${cell(3)}${cell(4)}${cell(5)}</tr></tbody></table>`;
+}
+function pgCardHtml(){
+  const groupOpts=PG_GROUPS.map((g,i)=>`<option value="${i}">${g.name}</option>`).join('');
+  const optOpts=PG_GROUPS[0].items.map((o,i)=>`<option value="${i}">${o.id}) ${o.name}</option>`).join('');
+  const colOpts=PG_COLOURS.map(c=>`<option>${c}</option>`).join('');
+  return `
+  <div class="cat" data-cat="pgpkg">
+    <div class="cat-hd" onclick="this.parentElement.classList.toggle('open')">
+      <span class="chev">▶</span>
+      <span class="cname">PG Iron Work Package</span>
+      <span class="count zero" id="cnt-pgpkg">0</span>
+    </div>
+    <div class="cat-bd">
+      <div class="cab-note">Pick a product, set the powder-coat colour and (optionally) an exhaust-fan opening, then add it — repeat for each piece. Prices follow the Room type. Lines group under <b>Iron Work</b>.</div>
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px">
+        <span style="font-size:11.5px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.6px">Room type</span>
+        <button type="button" class="pg-room-btn${PG_ROOM==='2'?' on':''}" data-room="2" onclick="pgSetRoom('2')">2 Room</button>
+        <button type="button" class="pg-room-btn${PG_ROOM==='3'?' on':''}" data-room="3" onclick="pgSetRoom('3')">3 Room</button>
+      </div>
+      <div class="cab-grid">
+        <label class="fld">Type <select id="pg-group" onchange="pgGroupChange()">${groupOpts}</select></label>
+        <label class="fld">Product <select id="pg-option" onchange="pgPreview()">${optOpts}</select></label>
+      </div>
+      <div class="cab-grid">
+        <label class="fld">Powder Coat Colour <select id="pg-colour">${colOpts}</select></label>
+        <label class="fld">Prepare exhaust-fan opening? <select id="pg-exhaust" onchange="pgExhaustChange()"><option value="no">No</option><option value="yes">Yes</option></select></label>
+      </div>
+      <div id="pg-hole-wrap" style="display:none;margin-bottom:10px">
+        <div style="font-size:11.5px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px">Exhaust hole location — tap a cell (grill face, L × H)</div>
+        ${pgHoleTableHtml()}
+      </div>
+      <div class="cab-preview" id="pg-preview"></div>
+      <button class="act b-primary" style="padding:11px 16px;font-size:13px" onclick="pgAdd()">+ Add to Quote</button>
+      <div id="pg-lines" style="margin-top:14px"></div>
+    </div>
+  </div>`;
+}
+function pgGroupChange(){
+  const gi=+document.getElementById('pg-group').value;
+  document.getElementById('pg-option').innerHTML=PG_GROUPS[gi].items.map((o,i)=>`<option value="${i}">${o.id}) ${o.name}</option>`).join('');
+  pgPreview();
+}
+function pgSetRoom(r){
+  PG_ROOM=r;
+  document.querySelectorAll('.pg-room-btn').forEach(b=>b.classList.toggle('on',b.dataset.room===r));
+  pgPreview(); renderPgLines(); recalc();
+}
+function pgExhaustChange(){
+  const yes=document.getElementById('pg-exhaust').value==='yes';
+  document.getElementById('pg-hole-wrap').style.display=yes?'':'none';
+  if(!yes){ pgHole=[false,false,false,false,false,false]; pgRefreshHole(); }
+  pgPreview();
+}
+function pgHoleToggle(i){
+  pgHole[i]=!pgHole[i];
+  const td=document.getElementById('pg-hole-'+i);
+  if(td){ td.classList.toggle('on',pgHole[i]); td.textContent=pgHole[i]?'●':''; }
+  pgPreview();
+}
+function pgRefreshHole(){ for(let i=0;i<6;i++){ const td=document.getElementById('pg-hole-'+i); if(td){ td.classList.toggle('on',pgHole[i]); td.textContent=pgHole[i]?'●':''; } } }
+function pgPreview(){
+  const {o}=pgSel();
+  const price=pgPrice(o);
+  let html=`<div class="cab-tiers">${o.spec?`<b>${o.spec}</b> · `:''}${pgRoomLabel()}</div>`;
+  if(price==null) html+=`<div class="cab-calc" style="color:#b45309">${o.name} — 3-Room price not set yet → <b>RM 0.00</b></div>`;
+  else html+=`<div class="cab-calc">${o.name} → <b>RM ${fmt(price)}</b></div>`;
+  document.getElementById('pg-preview').innerHTML=html;
+}
+function pgAdd(){
+  const {o}=pgSel();
+  const colour=(document.getElementById('pg-colour').value||'').trim();
+  const exhaust=document.getElementById('pg-exhaust').value==='yes';
+  const hole=exhaust?pgHole.map((v,i)=>v?i:-1).filter(i=>i>=0):[];
+  pgLines.push({code:o.id,name:o.name,spec:o.spec,p2:o.p2,p3:o.p3,colour,exhaust,hole});
+  document.getElementById('pg-exhaust').value='no';
+  document.getElementById('pg-hole-wrap').style.display='none';
+  pgHole=[false,false,false,false,false,false]; pgRefreshHole();
+  pgPreview(); renderPgLines(); recalc();
+}
+function pgRemove(i){ pgLines.splice(i,1); renderPgLines(); recalc(); }
+function pgDimStr(l){
+  const parts=[l.spec, l.colour];
+  if(l.exhaust){ const h=pgHoleLabel(l.hole); parts.push('exhaust opening'+(h?` (${h})`:'')); }
+  return parts.filter(Boolean).join(' · ');
+}
+function renderPgLines(){
+  const box=document.getElementById('pg-lines'); if(!box) return;
+  if(!pgLines.length){ box.innerHTML='<div class="cab-empty">No package items added yet.</div>'; return; }
+  box.innerHTML=pgLines.map((l,i)=>{
+    const price=pgLinePrice(l);
+    const note=(PG_ROOM==='3'&&l.p3==null)?' <span style="color:#b45309;font-weight:400">(3-Room price not set)</span>':'';
+    return `<div class="cab-line">
+      <div class="cab-line-info"><b>${l.code}) ${l.name}</b><br><span class="cab-dim">${pgDimStr(l)}</span></div>
+      <div class="cab-amt">RM ${fmt(price)}${note}</div>
+      <button class="cab-x" title="Remove" onclick="pgRemove(${i})">✕</button>
+    </div>`;
+  }).join('');
 }
 
 
@@ -1724,6 +1872,9 @@ function renderCatalog(){
   root.insertAdjacentHTML('beforeend', grillCardHtml());
   grillGroupChange();         // populate grill option select
   renderGrillLines();
+  root.insertAdjacentHTML('beforeend', pgCardHtml());
+  pgGroupChange();            // populate package product select
+  renderPgLines();
   root.insertAdjacentHTML('beforeend', paintCardHtml());
   renderPaintLines();
   CATALOG.forEach((cat,ci)=>{
@@ -1993,6 +2144,7 @@ function computeWorkCategories(){
   grillLines.forEach(l=>add('grill:'+l.gid));
   if(paintLines.length) add('paint');
   if(alucabLines.length) add('alucab');
+  if(pgLines.length) set.add('Iron Work');
   return [...set];
 }
 // The PIC(s) ticked in the form — assigned to the unit when an SO is created.
@@ -2015,6 +2167,10 @@ function collectLines(){
   });
   grillLines.forEach(l=>{
     lines.push({cat:l.gname,variantName:'',label:l.oname,sub:grillDimStr(l),price:l.price,qty:1,amount:l.price});
+  });
+  pgLines.forEach(l=>{
+    const amt=pgLinePrice(l);
+    lines.push({cat:'Iron Work',variantName:'',label:`${l.code}) ${l.name}`,sub:pgDimStr(l),price:amt,qty:1,amount:amt});
   });
   paintLines.forEach(l=>{
     lines.push({cat:PAINT_CAT,variantName:'',label:l.oname,sub:paintDimStr(l),price:l.price,qty:1,amount:l.price});
@@ -2047,6 +2203,8 @@ function recalc(){
   if(cabEl){cabEl.textContent=cabinetLines.length;cabEl.classList.toggle('zero',cabinetLines.length===0);}
   const grlEl=document.getElementById('cnt-grill');
   if(grlEl){grlEl.textContent=grillLines.length;grlEl.classList.toggle('zero',grillLines.length===0);}
+  const pgEl=document.getElementById('cnt-pgpkg');
+  if(pgEl){pgEl.textContent=pgLines.length;pgEl.classList.toggle('zero',pgLines.length===0);}
   const pntEl=document.getElementById('cnt-paint');
   if(pntEl){pntEl.textContent=paintLines.length;pntEl.classList.toggle('zero',paintLines.length===0);}
   const aluEl=document.getElementById('cnt-alucab');
@@ -2310,6 +2468,7 @@ async function saveQuote(){
     selections:Object.assign({},state),
     cabinets:cabinetLines.map(l=>Object.assign({},l)),
     grills:grillLines.map(l=>Object.assign({},l)),
+    pg:{room:PG_ROOM, lines:pgLines.map(l=>Object.assign({},l))},
     paints:paintLines.map(l=>Object.assign({},l)),
     alucabs:alucabLines.map(l=>Object.assign({},l)),
     discounts,
@@ -2393,6 +2552,9 @@ async function loadDocument(id, asType, mode){
     if(Array.isArray(p.cabinets)) p.cabinets.forEach(l=>cabinetLines.push(Object.assign({},l)));
     grillLines.length=0;
     if(Array.isArray(p.grills)) p.grills.forEach(l=>grillLines.push(Object.assign({},l)));
+    pgLines.length=0;
+    PG_ROOM=(p.pg&&p.pg.room==='3')?'3':'2';
+    if(p.pg&&Array.isArray(p.pg.lines)) p.pg.lines.forEach(l=>pgLines.push(Object.assign({},l)));
     paintLines.length=0;
     if(Array.isArray(p.paints)) p.paints.forEach(l=>paintLines.push(Object.assign({},l)));
     alucabLines.length=0;
@@ -2443,7 +2605,7 @@ async function loadDocument(id, asType, mode){
       updateConvertBtn();
       renderCatalog();   // re-renders items using the restored state/variants
       await refreshPendingNumber();
-      if(!p.selections && !(p.cabinets&&p.cabinets.length) && !(p.grills&&p.grills.length) && !(p.paints&&p.paints.length) && !(p.alucabs&&p.alucabs.length))
+      if(!p.selections && !(p.cabinets&&p.cabinets.length) && !(p.grills&&p.grills.length) && !(p.pg&&p.pg.lines&&p.pg.lines.length) && !(p.paints&&p.paints.length) && !(p.alucabs&&p.alucabs.length))
         setQnoStatus('Loaded customer from '+data.number+' — items could not be restored, please re-add');
       else
         setQnoStatus('Converting from '+data.number+' — preview, then Save Sales Order');
@@ -2606,6 +2768,9 @@ async function newQuote(){
   for(const k in discountSel) delete discountSel[k];
   cabinetLines.length=0;
   grillLines.length=0;
+  pgLines.length=0;
+  PG_ROOM='2';
+  pgHole=[false,false,false,false,false,false];
   paintLines.length=0;
   alucabLines.length=0;
   ['c_name','c_ic','c_unit','c_project','c_phone','c_email','c_remarks'].forEach(id=>document.getElementById(id).value='');
