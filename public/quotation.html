@@ -1484,14 +1484,16 @@ function buildPriceEditorHtml(){
   const aluworkCount=pgCount('yard');
   const paintCount=PAINT.length;
   const aluCount=ALUCAB.length;
+  const shortCat=name=>{ const m=/\(([^)]+)\)\s*$/.exec(name); return m?m[1]:name; };
+  const catTabs=CATALOG.filter(c=>c.id!=='other').map(c=>`<button type="button" class="pe-tab" data-panel="cat-${c.id}" onclick="peSwitchTab('cat-${c.id}')">${shortCat(c.name)} <span class="pe-pill" data-count>${c.items.length}</span></button>`).join('');
   let h=`<div class="pe-head">
     <div class="pe-tabs">
-      <button type="button" class="pe-tab active" data-panel="items" onclick="peSwitchTab('items')">Items <span class="pe-pill" data-count>${itemCount}</span></button>
-      <button type="button" class="pe-tab" data-panel="cab" onclick="peSwitchTab('cab')">Cabinet <span class="pe-pill" data-count>${cabCount}</span></button>
+      <button type="button" class="pe-tab active" data-panel="cab" onclick="peSwitchTab('cab')">Cabinet <span class="pe-pill" data-count>${cabCount}</span></button>
+      <button type="button" class="pe-tab" data-panel="alucab" onclick="peSwitchTab('alucab')">Aluminium Cabinet <span class="pe-pill" data-count>${aluCount}</span></button>
       <button type="button" class="pe-tab" data-panel="grill" onclick="peSwitchTab('grill')">Iron Work <span class="pe-pill" data-count>${ironCount}</span></button>
       <button type="button" class="pe-tab" data-panel="aluwork" onclick="peSwitchTab('aluwork')">Aluminium Work <span class="pe-pill" data-count>${aluworkCount}</span></button>
       <button type="button" class="pe-tab" data-panel="paint" onclick="peSwitchTab('paint')">Paint <span class="pe-pill" data-count>${paintCount}</span></button>
-      <button type="button" class="pe-tab" data-panel="alucab" onclick="peSwitchTab('alucab')">Aluminium Cabinet <span class="pe-pill" data-count>${aluCount}</span></button>
+      ${catTabs}
       <button type="button" class="pe-tab" data-panel="discount" onclick="peSwitchTab('discount')">Discounts <span class="pe-pill" data-count>${DISCOUNTS.length}</span></button>
     </div>
     <div class="pe-search-wrap"><span class="pe-ico">🔍</span>
@@ -1499,20 +1501,22 @@ function buildPriceEditorHtml(){
       <button type="button" class="pe-search-clear" id="peSearchClear" onclick="peClearSearch()">✕</button>
     </div></div>`;
 
-  // Items — admins can rename, add and delete products per category.
-  h+=`<div class="pe-panel active" data-panel="items"><div class="pe-noresults">No matching items.</div>`;
-  CATALOG.forEach(cat=>{
-    h+=`<div class="pe-cat" data-cat="${cat.id}" data-search="${peSafe(cat.name)}">
+  // Catalog product categories — one panel (chip) each. The 'other' category
+  // (Aluminium Work products) is rendered inside the Aluminium Work panel below.
+  const catCardHtml=cat=>{
+    let s=`<div class="pe-cat" data-cat="${cat.id}" data-search="${peSafe(cat.name)}">
       <div class="pe-cat-hd"><h3>${cat.name}</h3>
         <button type="button" class="pe-reset-cat" onclick="peResetCategory('${cat.id}')">Reset</button></div>`;
-    cat.items.forEach(it=>{ h+=peItemRowHtml(it); });
-    h+=`<button type="button" class="pe-additem" onclick="peAddItem('${cat.id}')">+ Add product</button>`;
-    h+='</div>';
+    cat.items.forEach(it=>{ s+=peItemRowHtml(it); });
+    s+=`<button type="button" class="pe-additem" onclick="peAddItem('${cat.id}')">+ Add product</button>`;
+    s+='</div>'; return s;
+  };
+  CATALOG.filter(c=>c.id!=='other').forEach(cat=>{
+    h+=`<div class="pe-panel" data-panel="cat-${cat.id}"><div class="pe-noresults">No matching items.</div>${catCardHtml(cat)}</div>`;
   });
-  h+='</div>';
 
   // Cabinet — one flat RM/m² rate + add-on rates; fixed packages keep flat prices.
-  h+=`<div class="pe-panel" data-panel="cab"><div class="pe-noresults">No matching cabinets.</div>
+  h+=`<div class="pe-panel active" data-panel="cab"><div class="pe-noresults">No matching cabinets.</div>
     <div class="pe-cat">${peSectionHead('Cabinet — rates')}`;
   const rd=PRICE_DEFAULTS.cabinets['__rates']||{};
   h+=`<div class="pe-cab" data-search="cabinet rate per m2 square metre light strip ac power add-on add on">${peCardHead('Cabinet & add-on rates')}
@@ -1570,7 +1574,7 @@ function buildPriceEditorHtml(){
   // Aluminium Work — the Aluminium Work packages (PG Yard).
   h+=`<div class="pe-panel" data-panel="aluwork"><div class="pe-noresults">No matching items.</div>`;
   PG_PACKAGES.filter(P=>P.cat==='Aluminium Work').forEach(P=>{ h+=pgSectionHtml(P); });
-  h+=`<div class="pe-cat" data-search="aluminium products louvered moru acrylic"><p class="pe-note">Aluminium products (Aluminium Louvered, Moru Acrylic) are edited under the <b>Items</b> tab → Aluminium Work.</p></div>`;
+  h+=catCardHtml(aluCat());
   h+='</div>';
 
   // Paint
@@ -1661,9 +1665,12 @@ function peApplyChanged(inp){
   const badge=cont.querySelector('.pe-badge'); if(badge) badge.hidden=!dirty;
   const reset=cont.querySelector('.pe-reset'); if(reset) reset.disabled=!customized;
 }
+// Edit-Prices tab/panel names: one per catalog category (except 'other', which
+// lives in the Aluminium Work panel) plus the fixed panels.
+function pePanelNames(){ return [...CATALOG.filter(c=>c.id!=='other').map(c=>'cat-'+c.id), 'cab','grill','aluwork','paint','alucab','discount']; }
 function peRecount(){
   const searching=(document.getElementById('peSearch')||{}).value;
-  ['items','cab','grill','aluwork','paint','alucab','discount'].forEach(name=>{
+  pePanelNames().forEach(name=>{
     const panel=document.querySelector(`.pe-panel[data-panel="${name}"]`);
     const tab=document.querySelector(`.pe-tab[data-panel="${name}"]`);
     if(!panel||!tab) return;
@@ -1706,7 +1713,7 @@ function peSwitchTab(name){
 function peFilter(){
   const q=((document.getElementById('peSearch')||{}).value||'').trim().toLowerCase();
   const clr=document.getElementById('peSearchClear'); if(clr) clr.classList.toggle('show',q.length>0);
-  ['items','cab','grill','aluwork','paint','alucab','discount'].forEach(name=>{
+  pePanelNames().forEach(name=>{
     const panel=document.querySelector(`.pe-panel[data-panel="${name}"]`);
     const tab=document.querySelector(`.pe-tab[data-panel="${name}"]`);
     if(!panel) return;
