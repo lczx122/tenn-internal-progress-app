@@ -79,7 +79,7 @@ export function Layout({
           ref={mainRef}
           className={
             'relative flex-1 overflow-y-auto overscroll-y-contain bg-slate-100 ' +
-            (bottomNav ? 'pb-[calc(3.5rem+env(safe-area-inset-bottom))] lg:pb-0' : '')
+            (bottomNav ? 'pb-[calc(2.75rem+max(0.375rem,calc(env(safe-area-inset-bottom)-1.25rem)))] lg:pb-0' : '')
           }
         >
           {onRefresh && (
