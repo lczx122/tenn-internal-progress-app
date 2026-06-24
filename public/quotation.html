@@ -612,10 +612,12 @@ function dispFromFt(v,cat){ v=+v||0; return UNITS[cat]==='ft' ? +(+v).toFixed(2)
 function relabelUnits(){
   ['cab','grill','paint','alu'].forEach(cat=>{
     document.querySelectorAll('.ulin-'+cat).forEach(s=>{ s.textContent=UNITS[cat]; });
-    const btn=document.getElementById('unitBtn-'+cat); if(btn) btn.textContent='Units: '+UNITS[cat].toUpperCase();
+    const lbl='Units: '+UNITS[cat].toUpperCase();
+    const btn=document.getElementById('unitBtn-'+cat); if(btn) btn.textContent=lbl;           // single-button cards
+    document.querySelectorAll('.unitBtn-'+cat).forEach(b=>{ b.textContent=lbl; });            // multi-button (grill: iron + alu)
   });
 }
-const UNIT_FIELDS = { cab:['cab-L','cab-H','cab-D'], grill:['grl-W','grl-H','grl-L'], paint:['pnt-W','pnt-H'], alu:['alu-L'] };
+const UNIT_FIELDS = { cab:['cab-L','cab-H','cab-D'], grill:['grl-iron-W','grl-iron-H','grl-iron-L','grl-alu-W','grl-alu-H','grl-alu-L'], paint:['pnt-W','pnt-H'], alu:['alu-L'] };
 function toggleUnit(cat){
   const to = UNITS[cat]==='ft' ? 'mm' : 'ft';
   // Convert whatever is currently typed into this category's entry fields.
@@ -627,7 +629,7 @@ function toggleUnit(cat){
   UNITS[cat] = to;
   relabelUnits();
   if(cat==='cab'){ cabPreview(); renderCabLines(); }
-  else if(cat==='grill'){ grillPreview(); renderGrillLines(); }
+  else if(cat==='grill'){ grillPreview('iron'); grillPreview('alu'); renderGrillLines('iron'); renderGrillLines('alu'); }
   else if(cat==='paint'){ paintPreview(); renderPaintLines(); }
   else if(cat==='alu'){ alucabPreview(); renderAlucabLines(); }
 }
@@ -752,10 +754,11 @@ const GRILL = [
   ]},
 ];
 
-function grillSel(){
-  const gi=+document.getElementById('grl-group').value;
-  const oi=+document.getElementById('grl-option').value;
-  return {gi,oi,g:GRILL[gi],o:GRILL[gi].options[oi]};
+function grillGrp(gid){ return GRILL.find(g=>g.id===gid) || GRILL[0]; }
+function grillSel(gid){
+  const g=grillGrp(gid);
+  const oi=+document.getElementById('grl-'+gid+'-option').value;
+  return {g,o:g.options[oi]||g.options[0]};
 }
 // W, H, L are canonical FEET (callers convert from the entry unit).
 function grillCompute(o,W,H,L){
@@ -769,88 +772,114 @@ function grillDimStr(l){
   if(l.unit==='ftrun'){ return `${dispFromFt(l.L,'grill')} ${u} run${col}`; }
   return 'Addon'+col;
 }
-function grillGroupChange(){
-  const gi=+document.getElementById('grl-group').value;
-  document.getElementById('grl-option').innerHTML=GRILL[gi].options.map((o,i)=>`<option value="${i}">${o.name}</option>`).join('');
-  // Colour selection applies to Iron Work (iron grill) only.
-  const cw=document.getElementById('grl-wrap-color'); if(cw) cw.style.display = GRILL[gi].id==='iron' ? '' : 'none';
-  grillOptionChange();
-}
-function grillOptionChange(){
-  const {o}=grillSel();
+function grillOptionChange(gid){
+  const {o}=grillSel(gid);
   const showWH=o.unit==='sqft', showL=o.unit==='ftrun';
-  document.getElementById('grl-wrap-W').style.display=showWH?'':'none';
-  document.getElementById('grl-wrap-H').style.display=showWH?'':'none';
-  document.getElementById('grl-wrap-L').style.display=showL?'':'none';
-  document.getElementById('grl-W').value=''; document.getElementById('grl-H').value=''; document.getElementById('grl-L').value='';
-  grillPreview();
+  const W=document.getElementById('grl-'+gid+'-wrap-W'), H=document.getElementById('grl-'+gid+'-wrap-H'), L=document.getElementById('grl-'+gid+'-wrap-L');
+  if(W) W.style.display=showWH?'':'none';
+  if(H) H.style.display=showWH?'':'none';
+  if(L) L.style.display=showL?'':'none';
+  ['W','H','L'].forEach(k=>{ const el=document.getElementById('grl-'+gid+'-'+k); if(el) el.value=''; });
+  grillPreview(gid);
 }
-function grillPreview(){
-  const {o}=grillSel();
+function grillPreview(gid){
+  const {o}=grillSel(gid);
   const u=unitLabel('grill');
-  const W=ftFromInput(document.getElementById('grl-W').value,'grill');
-  const H=ftFromInput(document.getElementById('grl-H').value,'grill');
-  const L=ftFromInput(document.getElementById('grl-L').value,'grill');
+  const W=ftFromInput(document.getElementById('grl-'+gid+'-W').value,'grill');
+  const H=ftFromInput(document.getElementById('grl-'+gid+'-H').value,'grill');
+  const L=ftFromInput(document.getElementById('grl-'+gid+'-L').value,'grill');
   const c=grillCompute(o,W,H,L);
   let html='';
   if(o.unit==='flat'){ html=`<div class="cab-calc">Flat price → <b>RM ${fmt(+o.rate||0)}</b></div>`; }
   else if(o.unit==='sqft'){ html=`<div class="cab-tiers"><b>RM ${fmt(+o.rate||0)}</b> / sqft</div>`; if(W>0&&H>0) html+=`<div class="cab-calc">${dispFromFt(W,'grill')} × ${dispFromFt(H,'grill')} ${u} = ${(W*H).toFixed(2)} sqft → <b>RM ${fmt(c.amount)}</b></div>`; }
   else { const tn=o.tier?` · >${o.tier.overFt}ft: RM ${fmt(+o.tier.overRate||0)}/ft`:''; html=`<div class="cab-tiers"><b>RM ${fmt(+o.rate||0)}</b> / ft run${tn}</div>`; if(L>0) html+=`<div class="cab-calc">${dispFromFt(L,'grill')} ${u} run → <b>RM ${fmt(c.amount)}</b></div>`; }
-  document.getElementById('grl-preview').innerHTML=html;
+  const pv=document.getElementById('grl-'+gid+'-preview'); if(pv) pv.innerHTML=html;
 }
-function grillAdd(){
-  const {g,o}=grillSel();
-  const W=ftFromInput(document.getElementById('grl-W').value,'grill');
-  const H=ftFromInput(document.getElementById('grl-H').value,'grill');
-  const L=ftFromInput(document.getElementById('grl-L').value,'grill');
+function grillAdd(gid){
+  const {g,o}=grillSel(gid);
+  const W=ftFromInput(document.getElementById('grl-'+gid+'-W').value,'grill');
+  const H=ftFromInput(document.getElementById('grl-'+gid+'-H').value,'grill');
+  const L=ftFromInput(document.getElementById('grl-'+gid+'-L').value,'grill');
   if(o.unit==='sqft' && !(W>0 && H>0)){ alert('Enter Width & Height ('+unitLabel('grill')+').'); return; }
   if(o.unit==='ftrun' && !(L>0)){ alert('Enter Run ('+unitLabel('grill')+').'); return; }
-  const colEl=document.getElementById('grl-color');
-  const colour=(g.id==='iron' && colEl) ? (colEl.value||'').trim() : '';
+  const colEl=document.getElementById('grl-'+gid+'-color');
+  const colour=(gid==='iron' && colEl) ? (colEl.value||'').trim() : '';
   const c=grillCompute(o,W,H,L);
   grillLines.push({gid:g.id,gname:g.name,oid:o.id,oname:o.name,unit:o.unit,W,H,L,colour,price:c.amount});
-  document.getElementById('grl-W').value=''; document.getElementById('grl-H').value=''; document.getElementById('grl-L').value='';
-  grillPreview(); renderGrillLines(); recalc();
+  ['W','H','L'].forEach(k=>{ const el=document.getElementById('grl-'+gid+'-'+k); if(el) el.value=''; });
+  grillPreview(gid); renderGrillLines(gid); recalc();
 }
-function grillRemove(i){ grillLines.splice(i,1); renderGrillLines(); recalc(); }
-function renderGrillLines(){
-  const box=document.getElementById('grl-lines'); if(!box) return;
-  if(!grillLines.length){ box.innerHTML='<div class="cab-empty">No grill added yet.</div>'; return; }
-  box.innerHTML=grillLines.map((l,i)=>`<div class="cab-line">
-    <div class="cab-line-info"><b>${l.oname}</b> <span class="muted">· ${l.gname}</span><br><span class="cab-dim">${grillDimStr(l)}</span></div>
+function grillRemove(i){ grillLines.splice(i,1); renderGrillLines('iron'); renderGrillLines('alu'); recalc(); }
+function renderGrillLines(gid){
+  const box=document.getElementById('grl-'+gid+'-lines'); if(!box) return;
+  const rows=grillLines.map((l,i)=>({l,i})).filter(x=>x.l.gid===gid);
+  if(!rows.length){ box.innerHTML='<div class="cab-empty">No items added yet.</div>'; return; }
+  box.innerHTML=rows.map(({l,i})=>`<div class="cab-line">
+    <div class="cab-line-info"><b>${l.oname}</b><br><span class="cab-dim">${grillDimStr(l)}</span></div>
     <div class="cab-amt">RM ${fmt(l.price)}</div>
     <button class="cab-x" title="Remove" onclick="grillRemove(${i})">✕</button>
   </div>`).join('');
 }
-function grillCardHtml(){
-  const groupOpts=GRILL.map((g,i)=>`<option value="${i}">${g.name}</option>`).join('');
-  const optOpts=GRILL[0].options.map((o,i)=>`<option value="${i}">${o.name}</option>`).join('');
-  return `
-  <div class="cat" data-cat="grill">
-    <div class="cat-hd" onclick="this.parentElement.classList.toggle('open')">
-      <span class="chev">▶</span>
-      <span class="cname">Iron / Aluminium Work</span>
-      <span class="count zero" id="cnt-grill">0</span>
-    </div>
-    <div class="cat-bd">
-      <div class="cab-note">Pick a grill type & item, enter the measurements, the price is auto-calculated. Area items: W × H → sqft; doors by run.</div>
-      <div style="display:flex;justify-content:flex-end;margin:-4px 0 8px"><button type="button" class="edit-prices-btn" id="unitBtn-grill" onclick="toggleUnit('grill')">Units: FT</button></div>
+// Grill entry body for one group (iron|alu) — embedded in the Iron/Aluminium Work cards.
+function grillBodyHtml(gid){
+  const g=grillGrp(gid);
+  const optOpts=g.options.map((o,i)=>`<option value="${i}">${o.name}</option>`).join('');
+  const colourRow = gid==='iron' ? `
       <div class="cab-grid">
-        <label class="fld">Grill Type <select id="grl-group" onchange="grillGroupChange()">${groupOpts}</select></label>
-        <label class="fld">Item <select id="grl-option" onchange="grillOptionChange()">${optOpts}</select></label>
+        <label class="fld" id="grl-${gid}-wrap-color">Colour (Iron Work) <input id="grl-${gid}-color" list="grlColorList" placeholder="Black"><datalist id="grlColorList"><option>Black</option><option>White</option></datalist></label>
+      </div>` : '';
+  return `
+      <div class="cab-note">Pick an item, enter the measurements; the price is auto-calculated. Area items: W × H → sqft; doors by run.</div>
+      <div style="display:flex;justify-content:flex-end;margin:-4px 0 8px"><button type="button" class="edit-prices-btn unitBtn-grill" onclick="toggleUnit('grill')">Units: ${UNITS.grill.toUpperCase()}</button></div>
+      <div class="cab-grid">
+        <label class="fld">Item <select id="grl-${gid}-option" onchange="grillOptionChange('${gid}')">${optOpts}</select></label>
       </div>
       <div class="cab-grid3">
-        <label class="fld" id="grl-wrap-W"><span>Width (<span class="ulin-grill">ft</span>)</span> <input id="grl-W" type="number" min="0" step="0.1" oninput="grillPreview()"></label>
-        <label class="fld" id="grl-wrap-H"><span>Height (<span class="ulin-grill">ft</span>)</span> <input id="grl-H" type="number" min="0" step="0.1" oninput="grillPreview()"></label>
-        <label class="fld" id="grl-wrap-L"><span>Run (<span class="ulin-grill">ft</span>)</span> <input id="grl-L" type="number" min="0" step="0.1" oninput="grillPreview()"></label>
-      </div>
-      <div class="cab-grid">
-        <label class="fld" id="grl-wrap-color">Colour (Iron Work) <input id="grl-color" list="grlColorList" placeholder="Black"><datalist id="grlColorList"><option>Black</option><option>White</option></datalist></label>
-      </div>
-      <div class="cab-preview" id="grl-preview"></div>
-      <button class="act b-primary" style="padding:11px 16px;font-size:13px" onclick="grillAdd()">+ Add Grill to Quote</button>
-      <div id="grl-lines" style="margin-top:14px"></div>
+        <label class="fld" id="grl-${gid}-wrap-W"><span>Width (<span class="ulin-grill">ft</span>)</span> <input id="grl-${gid}-W" type="number" min="0" step="0.1" oninput="grillPreview('${gid}')"></label>
+        <label class="fld" id="grl-${gid}-wrap-H"><span>Height (<span class="ulin-grill">ft</span>)</span> <input id="grl-${gid}-H" type="number" min="0" step="0.1" oninput="grillPreview('${gid}')"></label>
+        <label class="fld" id="grl-${gid}-wrap-L"><span>Run (<span class="ulin-grill">ft</span>)</span> <input id="grl-${gid}-L" type="number" min="0" step="0.1" oninput="grillPreview('${gid}')"></label>
+      </div>${colourRow}
+      <div class="cab-preview" id="grl-${gid}-preview"></div>
+      <button class="act b-primary" style="padding:11px 16px;font-size:13px" onclick="grillAdd('${gid}')">+ Add to Quote</button>
+      <div id="grl-${gid}-lines" style="margin-top:14px"></div>`;
+}
+// IRON WORK card — a Type selector switches between Iron Grill and the two packages.
+function ironWorkCardHtml(){
+  return `
+  <div class="cat" data-cat="ironwork">
+    <div class="cat-hd" onclick="this.parentElement.classList.toggle('open')">
+      <span class="chev">▶</span>
+      <span class="cname">Iron Work</span>
+      <span class="count zero" id="cnt-ironwork">0</span>
     </div>
+    <div class="cat-bd">
+      <div class="cab-grid">
+        <label class="fld">Type <select id="iw-mode" onchange="iwModeChange()">
+          <option value="g_iron">Iron Grill</option>
+          <option value="pg_iron">PG Iron Work Package</option>
+          <option value="pg_invisible">PG Invisible Grill Package</option>
+        </select></label>
+      </div>
+      <div id="iw-body-g_iron" class="iw-body">${grillBodyHtml('iron')}</div>
+      <div id="iw-body-pg_iron" class="iw-body" style="display:none">${pgBodyHtml('iron')}</div>
+      <div id="iw-body-pg_invisible" class="iw-body" style="display:none">${pgBodyHtml('invisible')}</div>
+    </div>
+  </div>`;
+}
+function iwModeChange(){
+  const m=(document.getElementById('iw-mode')||{}).value||'g_iron';
+  ['g_iron','pg_iron','pg_invisible'].forEach(k=>{ const el=document.getElementById('iw-body-'+k); if(el) el.style.display=(k===m)?'':'none'; });
+}
+// ALUMINIUM WORK card — the aluminium grill.
+function aluminiumWorkCardHtml(){
+  return `
+  <div class="cat" data-cat="aluwork">
+    <div class="cat-hd" onclick="this.parentElement.classList.toggle('open')">
+      <span class="chev">▶</span>
+      <span class="cname">Aluminium Work</span>
+      <span class="count zero" id="cnt-aluwork">0</span>
+    </div>
+    <div class="cat-bd">${grillBodyHtml('alu')}</div>
   </div>`;
 }
 
@@ -930,7 +959,8 @@ function pgHoleTableHtml(pid){
   const cell=i=>`<td id="pg-${pid}-hole-${i}" class="${pgHole[pid][i]?'on':''}" onclick="pgHoleToggle('${pid}',${i})">${pgHole[pid][i]?'●':''}</td>`;
   return `<table class="pg-holetbl"><tbody><tr>${cell(0)}${cell(1)}${cell(2)}</tr><tr>${cell(3)}${cell(4)}${cell(5)}</tr></tbody></table>`;
 }
-function pgCardHtml(pid){
+// Package entry body (embedded under the Iron Work card's Type selector).
+function pgBodyHtml(pid){
   const P=pgPkg(pid);
   const groupOpts=P.groups.map((g,i)=>`<option value="${i}">${g.name}</option>`).join('');
   const optOpts=P.groups[0].items.map((o,i)=>`<option value="${i}">${o.id}) ${o.name}</option>`).join('');
@@ -942,18 +972,11 @@ function pgCardHtml(pid){
   }
   const holeWrap=P.exhaust?`<div id="pg-${pid}-hole-wrap" style="display:none;margin-bottom:10px"><div style="font-size:11.5px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px">Exhaust hole location — tap a cell (grill face, L × H)</div>${pgHoleTableHtml(pid)}</div>`:'';
   return `
-  <div class="cat" data-cat="pg-${pid}">
-    <div class="cat-hd" onclick="this.parentElement.classList.toggle('open')">
-      <span class="chev">▶</span>
-      <span class="cname">${P.name}</span>
-      <span class="count zero" id="cnt-pg-${pid}">0</span>
-    </div>
-    <div class="cat-bd">
-      <div class="cab-note">${P.note} Prices follow the Room type. Lines group under <b>${P.cat}</b>.</div>
+      <div class="cab-note">${P.note} Prices follow the Room type.</div>
       <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px">
         <span style="font-size:11.5px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.6px">Room type</span>
-        <button type="button" class="pg-room-btn${pgRoom[pid]==='2'?' on':''}" data-room="2" onclick="pgSetRoom('${pid}','2')">2 Room</button>
-        <button type="button" class="pg-room-btn${pgRoom[pid]==='3'?' on':''}" data-room="3" onclick="pgSetRoom('${pid}','3')">3 Room</button>
+        <button type="button" class="pg-room-btn${pgRoom[pid]==='2'?' on':''}" data-room="2" data-pid="${pid}" onclick="pgSetRoom('${pid}','2')">2 Room</button>
+        <button type="button" class="pg-room-btn${pgRoom[pid]==='3'?' on':''}" data-room="3" data-pid="${pid}" onclick="pgSetRoom('${pid}','3')">3 Room</button>
       </div>
       <div class="cab-grid">
         <label class="fld">Type <select id="pg-${pid}-group" onchange="pgGroupChange('${pid}')">${groupOpts}</select></label>
@@ -963,9 +986,7 @@ function pgCardHtml(pid){
       ${holeWrap}
       <div class="cab-preview" id="pg-${pid}-preview"></div>
       <button class="act b-primary" style="padding:11px 16px;font-size:13px" onclick="pgAdd('${pid}')">+ Add to Quote</button>
-      <div id="pg-${pid}-lines" style="margin-top:14px"></div>
-    </div>
-  </div>`;
+      <div id="pg-${pid}-lines" style="margin-top:14px"></div>`;
 }
 function pgGroupChange(pid){
   const P=pgPkg(pid);
@@ -975,7 +996,7 @@ function pgGroupChange(pid){
 }
 function pgSetRoom(pid,r){
   pgRoom[pid]=r;
-  document.querySelectorAll('[data-cat="pg-'+pid+'"] .pg-room-btn').forEach(b=>b.classList.toggle('on',b.dataset.room===r));
+  document.querySelectorAll('.pg-room-btn[data-pid="'+pid+'"]').forEach(b=>b.classList.toggle('on',b.dataset.room===r));
   pgPreview(pid); renderPgLines(pid); recalc();
 }
 function pgExhaustChange(pid){
@@ -1937,10 +1958,13 @@ function renderCatalog(){
   renderCabLines();
   root.insertAdjacentHTML('beforeend', alucabCardHtml());
   renderAlucabLines();
-  root.insertAdjacentHTML('beforeend', grillCardHtml());
-  grillGroupChange();         // populate grill option select
-  renderGrillLines();
-  PG_PACKAGES.forEach(P=>{ root.insertAdjacentHTML('beforeend', pgCardHtml(P.id)); pgGroupChange(P.id); renderPgLines(P.id); });
+  root.insertAdjacentHTML('beforeend', ironWorkCardHtml());
+  grillOptionChange('iron'); renderGrillLines('iron');
+  pgGroupChange('iron'); renderPgLines('iron');
+  pgGroupChange('invisible'); renderPgLines('invisible');
+  iwModeChange();
+  root.insertAdjacentHTML('beforeend', aluminiumWorkCardHtml());
+  grillOptionChange('alu'); renderGrillLines('alu');
   root.insertAdjacentHTML('beforeend', paintCardHtml());
   renderPaintLines();
   CATALOG.forEach((cat,ci)=>{
@@ -2269,9 +2293,10 @@ function recalc(){
   });
   const cabEl=document.getElementById('cnt-cabinet');
   if(cabEl){cabEl.textContent=cabinetLines.length;cabEl.classList.toggle('zero',cabinetLines.length===0);}
-  const grlEl=document.getElementById('cnt-grill');
-  if(grlEl){grlEl.textContent=grillLines.length;grlEl.classList.toggle('zero',grillLines.length===0);}
-  PG_PACKAGES.forEach(P=>{ const el=document.getElementById('cnt-pg-'+P.id); if(el){ const n=(pgLines[P.id]||[]).length; el.textContent=n; el.classList.toggle('zero',n===0); } });
+  const ironN=grillLines.filter(l=>l.gid==='iron').length+(pgLines.iron||[]).length+(pgLines.invisible||[]).length;
+  const iwEl=document.getElementById('cnt-ironwork'); if(iwEl){ iwEl.textContent=ironN; iwEl.classList.toggle('zero',ironN===0); }
+  const awN=grillLines.filter(l=>l.gid==='alu').length;
+  const awEl=document.getElementById('cnt-aluwork'); if(awEl){ awEl.textContent=awN; awEl.classList.toggle('zero',awN===0); }
   const pntEl=document.getElementById('cnt-paint');
   if(pntEl){pntEl.textContent=paintLines.length;pntEl.classList.toggle('zero',paintLines.length===0);}
   const aluEl=document.getElementById('cnt-alucab');
