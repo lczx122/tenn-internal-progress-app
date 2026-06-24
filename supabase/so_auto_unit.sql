@@ -174,11 +174,13 @@ begin
   end if;
 
   -- Fallback for a document with no explicit list: one generic card.
+  -- Uses 'Other Services' so every category matches the quote generator + the
+  -- in-app category list (src/lib/categories.ts).
   if v_added = 0 and not exists (
-    select 1 from public.job_works where job_id = v_job and category = 'Products'
+    select 1 from public.job_works where job_id = v_job and category = 'Other Services'
   ) then
     insert into public.job_works (job_id, category, title, stage, updated_by)
-      values (v_job, 'Products', '', 'booked',
+      values (v_job, 'Other Services', '', 'booked',
               coalesce(nullif(new.prepared_by, ''), 'System'));
   end if;
 

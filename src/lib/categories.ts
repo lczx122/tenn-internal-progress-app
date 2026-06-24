@@ -8,16 +8,18 @@ export interface Category {
   accent: string // tailwind text/border accent for the category badge
 }
 
+// These MUST match the work categories the quotation/SO generator produces
+// (computeWorkCategories / WORK_MAP in public/quotation.html), in the same order
+// as the quote builder's sections, so staff see identical categories everywhere.
 export const CATEGORIES: Category[] = [
-  { key: 'Mindhome',       label: 'Mindhome',       accent: 'text-indigo-700 bg-indigo-50 border-indigo-200' },
-  { key: 'Iron Work',      label: 'Iron Work',      accent: 'text-slate-700 bg-slate-100 border-slate-300' },
-  { key: 'Aluminium Work', label: 'Aluminium Work', accent: 'text-sky-700 bg-sky-50 border-sky-200' },
-  { key: 'EE',          label: 'EE / Electrical', accent: 'text-rose-700 bg-rose-50 border-rose-200' },
-  { key: 'Smart Home',  label: 'Smart Home',  accent: 'text-teal-700 bg-teal-50 border-teal-200' },
-  { key: 'Smart Lock',  label: 'Smart Lock',  accent: 'text-violet-700 bg-violet-50 border-violet-200' },
-  { key: 'Painting',    label: 'Painting',    accent: 'text-fuchsia-700 bg-fuchsia-50 border-fuchsia-200' },
-  { key: 'Other Services', label: 'Other Services', accent: 'text-amber-700 bg-amber-50 border-amber-200' },
-  { key: 'Products',    label: 'Products',    accent: 'text-orange-700 bg-orange-50 border-orange-200' },
+  { key: 'Mindhome',       label: 'Mindhome',        accent: 'text-indigo-700 bg-indigo-50 border-indigo-200' },
+  { key: 'Iron Work',      label: 'Iron Work',       accent: 'text-slate-700 bg-slate-100 border-slate-300' },
+  { key: 'Aluminium Work', label: 'Aluminium Work',  accent: 'text-sky-700 bg-sky-50 border-sky-200' },
+  { key: 'Painting',       label: 'Painting',        accent: 'text-fuchsia-700 bg-fuchsia-50 border-fuchsia-200' },
+  { key: 'Smart Home',     label: 'Smart Home',      accent: 'text-teal-700 bg-teal-50 border-teal-200' },
+  { key: 'Smart Lock',     label: 'Smart Lock',      accent: 'text-violet-700 bg-violet-50 border-violet-200' },
+  { key: 'EE',             label: 'EE / Electrical', accent: 'text-rose-700 bg-rose-50 border-rose-200' },
+  { key: 'Other Services', label: 'Other Services',  accent: 'text-amber-700 bg-amber-50 border-amber-200' },
 ]
 
 const byKey = new Map(CATEGORIES.map((c) => [c.key, c]))
