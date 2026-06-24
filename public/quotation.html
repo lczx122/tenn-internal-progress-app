@@ -563,9 +563,14 @@ const TERMS = {
     // 'Iron grill is finished with anti-rust primer and enamel paint.',
   ],
 
-  // Triggered by: Aluminium products · Aluminium cabinet · Shoe cabinet · PG Yard package.
+  // Triggered by: Aluminium products · PG Yard package.
   'Aluminium Work': [
     // 'Colour shade may vary slightly from samples.',
+  ],
+
+  // Triggered by: Aluminium Cabinet · Shoe cabinet (aluminium cabinets).
+  'Aluminium Cabinet': [
+    // 'Aluminium cabinet finish may vary slightly from samples.',
   ],
 
   // Triggered by: Painting work.
@@ -2340,11 +2345,11 @@ const WORK_MAP = {
   'cab:tv':     ['Mindhome'],
   'cab:almari': ['Mindhome'],
   'cab:dining': ['Mindhome'],
-  'cab:kasut':  ['Aluminium Work'],
+  'cab:kasut':  ['Aluminium Cabinet'],
   'cab:paket':  ['Mindhome'],
   'grill:iron': ['Iron Work'],
   'paint':      ['Painting'],
-  'alucab':     ['Aluminium Work'],
+  'alucab':     ['Aluminium Cabinet'],
 };
 // The distinct unit work categories implied by the current selection.
 function computeWorkCategories(){
