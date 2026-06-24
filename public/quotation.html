@@ -514,7 +514,6 @@ const CATALOG = [
     variants:[],
     items:[
       {v:0,label:'Aluminium Louvered',sub:'Price by specification',price:0},
-      {v:0,label:'Invisible Grill',sub:'Price by specification',price:0},
       {v:0,label:'Moru Acrylic',sub:'Price by specification',price:0},
     ]
   },
@@ -856,146 +855,186 @@ function grillCardHtml(){
 }
 
 /* ============================================================
-   PG IRON WORK PACKAGE — pick a product, set powder-coat colour &
-   optional exhaust-fan opening (with a 3×2 hole-location grid),
-   then add to the quote (like the cabinet section). Prices follow
-   a 2-Room / 3-Room toggle; 3-Room prices (p3) are placeholders
-   (null) — fill them in below when ready. Lines group under "Iron Work".
+   PG PACKAGES — configurable iron-work packages (cabinet-style: pick
+   a product, set options, add; repeat). Each package has its own
+   2-Room / 3-Room toggle that reprices its lines; 3-Room prices (p3)
+   are placeholders (null) until provided. All prices are admin-editable
+   in Edit Prices. Lines group under the package's `cat`.
    ============================================================ */
-const PG_COLOURS = ['White - Rough Surface', 'White'];
-const PG_GROUPS = [
-  { id:'grill', name:'Grills', items:[
-    { id:'A',  name:'Balcony — 2 Leaf Sliding Door', spec:'95" × 88½"',  p2:1400, p3:null },
-    { id:'B',  name:'Main Door',                      spec:'34½" × 79¼"', p2:850,  p3:null },
-    { id:'C1', name:'Yard Grill — Ground Floor',      spec:'80" × 107"H', p2:1200, p3:null },
-    { id:'C2', name:'Yard Grill — 1st Floor',         spec:'80" × 100"H', p2:1200, p3:null },
-    { id:'C3', name:'Yard Grill — 2nd Floor',         spec:'80" × 159"H', p2:1850, p3:null },
-    { id:'C4', name:'Yard Grill — 3rd Floor & Above', spec:'80" × 77"H',  p2:850,  p3:null },
-  ]},
-  { id:'window', name:'Window Grill ADDON (Type A)', items:[
-    { id:'WA1', name:'Master Room', spec:"6' × 4'", p2:500, p3:null },
-    { id:'WA2', name:'Room 2',      spec:"4' × 4'", p2:330, p3:null },
-  ]},
+const PG_PACKAGES = [
+  {
+    id:'iron', name:'PG Iron Work Package', cat:'Iron Work',
+    note:'Pick a product, set the powder-coat colour and (optionally) an exhaust-fan opening, then add it — repeat for each piece.',
+    colour:true, exhaust:true, colours:['White - Rough Surface', 'White'],
+    groups:[
+      { id:'grill', name:'Grills', items:[
+        { id:'A',  name:'Balcony — 2 Leaf Sliding Door', spec:'95" × 88½"',  p2:1400, p3:null },
+        { id:'B',  name:'Main Door',                      spec:'34½" × 79¼"', p2:850,  p3:null },
+        { id:'C1', name:'Yard Grill — Ground Floor',      spec:'80" × 107"H', p2:1200, p3:null },
+        { id:'C2', name:'Yard Grill — 1st Floor',         spec:'80" × 100"H', p2:1200, p3:null },
+        { id:'C3', name:'Yard Grill — 2nd Floor',         spec:'80" × 159"H', p2:1850, p3:null },
+        { id:'C4', name:'Yard Grill — 3rd Floor & Above', spec:'80" × 77"H',  p2:850,  p3:null },
+      ]},
+      { id:'window', name:'Window Grill ADDON (Type A)', items:[
+        { id:'WA1', name:'Master Room', spec:"6' × 4'", p2:500, p3:null },
+        { id:'WA2', name:'Room 2',      spec:"4' × 4'", p2:330, p3:null },
+      ]},
+    ],
+  },
+  {
+    id:'invisible', name:'PG Invisible Grills Package', cat:'Iron Work',
+    note:'Pick the floor and balcony size, then add it — repeat for each piece.',
+    colour:false, exhaust:false,
+    groups:[
+      { id:'gf', name:'Ground Floor', items:[
+        { id:'A', name:'Half Balcony', spec:'117" × 89"H',  p2:1450, p3:null },
+        { id:'B', name:'Full Balcony', spec:'117" × 136"H', p2:2350, p3:null },
+      ]},
+      { id:'1f', name:'First Floor', items:[
+        { id:'A', name:'Half Balcony', spec:'117" × 83½"H', p2:1450, p3:null },
+        { id:'B', name:'Full Balcony', spec:'117" × 136"H', p2:2350, p3:null },
+      ]},
+      { id:'2f', name:'Second Floor', items:[
+        { id:'A', name:'Half Balcony', spec:'117" × 144"H', p2:2280, p3:null },
+        { id:'B', name:'Full Balcony', spec:'117" × 192"H', p2:3050, p3:null },
+      ]},
+      { id:'3f', name:'Third Floor', items:[
+        { id:'A', name:'Half Balcony', spec:'117" × 61"H',  p2:950,  p3:null },
+        { id:'B', name:'Full Balcony', spec:'117" × 109"H', p2:1750, p3:null },
+      ]},
+    ],
+  },
 ];
-let PG_ROOM = '2';                                   // '2' or '3'
-const pgLines = [];                                  // configured package items
-let pgHole = [false,false,false,false,false,false];  // current entry's 3×2 hole grid
+const pgRoom = {};   // {pkgId:'2'|'3'}
+const pgLines = {};  // {pkgId:[lines]}
+const pgHole = {};   // {pkgId:[6 bools]} — current entry's 3×2 grid
+PG_PACKAGES.forEach(P=>{ pgRoom[P.id]='2'; pgLines[P.id]=[]; pgHole[P.id]=[false,false,false,false,false,false]; });
 
-function pgSel(){
-  const gi=+document.getElementById('pg-group').value;
-  const oi=+document.getElementById('pg-option').value;
-  const g=PG_GROUPS[gi]||PG_GROUPS[0]; const o=g.items[oi]||g.items[0];
-  return {gi,oi,g,o};
+function pgPkg(id){ return PG_PACKAGES.find(p=>p.id===id) || PG_PACKAGES[0]; }
+function pgSel(pid){
+  const P=pgPkg(pid);
+  const gi=+document.getElementById('pg-'+pid+'-group').value;
+  const oi=+document.getElementById('pg-'+pid+'-option').value;
+  const g=P.groups[gi]||P.groups[0]; const o=g.items[oi]||g.items[0];
+  return {P,g,o};
 }
-function pgRoomLabel(){ return PG_ROOM==='2'?'2 Room':'3 Room'; }
-function pgPrice(o){ return PG_ROOM==='2' ? (+o.p2||0) : (o.p3==null?null:(+o.p3||0)); }
-function pgLinePrice(l){ return PG_ROOM==='2' ? (+l.p2||0) : (l.p3==null?0:(+l.p3||0)); }
+function pgRoomLabel(pid){ return pgRoom[pid]==='2'?'2 Room':'3 Room'; }
+function pgPrice(pid,o){ return pgRoom[pid]==='2' ? (+o.p2||0) : (o.p3==null?null:(+o.p3||0)); }
+function pgLinePrice(pid,l){ return pgRoom[pid]==='2' ? (+l.p2||0) : (l.p3==null?0:(+l.p3||0)); }
 function pgHoleLabel(hole){
   if(!hole||!hole.length) return '';
   const rows=['Top','Bottom'], cols=['Left','Centre','Right'];
   return hole.map(i=>`${rows[Math.floor(i/3)]}-${cols[i%3]}`).join(', ');
 }
-function pgHoleTableHtml(){
-  const cell=i=>`<td id="pg-hole-${i}" class="${pgHole[i]?'on':''}" onclick="pgHoleToggle(${i})">${pgHole[i]?'●':''}</td>`;
+function pgHoleTableHtml(pid){
+  const cell=i=>`<td id="pg-${pid}-hole-${i}" class="${pgHole[pid][i]?'on':''}" onclick="pgHoleToggle('${pid}',${i})">${pgHole[pid][i]?'●':''}</td>`;
   return `<table class="pg-holetbl"><tbody><tr>${cell(0)}${cell(1)}${cell(2)}</tr><tr>${cell(3)}${cell(4)}${cell(5)}</tr></tbody></table>`;
 }
-function pgCardHtml(){
-  const groupOpts=PG_GROUPS.map((g,i)=>`<option value="${i}">${g.name}</option>`).join('');
-  const optOpts=PG_GROUPS[0].items.map((o,i)=>`<option value="${i}">${o.id}) ${o.name}</option>`).join('');
-  const colOpts=PG_COLOURS.map(c=>`<option>${c}</option>`).join('');
+function pgCardHtml(pid){
+  const P=pgPkg(pid);
+  const groupOpts=P.groups.map((g,i)=>`<option value="${i}">${g.name}</option>`).join('');
+  const optOpts=P.groups[0].items.map((o,i)=>`<option value="${i}">${o.id}) ${o.name}</option>`).join('');
+  let optRow='';
+  if(P.colour||P.exhaust){
+    const colSel=P.colour?`<label class="fld">Powder Coat Colour <select id="pg-${pid}-colour">${P.colours.map(c=>`<option>${c}</option>`).join('')}</select></label>`:'';
+    const exSel=P.exhaust?`<label class="fld">Prepare exhaust-fan opening? <select id="pg-${pid}-exhaust" onchange="pgExhaustChange('${pid}')"><option value="no">No</option><option value="yes">Yes</option></select></label>`:'';
+    optRow=`<div class="cab-grid">${colSel}${exSel}</div>`;
+  }
+  const holeWrap=P.exhaust?`<div id="pg-${pid}-hole-wrap" style="display:none;margin-bottom:10px"><div style="font-size:11.5px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px">Exhaust hole location — tap a cell (grill face, L × H)</div>${pgHoleTableHtml(pid)}</div>`:'';
   return `
-  <div class="cat" data-cat="pgpkg">
+  <div class="cat" data-cat="pg-${pid}">
     <div class="cat-hd" onclick="this.parentElement.classList.toggle('open')">
       <span class="chev">▶</span>
-      <span class="cname">PG Iron Work Package</span>
-      <span class="count zero" id="cnt-pgpkg">0</span>
+      <span class="cname">${P.name}</span>
+      <span class="count zero" id="cnt-pg-${pid}">0</span>
     </div>
     <div class="cat-bd">
-      <div class="cab-note">Pick a product, set the powder-coat colour and (optionally) an exhaust-fan opening, then add it — repeat for each piece. Prices follow the Room type. Lines group under <b>Iron Work</b>.</div>
+      <div class="cab-note">${P.note} Prices follow the Room type. Lines group under <b>${P.cat}</b>.</div>
       <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px">
         <span style="font-size:11.5px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.6px">Room type</span>
-        <button type="button" class="pg-room-btn${PG_ROOM==='2'?' on':''}" data-room="2" onclick="pgSetRoom('2')">2 Room</button>
-        <button type="button" class="pg-room-btn${PG_ROOM==='3'?' on':''}" data-room="3" onclick="pgSetRoom('3')">3 Room</button>
+        <button type="button" class="pg-room-btn${pgRoom[pid]==='2'?' on':''}" data-room="2" onclick="pgSetRoom('${pid}','2')">2 Room</button>
+        <button type="button" class="pg-room-btn${pgRoom[pid]==='3'?' on':''}" data-room="3" onclick="pgSetRoom('${pid}','3')">3 Room</button>
       </div>
       <div class="cab-grid">
-        <label class="fld">Type <select id="pg-group" onchange="pgGroupChange()">${groupOpts}</select></label>
-        <label class="fld">Product <select id="pg-option" onchange="pgPreview()">${optOpts}</select></label>
+        <label class="fld">Type <select id="pg-${pid}-group" onchange="pgGroupChange('${pid}')">${groupOpts}</select></label>
+        <label class="fld">Product <select id="pg-${pid}-option" onchange="pgPreview('${pid}')">${optOpts}</select></label>
       </div>
-      <div class="cab-grid">
-        <label class="fld">Powder Coat Colour <select id="pg-colour">${colOpts}</select></label>
-        <label class="fld">Prepare exhaust-fan opening? <select id="pg-exhaust" onchange="pgExhaustChange()"><option value="no">No</option><option value="yes">Yes</option></select></label>
-      </div>
-      <div id="pg-hole-wrap" style="display:none;margin-bottom:10px">
-        <div style="font-size:11.5px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px">Exhaust hole location — tap a cell (grill face, L × H)</div>
-        ${pgHoleTableHtml()}
-      </div>
-      <div class="cab-preview" id="pg-preview"></div>
-      <button class="act b-primary" style="padding:11px 16px;font-size:13px" onclick="pgAdd()">+ Add to Quote</button>
-      <div id="pg-lines" style="margin-top:14px"></div>
+      ${optRow}
+      ${holeWrap}
+      <div class="cab-preview" id="pg-${pid}-preview"></div>
+      <button class="act b-primary" style="padding:11px 16px;font-size:13px" onclick="pgAdd('${pid}')">+ Add to Quote</button>
+      <div id="pg-${pid}-lines" style="margin-top:14px"></div>
     </div>
   </div>`;
 }
-function pgGroupChange(){
-  const gi=+document.getElementById('pg-group').value;
-  document.getElementById('pg-option').innerHTML=PG_GROUPS[gi].items.map((o,i)=>`<option value="${i}">${o.id}) ${o.name}</option>`).join('');
-  pgPreview();
+function pgGroupChange(pid){
+  const P=pgPkg(pid);
+  const gi=+document.getElementById('pg-'+pid+'-group').value;
+  document.getElementById('pg-'+pid+'-option').innerHTML=P.groups[gi].items.map((o,i)=>`<option value="${i}">${o.id}) ${o.name}</option>`).join('');
+  pgPreview(pid);
 }
-function pgSetRoom(r){
-  PG_ROOM=r;
-  document.querySelectorAll('.pg-room-btn').forEach(b=>b.classList.toggle('on',b.dataset.room===r));
-  pgPreview(); renderPgLines(); recalc();
+function pgSetRoom(pid,r){
+  pgRoom[pid]=r;
+  document.querySelectorAll('[data-cat="pg-'+pid+'"] .pg-room-btn').forEach(b=>b.classList.toggle('on',b.dataset.room===r));
+  pgPreview(pid); renderPgLines(pid); recalc();
 }
-function pgExhaustChange(){
-  const yes=document.getElementById('pg-exhaust').value==='yes';
-  document.getElementById('pg-hole-wrap').style.display=yes?'':'none';
-  if(!yes){ pgHole=[false,false,false,false,false,false]; pgRefreshHole(); }
-  pgPreview();
+function pgExhaustChange(pid){
+  const sel=document.getElementById('pg-'+pid+'-exhaust'); const yes=!!(sel&&sel.value==='yes');
+  const wrap=document.getElementById('pg-'+pid+'-hole-wrap'); if(wrap) wrap.style.display=yes?'':'none';
+  if(!yes){ pgHole[pid]=[false,false,false,false,false,false]; pgRefreshHole(pid); }
+  pgPreview(pid);
 }
-function pgHoleToggle(i){
-  pgHole[i]=!pgHole[i];
-  const td=document.getElementById('pg-hole-'+i);
-  if(td){ td.classList.toggle('on',pgHole[i]); td.textContent=pgHole[i]?'●':''; }
-  pgPreview();
+function pgHoleToggle(pid,i){
+  pgHole[pid][i]=!pgHole[pid][i];
+  const td=document.getElementById('pg-'+pid+'-hole-'+i);
+  if(td){ td.classList.toggle('on',pgHole[pid][i]); td.textContent=pgHole[pid][i]?'●':''; }
+  pgPreview(pid);
 }
-function pgRefreshHole(){ for(let i=0;i<6;i++){ const td=document.getElementById('pg-hole-'+i); if(td){ td.classList.toggle('on',pgHole[i]); td.textContent=pgHole[i]?'●':''; } } }
-function pgPreview(){
-  const {o}=pgSel();
-  const price=pgPrice(o);
-  let html=`<div class="cab-tiers">${o.spec?`<b>${o.spec}</b> · `:''}${pgRoomLabel()}</div>`;
+function pgRefreshHole(pid){ for(let i=0;i<6;i++){ const td=document.getElementById('pg-'+pid+'-hole-'+i); if(td){ td.classList.toggle('on',pgHole[pid][i]); td.textContent=pgHole[pid][i]?'●':''; } } }
+function pgPreview(pid){
+  const {o}=pgSel(pid);
+  const price=pgPrice(pid,o);
+  let html=`<div class="cab-tiers">${o.spec?`<b>${o.spec}</b> · `:''}${pgRoomLabel(pid)}</div>`;
   if(price==null) html+=`<div class="cab-calc" style="color:#b45309">${o.name} — 3-Room price not set yet → <b>RM 0.00</b></div>`;
   else html+=`<div class="cab-calc">${o.name} → <b>RM ${fmt(price)}</b></div>`;
-  document.getElementById('pg-preview').innerHTML=html;
+  const pv=document.getElementById('pg-'+pid+'-preview'); if(pv) pv.innerHTML=html;
 }
-function pgAdd(){
-  const {o}=pgSel();
-  const colour=(document.getElementById('pg-colour').value||'').trim();
-  const exhaust=document.getElementById('pg-exhaust').value==='yes';
-  const hole=exhaust?pgHole.map((v,i)=>v?i:-1).filter(i=>i>=0):[];
-  pgLines.push({code:o.id,name:o.name,spec:o.spec,p2:o.p2,p3:o.p3,colour,exhaust,hole});
-  document.getElementById('pg-exhaust').value='no';
-  document.getElementById('pg-hole-wrap').style.display='none';
-  pgHole=[false,false,false,false,false,false]; pgRefreshHole();
-  pgPreview(); renderPgLines(); recalc();
+function pgAdd(pid){
+  const P=pgPkg(pid); const {g,o}=pgSel(pid);
+  const cEl=document.getElementById('pg-'+pid+'-colour');
+  const colour=(P.colour&&cEl)?(cEl.value||'').trim():'';
+  const eEl=document.getElementById('pg-'+pid+'-exhaust');
+  const exhaust=(P.exhaust&&eEl)?eEl.value==='yes':false;
+  const hole=exhaust?pgHole[pid].map((v,i)=>v?i:-1).filter(i=>i>=0):[];
+  pgLines[pid].push({grp:g.name,code:o.id,name:o.name,spec:o.spec,p2:o.p2,p3:o.p3,colour,exhaust,hole});
+  if(P.exhaust&&eEl){ eEl.value='no'; const w=document.getElementById('pg-'+pid+'-hole-wrap'); if(w) w.style.display='none'; pgHole[pid]=[false,false,false,false,false,false]; pgRefreshHole(pid); }
+  pgPreview(pid); renderPgLines(pid); recalc();
 }
-function pgRemove(i){ pgLines.splice(i,1); renderPgLines(); recalc(); }
+function pgRemove(pid,i){ pgLines[pid].splice(i,1); renderPgLines(pid); recalc(); }
 function pgDimStr(l){
-  const parts=[l.spec, l.colour];
+  const parts=[];
+  if(l.grp) parts.push(l.grp);
+  if(l.spec) parts.push(l.spec);
+  if(l.colour) parts.push(l.colour);
   if(l.exhaust){ const h=pgHoleLabel(l.hole); parts.push('exhaust opening'+(h?` (${h})`:'')); }
-  return parts.filter(Boolean).join(' · ');
+  return parts.join(' · ');
 }
-function renderPgLines(){
-  const box=document.getElementById('pg-lines'); if(!box) return;
-  if(!pgLines.length){ box.innerHTML='<div class="cab-empty">No package items added yet.</div>'; return; }
-  box.innerHTML=pgLines.map((l,i)=>{
-    const price=pgLinePrice(l);
-    const note=(PG_ROOM==='3'&&l.p3==null)?' <span style="color:#b45309;font-weight:400">(3-Room price not set)</span>':'';
+function renderPgLines(pid){
+  const box=document.getElementById('pg-'+pid+'-lines'); if(!box) return;
+  const arr=pgLines[pid]||[];
+  if(!arr.length){ box.innerHTML='<div class="cab-empty">No package items added yet.</div>'; return; }
+  box.innerHTML=arr.map((l,i)=>{
+    const price=pgLinePrice(pid,l);
+    const note=(pgRoom[pid]==='3'&&l.p3==null)?' <span style="color:#b45309;font-weight:400">(3-Room price not set)</span>':'';
     return `<div class="cab-line">
       <div class="cab-line-info"><b>${l.code}) ${l.name}</b><br><span class="cab-dim">${pgDimStr(l)}</span></div>
       <div class="cab-amt">RM ${fmt(price)}${note}</div>
-      <button class="cab-x" title="Remove" onclick="pgRemove(${i})">✕</button>
+      <button class="cab-x" title="Remove" onclick="pgRemove('${pid}',${i})">✕</button>
     </div>`;
   }).join('');
 }
+// Package portion of the save payload.
+function pgPayload(){ const r={}, ln={}; PG_PACKAGES.forEach(P=>{ r[P.id]=pgRoom[P.id]; ln[P.id]=(pgLines[P.id]||[]).map(l=>Object.assign({},l)); }); return {rooms:r, lines:ln}; }
 
 
 // Measured cabinets: area × flat rate. Fixed packages keep their flat price.
@@ -1022,7 +1061,7 @@ function areaTierTableHtml(tiers){
    Item prices and cabinet tier parameters can be overridden by an admin and
    stored in Supabase (app_settings key='pricing'). The overlay is applied over
    the coded defaults on load; everyone reads it, only admins can save it. */
-let priceOverlay = { items:{}, catalog:{}, cabinets:{}, grills:{}, paints:{}, alucabs:{}, areaTiers:[], discounts:[] };
+let priceOverlay = { items:{}, catalog:{}, cabinets:{}, grills:{}, paints:{}, alucabs:{}, areaTiers:[], discounts:[], pg:{} };
 let isAdminUser = false;
 let isGuestUser = false;
 function getGuest(){
@@ -1080,6 +1119,13 @@ function applyOverrides(ov){
     if(cabRates.lightstripRate!=null && !isNaN(+cabRates.lightstripRate)) LIGHTSTRIP_RATE=+cabRates.lightstripRate;
     if(cabRates.acpowerRate!=null && !isNaN(+cabRates.acpowerRate)) ACPOWER_RATE=+cabRates.acpowerRate;
   }
+  // PG package prices (keyed package:group:item; 2-Room p2 & 3-Room p3).
+  const pgo=ov.pg||{};
+  PG_PACKAGES.forEach(P=>P.groups.forEach(g=>g.items.forEach(o=>{
+    const v=pgo[P.id+':'+g.id+':'+o.id]; if(!v) return;
+    if(v.p2!=null && !isNaN(+v.p2)) o.p2=+v.p2;
+    if('p3' in v) o.p3=(v.p3==null||v.p3===''||isNaN(+v.p3))?null:+v.p3;
+  })));
   // Global area tiers (shared by all cabinets).
   if(Array.isArray(ov.areaTiers) && ov.areaTiers.length){
     const t=ov.areaTiers.map(x=>({minM2:+x.minM2, pct:+x.pct}))
@@ -1118,7 +1164,7 @@ async function loadPricing(){
     await ready(supa);
     const {data}=await supa.from('app_settings').select('value').eq('key','pricing').maybeSingle();
     if(data&&data.value){
-      priceOverlay={items:(data.value.items||{}), catalog:(data.value.catalog||{}), cabinets:(data.value.cabinets||{}), grills:(data.value.grills||{}), paints:(data.value.paints||{}), alucabs:(data.value.alucabs||{}), areaTiers:(data.value.areaTiers||[]), discounts:(data.value.discounts||[])};
+      priceOverlay={items:(data.value.items||{}), catalog:(data.value.catalog||{}), cabinets:(data.value.cabinets||{}), grills:(data.value.grills||{}), paints:(data.value.paints||{}), alucabs:(data.value.alucabs||{}), areaTiers:(data.value.areaTiers||[]), discounts:(data.value.discounts||[]), pg:(data.value.pg||{})};
       applyOverrides(priceOverlay);
     }
   }catch(e){}
@@ -1140,7 +1186,7 @@ function normalizeCatalog(){
     if(it.hidden==null) it.hidden=false;
   }));
 }
-const PRICE_DEFAULTS = { items:{}, catalog:{}, cabinets:{}, grills:{}, paints:{}, alucabs:{}, areaTiers:[], discounts:[] };
+const PRICE_DEFAULTS = { items:{}, catalog:{}, cabinets:{}, grills:{}, paints:{}, alucabs:{}, areaTiers:[], discounts:[], pg:{} };
 function capturePriceDefaults(){
   PRICE_DEFAULTS.items={}; PRICE_DEFAULTS.catalog={}; PRICE_DEFAULTS.cabinets={}; PRICE_DEFAULTS.grills={}; PRICE_DEFAULTS.paints={}; PRICE_DEFAULTS.alucabs={};
   PRICE_DEFAULTS.discounts=DEFAULT_DISCOUNTS.map(d=>({...d}));
@@ -1148,6 +1194,8 @@ function capturePriceDefaults(){
   CATALOG.forEach(cat=>{ PRICE_DEFAULTS.catalog[cat.id]=cat.items.map(it=>({id:it.id,label:it.label,sub:it.sub||'',price:it.price,hidden:false})); });
   CABINET.forEach(g=>g.options.forEach(o=>{ PRICE_DEFAULTS.cabinets[g.id+':'+o.id]={basePrice:o.basePrice}; }));
   PRICE_DEFAULTS.cabinets['__rates']={cabinetRate:CABINET_RATE, lightstripRate:LIGHTSTRIP_RATE, acpowerRate:ACPOWER_RATE};
+  PRICE_DEFAULTS.pg={};
+  PG_PACKAGES.forEach(P=>P.groups.forEach(g=>g.items.forEach(o=>{ PRICE_DEFAULTS.pg[P.id+':'+g.id+':'+o.id]={p2:o.p2,p3:o.p3}; })));
   GRILL.forEach(g=>g.options.forEach(o=>{ PRICE_DEFAULTS.grills[g.id+':'+o.id]={rate:o.rate,overRate:(o.tier?o.tier.overRate:null)}; }));
   PAINT.forEach(o=>{ PRICE_DEFAULTS.paints[o.id]={rate:o.rate}; });
   ALUCAB.forEach(o=>{ PRICE_DEFAULTS.alucabs[o.id]={rate:o.rate}; });
@@ -1270,7 +1318,8 @@ function fedReposition(){
 function peField(kind,key,field,val,label,opts){
   opts=opts||{};
   const def=(opts.def!=null?opts.def:val);
-  const inp=`<input type="number" step="${opts.step||1}" min="0" data-kind="${kind}" data-key="${key}" data-field="${field}" data-default="${def}" value="${val}">`;
+  const dv=(def==null?'':def), vv=(val==null?'':val);   // null → blank (e.g. unset 3-Room price)
+  const inp=`<input type="number" step="${opts.step||1}" min="0" data-kind="${kind}" data-key="${key}" data-field="${field}" data-default="${dv}" value="${vv}">`;
   const wrapped=opts.money?`<span class="pe-money"><span class="pe-rm">RM</span>${inp}</span>`:inp;
   return `<label class="pe-f"><span>${label}</span>${wrapped}</label>`;
 }
@@ -1403,7 +1452,21 @@ function buildPriceEditorHtml(){
         ${o.unit==='ftrun'?peField('grill',k,'overRate',(o.tier?o.tier.overRate:0),'RM/ft >12ft',{money:true,def:(d.overRate!=null?d.overRate:0)}):''}
       </div></div>`;
   }));
-  h+='</div></div>';
+  h+='</div>';
+  // PG packages — per-product 2-Room / 3-Room prices.
+  PG_PACKAGES.forEach(P=>{
+    h+=`<div class="pe-cat" data-search="${peSafe(P.name+' package iron work 2 room 3 room')}">${peSectionHead(P.name+' — prices')}<p class="pe-note">Per product: 2-Room &amp; 3-Room (RM). Leave the 3-Room field blank to keep it unset.</p>`;
+    P.groups.forEach(g=>g.items.forEach(o=>{
+      const k=P.id+':'+g.id+':'+o.id, d=(PRICE_DEFAULTS.pg||{})[k]||{};
+      h+=`<div class="pe-cab" data-search="${peSafe(P.name+' '+g.name+' '+o.name+' '+o.id)}">${peCardHead(g.name+' · '+o.id+') '+o.name+(o.spec?' · '+o.spec:''))}
+        <div class="pe-cab-grid">
+          ${peField('pg',k,'p2',o.p2,'2-Room RM',{money:true,def:d.p2})}
+          ${peField('pg',k,'p3',o.p3,'3-Room RM',{money:true,def:d.p3})}
+        </div></div>`;
+    }));
+    h+='</div>';
+  });
+  h+='</div>';
 
   // Paint
   h+=`<div class="pe-panel" data-panel="paint"><div class="pe-noresults">No matching paint items.</div>
@@ -1599,8 +1662,8 @@ function peValidate(){
     if(inp.dataset.kind==='catitem' || inp.dataset.kind==='discitem'){ inp.classList.remove('pe-invalid'); return; }
     const v=parseFloat(inp.value);
     let invalid;
-    if(inp.dataset.kind==='areatier'){
-      // Tier rows may be left blank (= unused); only non-blank negatives are bad.
+    if(inp.dataset.kind==='areatier' || (inp.dataset.kind==='pg' && inp.dataset.field==='p3')){
+      // May be left blank (= unused / 3-Room price not set yet); only non-blank negatives are bad.
       invalid = inp.value!=='' && (isNaN(v)||v<0);
     } else {
       invalid = (inp.value===''||isNaN(v)||v<0);
@@ -1619,7 +1682,7 @@ async function savePrices(){
     alert('Please fix '+val.count+' highlighted field'+(val.count>1?'s':'')+' (blank or negative) before saving.');
     return;
   }
-  const overlay={items:{},catalog:{},cabinets:{},grills:{},paints:{},alucabs:{},areaTiers:[],discounts:[]};
+  const overlay={items:{},catalog:{},cabinets:{},grills:{},paints:{},alucabs:{},areaTiers:[],discounts:[],pg:{}};
   // Discounts — admin-managed selectable rebates (name + flat amount).
   document.querySelectorAll('#priceBody .pe-cat[data-disc="1"] .pe-item').forEach(row=>{
     const label=(((row.querySelector('input[data-field="label"]')||{}).value)||'').trim();
@@ -1668,6 +1731,11 @@ async function savePrices(){
   document.querySelectorAll('#priceBody input[data-kind="alucab"]').forEach(inp=>{
     const k=inp.dataset.key,f=inp.dataset.field,v=parseFloat(inp.value);
     (overlay.alucabs[k]=overlay.alucabs[k]||{})[f]=isNaN(v)?0:v;
+  });
+  document.querySelectorAll('#priceBody input[data-kind="pg"]').forEach(inp=>{
+    const k=inp.dataset.key,f=inp.dataset.field,raw=(inp.value||'').trim(),v=parseFloat(raw);
+    // blank 3-Room price stays unset (null); other blanks fall back to 0
+    (overlay.pg[k]=overlay.pg[k]||{})[f]=(f==='p3'&&raw==='')?null:(isNaN(v)?0:v);
   });
   const supa=getSupa();
   if(!supa){ alert('Not connected — open this inside the app to save prices.'); return; }
@@ -1872,9 +1940,7 @@ function renderCatalog(){
   root.insertAdjacentHTML('beforeend', grillCardHtml());
   grillGroupChange();         // populate grill option select
   renderGrillLines();
-  root.insertAdjacentHTML('beforeend', pgCardHtml());
-  pgGroupChange();            // populate package product select
-  renderPgLines();
+  PG_PACKAGES.forEach(P=>{ root.insertAdjacentHTML('beforeend', pgCardHtml(P.id)); pgGroupChange(P.id); renderPgLines(P.id); });
   root.insertAdjacentHTML('beforeend', paintCardHtml());
   renderPaintLines();
   CATALOG.forEach((cat,ci)=>{
@@ -2144,7 +2210,7 @@ function computeWorkCategories(){
   grillLines.forEach(l=>add('grill:'+l.gid));
   if(paintLines.length) add('paint');
   if(alucabLines.length) add('alucab');
-  if(pgLines.length) set.add('Iron Work');
+  PG_PACKAGES.forEach(P=>{ if((pgLines[P.id]||[]).length) set.add(P.cat); });
   return [...set];
 }
 // The PIC(s) ticked in the form — assigned to the unit when an SO is created.
@@ -2168,9 +2234,11 @@ function collectLines(){
   grillLines.forEach(l=>{
     lines.push({cat:l.gname,variantName:'',label:l.oname,sub:grillDimStr(l),price:l.price,qty:1,amount:l.price});
   });
-  pgLines.forEach(l=>{
-    const amt=pgLinePrice(l);
-    lines.push({cat:'Iron Work',variantName:'',label:`${l.code}) ${l.name}`,sub:pgDimStr(l),price:amt,qty:1,amount:amt});
+  PG_PACKAGES.forEach(P=>{
+    (pgLines[P.id]||[]).forEach(l=>{
+      const amt=pgLinePrice(P.id,l);
+      lines.push({cat:P.cat,variantName:'',label:`${l.code}) ${l.name}`,sub:pgDimStr(l),price:amt,qty:1,amount:amt});
+    });
   });
   paintLines.forEach(l=>{
     lines.push({cat:PAINT_CAT,variantName:'',label:l.oname,sub:paintDimStr(l),price:l.price,qty:1,amount:l.price});
@@ -2203,8 +2271,7 @@ function recalc(){
   if(cabEl){cabEl.textContent=cabinetLines.length;cabEl.classList.toggle('zero',cabinetLines.length===0);}
   const grlEl=document.getElementById('cnt-grill');
   if(grlEl){grlEl.textContent=grillLines.length;grlEl.classList.toggle('zero',grillLines.length===0);}
-  const pgEl=document.getElementById('cnt-pgpkg');
-  if(pgEl){pgEl.textContent=pgLines.length;pgEl.classList.toggle('zero',pgLines.length===0);}
+  PG_PACKAGES.forEach(P=>{ const el=document.getElementById('cnt-pg-'+P.id); if(el){ const n=(pgLines[P.id]||[]).length; el.textContent=n; el.classList.toggle('zero',n===0); } });
   const pntEl=document.getElementById('cnt-paint');
   if(pntEl){pntEl.textContent=paintLines.length;pntEl.classList.toggle('zero',paintLines.length===0);}
   const aluEl=document.getElementById('cnt-alucab');
@@ -2468,7 +2535,7 @@ async function saveQuote(){
     selections:Object.assign({},state),
     cabinets:cabinetLines.map(l=>Object.assign({},l)),
     grills:grillLines.map(l=>Object.assign({},l)),
-    pg:{room:PG_ROOM, lines:pgLines.map(l=>Object.assign({},l))},
+    pg:pgPayload(),
     paints:paintLines.map(l=>Object.assign({},l)),
     alucabs:alucabLines.map(l=>Object.assign({},l)),
     discounts,
@@ -2552,9 +2619,16 @@ async function loadDocument(id, asType, mode){
     if(Array.isArray(p.cabinets)) p.cabinets.forEach(l=>cabinetLines.push(Object.assign({},l)));
     grillLines.length=0;
     if(Array.isArray(p.grills)) p.grills.forEach(l=>grillLines.push(Object.assign({},l)));
-    pgLines.length=0;
-    PG_ROOM=(p.pg&&p.pg.room==='3')?'3':'2';
-    if(p.pg&&Array.isArray(p.pg.lines)) p.pg.lines.forEach(l=>pgLines.push(Object.assign({},l)));
+    PG_PACKAGES.forEach(P=>{ pgLines[P.id].length=0; pgRoom[P.id]='2'; pgHole[P.id]=[false,false,false,false,false,false]; });
+    if(p.pg){
+      if(Array.isArray(p.pg.lines)){ // legacy single-package (iron) format
+        if(p.pg.room==='3') pgRoom.iron='3';
+        p.pg.lines.forEach(l=>{ if(pgLines.iron) pgLines.iron.push(Object.assign({},l)); });
+      } else {
+        const rms=p.pg.rooms||{}, lns=p.pg.lines||{};
+        PG_PACKAGES.forEach(P=>{ if(rms[P.id]==='2'||rms[P.id]==='3') pgRoom[P.id]=rms[P.id]; const a=lns[P.id]; if(Array.isArray(a)) a.forEach(l=>pgLines[P.id].push(Object.assign({},l))); });
+      }
+    }
     paintLines.length=0;
     if(Array.isArray(p.paints)) p.paints.forEach(l=>paintLines.push(Object.assign({},l)));
     alucabLines.length=0;
@@ -2768,9 +2842,7 @@ async function newQuote(){
   for(const k in discountSel) delete discountSel[k];
   cabinetLines.length=0;
   grillLines.length=0;
-  pgLines.length=0;
-  PG_ROOM='2';
-  pgHole=[false,false,false,false,false,false];
+  PG_PACKAGES.forEach(P=>{ pgLines[P.id].length=0; pgRoom[P.id]='2'; pgHole[P.id]=[false,false,false,false,false,false]; });
   paintLines.length=0;
   alucabLines.length=0;
   ['c_name','c_ic','c_unit','c_project','c_phone','c_email','c_remarks'].forEach(id=>document.getElementById(id).value='');
