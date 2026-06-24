@@ -16,6 +16,7 @@ export const CATEGORIES: Category[] = [
   { key: 'Smart Home',  label: 'Smart Home',  accent: 'text-teal-700 bg-teal-50 border-teal-200' },
   { key: 'Smart Lock',  label: 'Smart Lock',  accent: 'text-violet-700 bg-violet-50 border-violet-200' },
   { key: 'Painting',    label: 'Painting',    accent: 'text-fuchsia-700 bg-fuchsia-50 border-fuchsia-200' },
+  { key: 'Other Services', label: 'Other Services', accent: 'text-amber-700 bg-amber-50 border-amber-200' },
   { key: 'Products',    label: 'Products',    accent: 'text-orange-700 bg-orange-50 border-orange-200' },
 ]
 

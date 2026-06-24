@@ -2047,8 +2047,53 @@ function renderCatalog(){
     root.appendChild(wrap);
     renderItems(cat);
   });
+  root.insertAdjacentHTML('beforeend', othCardHtml());
+  renderOthLines();
   root.insertAdjacentHTML('beforeend', discountCardHtml());
   recalc();
+}
+
+/* ---------- Other Services — ad-hoc custom line items ----------
+   A free-form section: the salesperson types a description + price and adds it
+   to this quote (not saved globally). Lines group under "Other Services". */
+const customLines = []; // [{name, price}]
+function escHtml(s){ return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function othAdd(){
+  const name=(document.getElementById('oth-name').value||'').trim();
+  const price=parseFloat(document.getElementById('oth-price').value)||0;
+  if(!name){ alert('Enter a description for the service.'); document.getElementById('oth-name').focus(); return; }
+  customLines.push({name, price});
+  document.getElementById('oth-name').value=''; document.getElementById('oth-price').value='';
+  renderOthLines(); recalc();
+}
+function othRemove(i){ customLines.splice(i,1); renderOthLines(); recalc(); }
+function renderOthLines(){
+  const box=document.getElementById('oth-lines'); if(!box) return;
+  if(!customLines.length){ box.innerHTML='<div class="cab-empty">No custom items added yet.</div>'; return; }
+  box.innerHTML=customLines.map((l,i)=>`<div class="cab-line">
+    <div class="cab-line-info"><b>${escHtml(l.name)}</b></div>
+    <div class="cab-amt">RM ${fmt(+l.price||0)}</div>
+    <button class="cab-x" title="Remove" onclick="othRemove(${i})">✕</button>
+  </div>`).join('');
+}
+function othCardHtml(){
+  return `
+  <div class="cat" data-cat="othersvc">
+    <div class="cat-hd" onclick="this.parentElement.classList.toggle('open')">
+      <span class="chev">▶</span>
+      <span class="cname">Other Services</span>
+      <span class="count zero" id="cnt-othersvc">0</span>
+    </div>
+    <div class="cat-bd">
+      <div class="cab-note">Add any custom product or service with your own description and price.</div>
+      <div class="cab-grid">
+        <label class="fld">Description <input id="oth-name" type="text" placeholder="e.g. Site cleaning"></label>
+        <label class="fld">Price (RM) <input id="oth-price" type="number" min="0" step="0.01" placeholder="0.00"></label>
+      </div>
+      <button class="act b-primary" style="padding:11px 16px;font-size:13px" onclick="othAdd()">+ Add to Quote</button>
+      <div id="oth-lines" style="margin-top:14px"></div>
+    </div>
+  </div>`;
 }
 
 /* ---------- discount module UI ---------- */
@@ -2293,6 +2338,7 @@ function computeWorkCategories(){
   if(paintLines.length) add('paint');
   if(alucabLines.length) add('alucab');
   PG_PACKAGES.forEach(P=>{ if((pgLines[P.id]||[]).length) set.add(P.cat); });
+  if(customLines.length) set.add('Other Services');
   return [...set];
 }
 // The PIC(s) ticked in the form — assigned to the unit when an SO is created.
@@ -2338,6 +2384,7 @@ function collectLines(){
       }
     });
   });
+  customLines.forEach(l=>{ const amt=+l.price||0; lines.push({cat:'Other Services',variantName:'',label:escHtml(l.name),sub:'',price:amt,qty:1,amount:amt}); });
   return lines;
 }
 
@@ -2359,6 +2406,8 @@ function recalc(){
   if(pntEl){pntEl.textContent=paintLines.length;pntEl.classList.toggle('zero',paintLines.length===0);}
   const aluEl=document.getElementById('cnt-alucab');
   if(aluEl){aluEl.textContent=alucabLines.length;aluEl.classList.toggle('zero',alucabLines.length===0);}
+  const othEl=document.getElementById('cnt-othersvc');
+  if(othEl){othEl.textContent=customLines.length;othEl.classList.toggle('zero',customLines.length===0);}
   const discounts=selectedDiscounts();
   const dscEl=document.getElementById('cnt-discount');
   if(dscEl){dscEl.textContent=discounts.length;dscEl.classList.toggle('zero',discounts.length===0);}
@@ -2404,7 +2453,7 @@ function buildDoc(){
 
   // group lines by category (cabinet groups first, then catalog categories)
   let rowsHtml='';
-  const order=[...CABINET.map(gp=>gp.name), ALUCAB_CAT, ...GRILL.map(gp=>gp.name), PAINT_CAT, ...CATALOG.map(c=>c.name)];
+  const order=[...CABINET.map(gp=>gp.name), ALUCAB_CAT, ...GRILL.map(gp=>gp.name), PAINT_CAT, ...CATALOG.map(c=>c.name), 'Other Services'];
   const seen=new Set();
   order.forEach(cname=>{
     if(seen.has(cname)) return; seen.add(cname);
@@ -2619,6 +2668,7 @@ async function saveQuote(){
     cabinets:cabinetLines.map(l=>Object.assign({},l)),
     grills:grillLines.map(l=>Object.assign({},l)),
     pg:pgPayload(),
+    custom:customLines.map(l=>Object.assign({},l)),
     paints:paintLines.map(l=>Object.assign({},l)),
     alucabs:alucabLines.map(l=>Object.assign({},l)),
     discounts,
@@ -2702,6 +2752,8 @@ async function loadDocument(id, asType, mode){
     if(Array.isArray(p.cabinets)) p.cabinets.forEach(l=>cabinetLines.push(Object.assign({},l)));
     grillLines.length=0;
     if(Array.isArray(p.grills)) p.grills.forEach(l=>grillLines.push(Object.assign({},l)));
+    customLines.length=0;
+    if(Array.isArray(p.custom)) p.custom.forEach(l=>customLines.push(Object.assign({},l)));
     PG_PACKAGES.forEach(P=>{ pgLines[P.id].length=0; pgRoom[P.id]='2'; pgHole[P.id]=[false,false,false,false,false,false]; });
     if(p.pg){
       if(Array.isArray(p.pg.lines)){ // legacy single-package (iron) format
@@ -2926,6 +2978,7 @@ async function newQuote(){
   cabinetLines.length=0;
   grillLines.length=0;
   PG_PACKAGES.forEach(P=>{ pgLines[P.id].length=0; pgRoom[P.id]='2'; pgHole[P.id]=[false,false,false,false,false,false]; });
+  customLines.length=0;
   paintLines.length=0;
   alucabLines.length=0;
   ['c_name','c_ic','c_unit','c_project','c_phone','c_email','c_remarks'].forEach(id=>document.getElementById(id).value='');
