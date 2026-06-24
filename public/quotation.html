@@ -1479,16 +1479,19 @@ function peSectionHead(title){
 function buildPriceEditorHtml(){
   const itemCount=CATALOG.reduce((n,c)=>n+c.items.length,0);
   const cabCount=CABINET.reduce((n,g)=>n+g.options.length,0);
-  const grillCount=GRILL.reduce((n,g)=>n+g.options.length,0);
+  const pgCount=id=>{ const P=PG_PACKAGES.find(p=>p.id===id); return P?P.groups.reduce((n,g)=>n+g.items.length,0):0; };
+  const ironCount=GRILL.reduce((n,g)=>n+g.options.length,0)+pgCount('iron')+pgCount('invisible');
+  const aluworkCount=pgCount('yard');
   const paintCount=PAINT.length;
   const aluCount=ALUCAB.length;
   let h=`<div class="pe-head">
     <div class="pe-tabs">
       <button type="button" class="pe-tab active" data-panel="items" onclick="peSwitchTab('items')">Items <span class="pe-pill" data-count>${itemCount}</span></button>
       <button type="button" class="pe-tab" data-panel="cab" onclick="peSwitchTab('cab')">Cabinet <span class="pe-pill" data-count>${cabCount}</span></button>
-      <button type="button" class="pe-tab" data-panel="grill" onclick="peSwitchTab('grill')">Grill <span class="pe-pill" data-count>${grillCount}</span></button>
+      <button type="button" class="pe-tab" data-panel="grill" onclick="peSwitchTab('grill')">Iron Work <span class="pe-pill" data-count>${ironCount}</span></button>
+      <button type="button" class="pe-tab" data-panel="aluwork" onclick="peSwitchTab('aluwork')">Aluminium Work <span class="pe-pill" data-count>${aluworkCount}</span></button>
       <button type="button" class="pe-tab" data-panel="paint" onclick="peSwitchTab('paint')">Paint <span class="pe-pill" data-count>${paintCount}</span></button>
-      <button type="button" class="pe-tab" data-panel="alucab" onclick="peSwitchTab('alucab')">Alu. Cabinet <span class="pe-pill" data-count>${aluCount}</span></button>
+      <button type="button" class="pe-tab" data-panel="alucab" onclick="peSwitchTab('alucab')">Aluminium Cabinet <span class="pe-pill" data-count>${aluCount}</span></button>
       <button type="button" class="pe-tab" data-panel="discount" onclick="peSwitchTab('discount')">Discounts <span class="pe-pill" data-count>${DISCOUNTS.length}</span></button>
     </div>
     <div class="pe-search-wrap"><span class="pe-ico">🔍</span>
@@ -1530,9 +1533,26 @@ function buildPriceEditorHtml(){
   }));
   h+='</div></div>';
 
-  // Grill
-  h+=`<div class="pe-panel" data-panel="grill"><div class="pe-noresults">No matching grill items.</div>
-    <div class="pe-cat">${peSectionHead('Grill — rate')}<p class="pe-note">Area items: RM / sqft · Run items: RM / ft. Aluminium rates start at 0.</p>`;
+  // Reusable PG-package editor section.
+  const pgSectionHtml=P=>{
+    let s=`<div class="pe-cat" data-search="${peSafe(P.name+' package 2 room 3 room')}">${peSectionHead(P.name+' — products & prices')}<p class="pe-note">Edit each product's name, size &amp; price per room. 2-Room and 3-Room are separate (different sizes); leave a 3-Room field blank to keep it unset.</p>`;
+    P.groups.forEach(g=>g.items.forEach(o=>{
+      const k=P.id+':'+g.id+':'+o.id, d=(PRICE_DEFAULTS.pg||{})[k]||{};
+      s+=`<div class="pe-cab" data-search="${peSafe(P.name+' '+g.name+' '+o.name+' '+o.id)}">${peCardHead(g.name+' · '+o.name)}
+        <div class="pe-cab-grid">
+          ${peTextField('pg',k,'name',o.name,'Name',d.name)}
+          ${peTextField('pg',k,'spec',(o.spec||''),'2-Room Size',d.spec)}
+          ${peField('pg',k,'p2',o.p2,'2-Room RM',{money:true,def:d.p2})}
+          ${peTextField('pg',k,'spec3',(o.spec3||''),'3-Room Size',d.spec3)}
+          ${peField('pg',k,'p3',o.p3,'3-Room RM',{money:true,def:d.p3})}
+        </div></div>`;
+    }));
+    s+='</div>'; return s;
+  };
+
+  // Iron Work — iron grill rates + the Iron Work packages.
+  h+=`<div class="pe-panel" data-panel="grill"><div class="pe-noresults">No matching iron-work items.</div>
+    <div class="pe-cat">${peSectionHead('Iron grill — rate')}<p class="pe-note">Area items: RM / sqft · Run items: RM / ft.</p>`;
   GRILL.forEach(g=>g.options.forEach(o=>{
     const k=g.id+':'+o.id, d=PRICE_DEFAULTS.grills[k]||{};
     const ul=o.unit==='sqft'?'RM/sqft':(o.unit==='ftrun'?'RM/ft':'RM');
@@ -1544,22 +1564,13 @@ function buildPriceEditorHtml(){
       </div></div>`;
   }));
   h+='</div>';
-  // PG packages — per-product 2-Room / 3-Room prices.
-  PG_PACKAGES.forEach(P=>{
-    h+=`<div class="pe-cat" data-search="${peSafe(P.name+' package iron work 2 room 3 room')}">${peSectionHead(P.name+' — products & prices')}<p class="pe-note">Edit each product's name, size &amp; price per room. 2-Room and 3-Room are separate (different sizes); leave a 3-Room field blank to keep it unset.</p>`;
-    P.groups.forEach(g=>g.items.forEach(o=>{
-      const k=P.id+':'+g.id+':'+o.id, d=(PRICE_DEFAULTS.pg||{})[k]||{};
-      h+=`<div class="pe-cab" data-search="${peSafe(P.name+' '+g.name+' '+o.name+' '+o.id)}">${peCardHead(g.name+' · '+o.name)}
-        <div class="pe-cab-grid">
-          ${peTextField('pg',k,'name',o.name,'Name',d.name)}
-          ${peTextField('pg',k,'spec',(o.spec||''),'2-Room Size',d.spec)}
-          ${peField('pg',k,'p2',o.p2,'2-Room RM',{money:true,def:d.p2})}
-          ${peTextField('pg',k,'spec3',(o.spec3||''),'3-Room Size',d.spec3)}
-          ${peField('pg',k,'p3',o.p3,'3-Room RM',{money:true,def:d.p3})}
-        </div></div>`;
-    }));
-    h+='</div>';
-  });
+  PG_PACKAGES.filter(P=>P.cat==='Iron Work').forEach(P=>{ h+=pgSectionHtml(P); });
+  h+='</div>';
+
+  // Aluminium Work — the Aluminium Work packages (PG Yard).
+  h+=`<div class="pe-panel" data-panel="aluwork"><div class="pe-noresults">No matching items.</div>`;
+  PG_PACKAGES.filter(P=>P.cat==='Aluminium Work').forEach(P=>{ h+=pgSectionHtml(P); });
+  h+=`<div class="pe-cat" data-search="aluminium products louvered moru acrylic"><p class="pe-note">Aluminium products (Aluminium Louvered, Moru Acrylic) are edited under the <b>Items</b> tab → Aluminium Work.</p></div>`;
   h+='</div>';
 
   // Paint
@@ -1652,7 +1663,7 @@ function peApplyChanged(inp){
 }
 function peRecount(){
   const searching=(document.getElementById('peSearch')||{}).value;
-  ['items','cab','grill','paint','alucab','discount'].forEach(name=>{
+  ['items','cab','grill','aluwork','paint','alucab','discount'].forEach(name=>{
     const panel=document.querySelector(`.pe-panel[data-panel="${name}"]`);
     const tab=document.querySelector(`.pe-tab[data-panel="${name}"]`);
     if(!panel||!tab) return;
@@ -1695,7 +1706,7 @@ function peSwitchTab(name){
 function peFilter(){
   const q=((document.getElementById('peSearch')||{}).value||'').trim().toLowerCase();
   const clr=document.getElementById('peSearchClear'); if(clr) clr.classList.toggle('show',q.length>0);
-  ['items','cab','grill','paint','alucab','discount'].forEach(name=>{
+  ['items','cab','grill','aluwork','paint','alucab','discount'].forEach(name=>{
     const panel=document.querySelector(`.pe-panel[data-panel="${name}"]`);
     const tab=document.querySelector(`.pe-tab[data-panel="${name}"]`);
     if(!panel) return;
