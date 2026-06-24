@@ -503,8 +503,8 @@ const CATALOG = [
     ]
   },
   {
-    id:'other', name:'Other Services',
-    note:'Price by specification / area.',
+    id:'other', name:'Aluminium Work',
+    note:'Aluminium products &amp; other services — price by specification / area.',
     variants:[],
     items:[
       {v:0,label:'Aluminium Louvered',sub:'Price by specification',price:0},
@@ -553,8 +553,13 @@ const TERMS = {
     // 'Cabinet structure carries a 1-year workmanship warranty.',
   ],
 
-  // Triggered by: Shoe cabinet · Aluminium cabinet · Grills · "Other" items.
-  'Aluminium': [
+  // Triggered by: Iron Work (iron grill) items.
+  'Iron Work': [
+    // 'Iron grill is finished with anti-rust primer and enamel paint.',
+  ],
+
+  // Triggered by: Aluminium grill · Aluminium cabinet · Shoe cabinet · products & other services.
+  'Aluminium Work': [
     // 'Colour shade may vary slightly from samples.',
   ],
 
@@ -714,7 +719,7 @@ const CABINET = [
    Aluminium rates are 0 until set in Edit Prices.
    ============================================================ */
 const GRILL = [
-  { id:'iron', name:'Iron Grill', options:[
+  { id:'iron', name:'Iron Work', options:[
       { id:'pagar',    name:'Main Gate',                  unit:'sqft',  rate:45 },
       { id:'automoto', name:'ADDON Gate — Auto Motor',    unit:'flat',  rate:0 },
       { id:'depan',    name:'Front Door',                 unit:'ftrun', rate:525, tier:{overFt:12, overRate:480} },
@@ -727,7 +732,7 @@ const GRILL = [
       { id:'awnpu',    name:'Awning — PU Metal Roofing',  unit:'sqft',  rate:49 },
       { id:'awnstd',   name:'Awning Standard',            unit:'sqft',  rate:17 },
   ]},
-  { id:'alu', name:'Aluminium Hollow Grill', options:[
+  { id:'alu', name:'Aluminium Work', options:[
       { id:'pagar',    name:'Main Gate',                  unit:'sqft',  rate:0 },
       { id:'automoto', name:'ADDON Gate — Auto Motor',    unit:'flat',  rate:0 },
       { id:'depan',    name:'Front Door',                 unit:'ftrun', rate:0, tier:{overFt:12, overRate:0} },
@@ -762,7 +767,7 @@ function grillDimStr(l){
 function grillGroupChange(){
   const gi=+document.getElementById('grl-group').value;
   document.getElementById('grl-option').innerHTML=GRILL[gi].options.map((o,i)=>`<option value="${i}">${o.name}</option>`).join('');
-  // Colour selection applies to Iron Grill only.
+  // Colour selection applies to Iron Work (iron grill) only.
   const cw=document.getElementById('grl-wrap-color'); if(cw) cw.style.display = GRILL[gi].id==='iron' ? '' : 'none';
   grillOptionChange();
 }
@@ -819,7 +824,7 @@ function grillCardHtml(){
   <div class="cat" data-cat="grill">
     <div class="cat-hd" onclick="this.parentElement.classList.toggle('open')">
       <span class="chev">▶</span>
-      <span class="cname">Grill (Iron / Aluminium)</span>
+      <span class="cname">Iron / Aluminium Work</span>
       <span class="count zero" id="cnt-grill">0</span>
     </div>
     <div class="cat-bd">
@@ -835,7 +840,7 @@ function grillCardHtml(){
         <label class="fld" id="grl-wrap-L"><span>Run (<span class="ulin-grill">ft</span>)</span> <input id="grl-L" type="number" min="0" step="0.1" oninput="grillPreview()"></label>
       </div>
       <div class="cab-grid">
-        <label class="fld" id="grl-wrap-color">Colour (Iron Grill) <input id="grl-color" list="grlColorList" placeholder="Black"><datalist id="grlColorList"><option>Black</option><option>White</option></datalist></label>
+        <label class="fld" id="grl-wrap-color">Colour (Iron Work) <input id="grl-color" list="grlColorList" placeholder="Black"><datalist id="grlColorList"><option>Black</option><option>White</option></datalist></label>
       </div>
       <div class="cab-preview" id="grl-preview"></div>
       <button class="act b-primary" style="padding:11px 16px;font-size:13px" onclick="grillAdd()">+ Add Grill to Quote</button>
@@ -1967,17 +1972,17 @@ const WORK_MAP = {
   'smarthome': ['Smart Home'],
   'smartlock': ['Smart Lock'],
   'ee':        ['EE'],
-  'other':     ['Aluminium'],
+  'other':     ['Aluminium Work'],
   'cab:dapur':  ['Mindhome'],
   'cab:tv':     ['Mindhome'],
   'cab:almari': ['Mindhome'],
   'cab:dining': ['Mindhome'],
-  'cab:kasut':  ['Aluminium'],
+  'cab:kasut':  ['Aluminium Work'],
   'cab:paket':  ['Mindhome'],
-  'grill:iron': ['Aluminium'],
-  'grill:alu':  ['Aluminium'],
+  'grill:iron': ['Iron Work'],
+  'grill:alu':  ['Aluminium Work'],
   'paint':      ['Painting'],
-  'alucab':     ['Aluminium'],
+  'alucab':     ['Aluminium Work'],
 };
 // The distinct unit work categories implied by the current selection.
 function computeWorkCategories(){

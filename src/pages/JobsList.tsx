@@ -36,7 +36,7 @@ export default function JobsList() {
   const [works, setWorks] = useState<JobWork[]>(c0?.works ?? [])
   const [loading, setLoading] = useState(!c0)
   // Filters can be seeded from the URL (e.g. the dashboard links to
-  // /units?stage=installing, /units?cat=Aluminium, or /units?q=Ahmad).
+  // /units?stage=installing, /units?cat=Painting, or /units?q=Ahmad).
   const [searchParams] = useSearchParams()
   const [query, setQuery] = useState(searchParams.get('q') ?? '')
   const [projectFilter, setProjectFilter] = useState(searchParams.get('project') ?? '')
