@@ -591,7 +591,6 @@ const TERMS = {
   // ── ALWAYS SHOWN ────────────────────────────────────────────────────────
   general: [
     '50% deposit to be paid upon confirmation of work.',
-    'Prices quoted are valid for one month from the date of this document.',
     'First design fee is included and complimentary; subsequent design changes may be charged a design modification fee of RM 100.',
     'No modifications can be made after confirmation of work.',
     'If the order is cancelled, 20% of the total amount will be retained as a service fee.',
@@ -601,7 +600,7 @@ const TERMS = {
   // ── PER-CATEGORY ────────────────────────────────────────────────────────
   // Fill these in. Uncomment an example or add your own lines.
 
-  // Triggered by: Kitchen / TV / Wardrobe / Dining / Package cabinets.
+  // Triggered by: TV / Wardrobe / Dining / Package cabinets.
   'Mindhome': [
     // 'Cabinet structure carries a 1-year workmanship warranty.',
   ],
@@ -744,12 +743,6 @@ function cabOpt(basePrice, defL, defH){
 }
 
 const CABINET = [
-  { id:'dapur', name:'Kitchen Cabinet', options:[
-      { id:'atas',      name:'Upper Kitchen Cabinet',              ...cabOpt(1200, 1200, 1000) },
-      { id:'bawah',     name:'Lower Kitchen Cabinet',              ...cabOpt(1500, 1200, 1000) },
-      { id:'atas_alu',  name:'Upper Kitchen Cabinet (Aluminium)',  ...cabOpt(1400, 1200, 1000) },
-      { id:'bawah_alu', name:'Lower Kitchen Cabinet (Aluminium)',  ...cabOpt(1700, 1200, 1000) },
-  ]},
   { id:'tv', name:'TV Cabinet', options:[
       { id:'standard', name:'TV Cabinet',              ...cabOpt(1000, 2400, 1000) },
       { id:'backdrop', name:'TV Cabinet with Backdrop', ...cabOpt(1600, 2400, 1000) },
@@ -762,9 +755,6 @@ const CABINET = [
   ]},
   { id:'dining', name:'Dining Cabinet', options:[
       { id:'standard', name:'Dining Cabinet', ...cabOpt(1200, 1200, 1000) },
-  ]},
-  { id:'kasut', name:'Shoe Cabinet', options:[
-      { id:'alu', name:'Aluminium Shoe Cabinet', ...cabOpt(900, 900, 1000) },
   ]},
   // Fixed-price cabinet packages — no measurement; the price is flat.
   { id:'paket', name:'Cabinet Package', options:[
@@ -1019,6 +1009,24 @@ const PG_PACKAGES = [
         { id:'alu',  name:'Aluminium',     spec:'80" × 77"H', p2:1850, p3:null },
         { id:'poly', name:'Polycarbonate', spec:'80" × 77"H', p2:1400, p3:null },
         { id:'moru', name:'Moru Acrylic',  spec:'80" × 77"H', p2:1750, p3:null, colours:['White','Transparent'] },
+      ]},
+    ],
+  },
+  {
+    id:'painting', name:'PG Painting Package (2 / 3 Room)', cat:'Painting',
+    note:'2 Room / 3 Room wall-painting colour package. Pick the wall painting, then add the add-ons (Door & Frame / Frame are per set — set the quantity).',
+    colour:false, exhaust:false, codeLabels:false,
+    colourLabel:'Colour Package', qtyLabel:'Quantity (sets)',
+    typeLabel:'Section', productLabel:'Item',
+    groups:[
+      { id:'wall', name:'Wall Painting', items:[
+        { id:'wall', name:'Wall Painting', spec:'688 sqft (Type A)', spec3:'1088 sqft (Type B)', p2:1499, p3:1999,
+          colours:['Option 01','Option 02','Option 03','Option 04','Option 05'] },
+      ]},
+      { id:'addon', name:'Add-ons', items:[
+        { id:'ceiling',   name:'Ceiling',                spec:'', spec3:'', p2:499, p3:699 },
+        { id:'doorframe', name:'Door & Frame (per set)', spec:'', spec3:'', p2:100, p3:100, qty:true },
+        { id:'frame',     name:'Frame (per set)',        spec:'', spec3:'', p2:50,  p3:50,  qty:true },
       ]},
     ],
   },
@@ -1565,7 +1573,7 @@ function buildPriceEditorHtml(){
   const pgCount=id=>{ const P=PG_PACKAGES.find(p=>p.id===id); return P?P.groups.reduce((n,g)=>n+g.items.length,0):0; };
   const ironCount=GRILL.reduce((n,g)=>n+g.options.length,0)+pgCount('iron')+pgCount('invisible');
   const aluworkCount=pgCount('yard');
-  const paintCount=PAINT_PKG.cats.reduce((n,c)=>n+c.types.length,0)+PAINT_PKG.addons.length+2+PAINT_PKG.repairs.length;
+  const paintCount=PAINT_PKG.cats.reduce((n,c)=>n+c.types.length,0)+PAINT_PKG.addons.length+2+PAINT_PKG.repairs.length+pgCount('painting');
   const aluCount=ALUCAB.length;
   const shortCat=name=>{ const m=/\(([^)]+)\)\s*$/.exec(name); return m?m[1]:name; };
   const catTabs=CATALOG.filter(c=>c.id!=='other').map(c=>`<button type="button" class="pe-tab" data-panel="cat-${c.id}" onclick="peSwitchTab('cat-${c.id}')">${shortCat(c.name)} <span class="pe-pill" data-count>${c.items.length}</span></button>`).join('');
@@ -1698,6 +1706,7 @@ function buildPriceEditorHtml(){
       <div class="pe-cab-grid">${peTextField('paintpkg','repair:'+r.id,'name',r.name,'Name',d.name)}${peField('paintpkg','repair:'+r.id,'price',r.price,'RM / 400 sqft',{money:true,def:d.price})}</div></div>`;
   });
   h+='</div>';
+  PG_PACKAGES.filter(P=>P.cat==='Painting').forEach(P=>{ h+=pgSectionHtml(P); });
   h+='</div>';
 
   // Aluminium Cabinet — per linear foot of length
@@ -2181,32 +2190,45 @@ function paintCardHtml(){
       <span class="count zero" id="cnt-paint">0</span>
     </div>
     <div class="cat-bd">
-      <div class="cab-note">${PAINT_PKG.note}</div>
       <div class="cab-grid">
-        <label class="fld">Category <select id="pnt-cat" onchange="paintCatChange()">${catOpts}</select></label>
-        <label class="fld"><span id="pnt-typelabel">${c0.typeLabel}</span> <select id="pnt-type" onchange="paintTypeChange()">${typeOpts}</select></label>
-      </div>
-      <div class="cab-grid" id="pnt-scope-wrap">
-        <label class="fld">Scope <select id="pnt-scope" onchange="paintScopeChange()">
-          <option value="int">Interior</option>
-          <option value="ext">Exterior</option>
-          <option value="combo">Interior + Exterior (−10%)</option>
+        <label class="fld">Type <select id="pw-mode" onchange="pwModeChange()">
+          <option value="pkg">PG Painting Package (Commercial · Landed · Condo)</option>
+          <option value="residential">PG Painting Package (2 / 3 Room)</option>
         </select></label>
       </div>
-      <div class="cab-preview" id="pnt-preview"></div>
-      <button class="act b-primary" style="padding:11px 16px;font-size:13px" onclick="paintAdd()">+ Add Package to Quote</button>
+      <div id="pw-body-pkg" class="pw-body">
+        <div class="cab-note">${PAINT_PKG.note}</div>
+        <div class="cab-grid">
+          <label class="fld">Category <select id="pnt-cat" onchange="paintCatChange()">${catOpts}</select></label>
+          <label class="fld"><span id="pnt-typelabel">${c0.typeLabel}</span> <select id="pnt-type" onchange="paintTypeChange()">${typeOpts}</select></label>
+        </div>
+        <div class="cab-grid" id="pnt-scope-wrap">
+          <label class="fld">Scope <select id="pnt-scope" onchange="paintScopeChange()">
+            <option value="int">Interior</option>
+            <option value="ext">Exterior</option>
+            <option value="combo">Interior + Exterior (−10%)</option>
+          </select></label>
+        </div>
+        <div class="cab-preview" id="pnt-preview"></div>
+        <button class="act b-primary" style="padding:11px 16px;font-size:13px" onclick="paintAdd()">+ Add Package to Quote</button>
 
-      <div style="font-size:11.5px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.6px;margin:18px 0 8px">Add-ons &amp; Extras</div>
-      <div class="cab-grid">
-        <label class="fld">Add-on <select id="pnt-extra" onchange="paintExtraPreview()">${extraOpts}</select></label>
-        <label class="fld">Quantity <input id="pnt-extra-qty" type="number" min="1" step="1" value="1" oninput="paintExtraPreview()"></label>
+        <div style="font-size:11.5px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.6px;margin:18px 0 8px">Add-ons &amp; Extras</div>
+        <div class="cab-grid">
+          <label class="fld">Add-on <select id="pnt-extra" onchange="paintExtraPreview()">${extraOpts}</select></label>
+          <label class="fld">Quantity <input id="pnt-extra-qty" type="number" min="1" step="1" value="1" oninput="paintExtraPreview()"></label>
+        </div>
+        <div class="cab-preview" id="pnt-extra-preview"></div>
+        <button class="act b-primary" style="padding:11px 16px;font-size:13px" onclick="paintExtraAdd()">+ Add Add-on to Quote</button>
       </div>
-      <div class="cab-preview" id="pnt-extra-preview"></div>
-      <button class="act b-primary" style="padding:11px 16px;font-size:13px" onclick="paintExtraAdd()">+ Add Add-on to Quote</button>
+      <div id="pw-body-residential" class="pw-body" style="display:none">${pgBodyHtml('painting')}</div>
 
       <div id="pnt-lines" style="margin-top:14px"></div>
     </div>
   </div>`;
+}
+function pwModeChange(){
+  const m=(document.getElementById('pw-mode')||{}).value||'pkg';
+  ['pkg','residential'].forEach(k=>{ const el=document.getElementById('pw-body-'+k); if(el) el.style.display=(k===m)?'':'none'; });
 }
 
 /* ============================================================
@@ -2220,7 +2242,7 @@ const ALUCAB = [
   { id:'base',   name:'Base Cabinet',               spec:'Depth 22" · Height 34"', rate:750 },
   { id:'wall25', name:'Wall Cabinet (2.5ft / 30")', spec:'Depth 13" · Height 30"', rate:400 },
   { id:'wall3',  name:'Wall Cabinet (3ft / 36")',   spec:'Depth 13" · Height 36"', rate:500 },
-  { id:'corner', name:'Corner Cabinet (3ft / 36")', spec:'Depth 13" · Height 36"', rate:520 },
+  { id:'corner', name:'Shoe Cabinet (3ft / 36")', spec:'Depth 13" · Height 36"', rate:520 },
 ];
 function alucabSel(){ return ALUCAB[+document.getElementById('alu-option').value]; }
 function alucabOptionChange(){ document.getElementById('alu-L').value=''; alucabPreview(); }
@@ -2295,6 +2317,7 @@ function renderCatalog(){
   awModeChange();
   root.insertAdjacentHTML('beforeend', paintCardHtml());
   paintCatChange(); paintPreview(); paintExtraPreview(); renderPaintLines();
+  pgGroupChange('painting'); renderPgLines('painting'); pwModeChange();
   CATALOG.forEach((cat,ci)=>{
     if(cat.id==='other') return; // 'Aluminium Work' products are rendered inside the Aluminium Work card
     if(activeVariant[cat.id]===undefined) activeVariant[cat.id]=0;
@@ -2707,11 +2730,9 @@ const WORK_MAP = {
   'smartlock': ['Smart Lock'],
   'ee':        ['EE'],
   'other':     ['Aluminium Work'],
-  'cab:dapur':  ['Mindhome'],
   'cab:tv':     ['Mindhome'],
   'cab:almari': ['Mindhome'],
   'cab:dining': ['Mindhome'],
-  'cab:kasut':  ['Aluminium Cabinet'],
   'cab:paket':  ['Mindhome'],
   'grill:iron': ['Iron Work'],
   'paint':      ['Painting'],
@@ -2794,7 +2815,7 @@ function recalc(){
   const _oc=aluCat(); let _othSel=0; if(_oc) _oc.items.forEach((it,idx)=>{ if((state[_oc.id+':'+idx]||0)>0) _othSel++; });
   const awN=pgVisLines('yard').length+_othSel;
   const awEl=document.getElementById('cnt-aluwork'); if(awEl){ awEl.textContent=awN; awEl.classList.toggle('zero',awN===0); }
-  const pntN=paintLines.length;
+  const pntN=paintLines.length+pgVisLines('painting').length;
   const pntEl=document.getElementById('cnt-paint');
   if(pntEl){pntEl.textContent=pntN;pntEl.classList.toggle('zero',pntN===0);}
   const aluEl=document.getElementById('cnt-alucab');
@@ -2907,7 +2928,7 @@ function buildDoc(){
 
     <div class="doc-tc">
       <h4>Terms &amp; Conditions</h4>
-      ${TERMS.general.map((t,i)=>`${i+1}) ${t}`).join('<br>')}
+      ${(()=>{ const g=TERMS.general.slice(); if(docType==='QT') g.splice(1,0,'This quotation is valid for 30 days from the date of issue.'); return g.map((t,i)=>`${i+1}) ${t}`).join('<br>'); })()}
       ${computeWorkCategories().filter(c=>(TERMS[c]||[]).length).map(c=>`<div style="margin-top:8px"><b>${c} — Terms</b><br>${TERMS[c].map((t,i)=>`${i+1}) ${t}`).join('<br>')}</div>`).join('')}
     </div>
 
