@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import type { Appointment, Job, Profile } from '../lib/types'
 import { Layout } from '../components/Layout'
+import { Icon } from '../components/Icon'
 import { APPT_TYPES, getApptType, toLocalInput } from '../lib/appointments'
 
 // Default a new appointment to the next whole hour.
@@ -171,7 +172,7 @@ export default function AppointmentForm() {
         const when = new Date(row.starts_at).toLocaleString(undefined, {
           day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
         })
-        await logToJob(row.job_id, `📅 ${getApptType(row.type).label} scheduled for ${when}${row.who ? ` (${row.who})` : ''}`)
+        await logToJob(row.job_id, `${getApptType(row.type).label} scheduled for ${when}${row.who ? ` (${row.who})` : ''}`)
       }
     }
     navigate('/schedule')
@@ -187,7 +188,7 @@ export default function AppointmentForm() {
     setBusy(true)
     await supabase.from('appointments').update({ status: next }).eq('id', id)
     if (next === 'done' && form.job_id) {
-      await logToJob(form.job_id, `✅ ${getApptType(form.type).label} completed`)
+      await logToJob(form.job_id, `${getApptType(form.type).label} completed`)
     }
     setBusy(false)
     navigate('/schedule')
@@ -221,7 +222,7 @@ export default function AppointmentForm() {
             <select className={field} value={form.type} onChange={(e) => set('type', e.target.value)}>
               {APPT_TYPES.map((t) => (
                 <option key={t.key} value={t.key}>
-                  {t.icon} {t.label}
+                  {t.label}
                 </option>
               ))}
             </select>
@@ -349,9 +350,9 @@ export default function AppointmentForm() {
               <button
                 onClick={() => changeStatus('done')}
                 disabled={busy}
-                className="flex-1 rounded-lg bg-emerald-600 py-2.5 text-sm font-medium text-white active:bg-emerald-700 disabled:opacity-60"
+                className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-emerald-600 py-2.5 text-sm font-medium text-white active:bg-emerald-700 disabled:opacity-60"
               >
-                ✅ Mark done
+                <Icon name="check-circle" className="h-4 w-4" /> Mark done
               </button>
               <button
                 onClick={() => changeStatus('cancelled')}

@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import type { Costing, JobWork } from '../lib/types'
 import { Layout } from '../components/Layout'
+import { Icon } from '../components/Icon'
 import { FinanceToggle } from '../components/FinanceToggle'
 import { overallPercent } from '../lib/stages'
 import { useAutoRefresh } from '../lib/useAutoRefresh'
@@ -337,9 +338,9 @@ export default function CostingList() {
                 })}
                 <button
                   onClick={exportCsv}
-                  className="ml-auto rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-600 active:bg-slate-50"
+                  className="ml-auto inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-600 active:bg-slate-50"
                 >
-                  ⬇ Export CSV
+                  <Icon name="download" className="h-4 w-4" /> Export CSV
                 </button>
               </div>
               <EditableSheet
@@ -482,7 +483,7 @@ function EditableSheet({
                       className="flex w-full flex-wrap items-center gap-1"
                     >
                       <span className={'rounded-full px-2 py-0.5 text-[11px] font-medium ' + statusStyle(prog.status)}>{prog.status}</span>
-                      <span className="whitespace-nowrap text-[11px] text-slate-400">🔗 {prog.percent}%</span>
+                      <span className="inline-flex items-center gap-1 whitespace-nowrap text-[11px] text-slate-400"><Icon name="link" className="h-3 w-3" /> {prog.percent}%</span>
                     </button>
                   ) : (
                     <select
@@ -557,7 +558,7 @@ function Cards({ rows, progressOf, onOpen }: { rows: Costing[]; progressOf: (r: 
               <p className="text-xs text-slate-400">Sale {money(num(r.revenue))} · cost {money(c.totalCost)}</p>
               {status && (
                 <span className={`flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ${statusStyle(status)}`}>
-                  {prog && <span title="Synced from linked unit">🔗</span>}
+                  {prog && <span title="Synced from linked unit"><Icon name="link" className="h-3 w-3" /></span>}
                   {status}
                   {prog && <span className="opacity-60">{prog.percent}%</span>}
                 </span>

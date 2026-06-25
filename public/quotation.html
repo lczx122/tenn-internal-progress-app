@@ -67,6 +67,9 @@
   /* ---------- admin: edit prices ---------- */
   .edit-prices-btn{background:var(--navy);color:#fff;border:none;border-radius:8px;font-family:'Archivo';font-weight:700;font-size:11.5px;padding:6px 11px;cursor:pointer;white-space:nowrap}
   .edit-prices-btn:hover{background:var(--navy-2)}
+  /* inline button icon + label (outline icons replacing former emoji) */
+  .bico{display:inline-flex;align-items:center;vertical-align:-0.18em}
+  .bico svg{width:1.05em;height:1.05em}
   #priceModal .modal-inner{max-width:900px}
   #priceModal .doc-pad{padding:0 26px 18px}
   #priceModal .doc-pad>h2{padding-top:22px}
@@ -385,8 +388,8 @@
   <!-- LEFT: builder -->
   <div>
     <div class="doctype" id="doctype">
-      <button class="dt active" data-type="QT" onclick="setDocType('QT')">📄 Quotation</button>
-      <button class="dt" data-type="SO" onclick="setDocType('SO')">🧾 Sales Order</button>
+      <button class="dt active" data-type="QT" onclick="setDocType('QT')"><span class="bico" data-ico="doc"></span> Quotation</button>
+      <button class="dt" data-type="SO" onclick="setDocType('SO')"><span class="bico" data-ico="receipt"></span> Sales Order</button>
     </div>
 
     <div class="card" style="margin-bottom:24px">
@@ -414,11 +417,11 @@
     </div>
 
     <div class="card">
-      <div class="hd" style="justify-content:space-between"><h2>Select Products</h2><button id="editPricesBtn" class="edit-prices-btn" style="display:none" onclick="openPriceEditor()">✏️ Edit Prices</button></div>
+      <div class="hd" style="justify-content:space-between"><h2>Select Products</h2><button id="editPricesBtn" class="edit-prices-btn" style="display:none" onclick="openPriceEditor()"><span class="bico" data-ico="edit"></span> Edit Prices</button></div>
       <div class="bd">
         <div id="catTopbar">
           <div id="catBack" style="display:none"><button type="button" class="cat-back-btn" onclick="showCatMenu()">← All categories</button><span id="catTitle"></span></div>
-          <div id="catSearchWrap"><span class="cat-search-ico">🔍</span>
+          <div id="catSearchWrap"><span class="cat-search-ico" data-ico="search"></span>
             <input id="catSearch" placeholder="Search a product…" oninput="catSearch()">
             <button type="button" id="catSearchClear" class="cat-search-clear" onclick="catClearSearch()">✕</button>
           </div>
@@ -444,8 +447,8 @@
       </div>
       <div class="btns">
         <button class="act b-primary" id="previewBtn" onclick="openPreview()">Preview Quotation</button>
-        <button class="act b-save" id="saveBtn" style="display:none" onclick="saveQuote()">💾 Save Quotation</button>
-        <button class="act b-primary" id="convertBtn" style="display:none" onclick="convertToSO()">🧾 Convert to Sales Order</button>
+        <button class="act b-save" id="saveBtn" style="display:none" onclick="saveQuote()"><span class="bico" data-ico="save"></span> <span class="blabel">Save Quotation</span></button>
+        <button class="act b-primary" id="convertBtn" style="display:none" onclick="convertToSO()"><span class="bico" data-ico="receipt"></span> Convert to Sales Order</button>
         <button class="act b-clear" onclick="newQuote()">New Quote</button>
       </div>
       <p class="hint" style="margin-top:10px">Preview the quotation first, then tap <b>Save Quotation</b> to assign its <b>QT-YYMM-XXX</b> number and store it in the shared register.</p>
@@ -473,9 +476,9 @@
 <div class="modal" id="modal">
   <div class="modal-inner">
     <div class="modal-bar">
-      <button class="act b-save" id="saveBtnModal" onclick="saveQuote()">💾 Save Quotation</button>
-      <button class="act b-primary" id="convertBtnModal" style="display:none" onclick="convertToSO()">🧾 Convert to Sales Order</button>
-      <button class="act b-primary" id="shareBtn" onclick="printOrShare(this)">🖨 Print / PDF</button>
+      <button class="act b-save" id="saveBtnModal" onclick="saveQuote()"><span class="bico" data-ico="save"></span> <span class="blabel">Save Quotation</span></button>
+      <button class="act b-primary" id="convertBtnModal" style="display:none" onclick="convertToSO()"><span class="bico" data-ico="receipt"></span> Convert to Sales Order</button>
+      <button class="act b-primary" id="shareBtn" onclick="printOrShare(this)"><span class="bico" data-ico="printer"></span> <span class="blabel">Print / PDF</span></button>
       <button class="act b-ghost" onclick="closePreview()">Close</button>
     </div>
     <div class="doc print-area-on"><div class="doc-pad" id="docBody"></div></div>
@@ -1367,6 +1370,7 @@ const peSafe=s=>String(s==null?'':s).replace(/"/g,'&quot;').toLowerCase();
 /* ---- price editor modal ---- */
 function openPriceEditor(){
   document.getElementById('priceBody').innerHTML=buildPriceEditorHtml();
+  fillIcons(document.getElementById('priceBody'));
   document.getElementById('priceModal').classList.add('show');
   document.body.style.overflow='hidden';
   peInitEditor();
@@ -1498,7 +1502,7 @@ function peItemRowHtml(it){
       <input type="text" data-kind="catitem" data-field="sub" value="${peAttr(it.sub)}" placeholder="Description (optional)">
     </div>
     <span class="pe-money"><span class="pe-rm">RM</span><input type="number" step="0.01" min="0" data-kind="catitem" data-field="price" value="${price}"></span>
-    <button type="button" class="pe-hide" title="${hidden?'Hidden — tap to show in quotes':'Visible — tap to hide from quotes'}" onclick="peToggleHide(this)">${hidden?'🚫':'👁'}</button>
+    <button type="button" class="pe-hide" title="${hidden?'Hidden — tap to show in quotes':'Visible — tap to hide from quotes'}" onclick="peToggleHide(this)">${hidden?qIco('eyeOff'):qIco('eye')}</button>
     ${custom?`<button type="button" class="pe-del" title="Delete custom product" onclick="peDeleteItem(this)">✕</button>`:''}
   </div>`;
 }
@@ -1519,7 +1523,7 @@ function peToggleHide(btn){
   const hide = row.dataset.hidden!=='1';
   row.dataset.hidden = hide?'1':'';
   row.classList.toggle('pe-hidden', hide);
-  btn.textContent = hide?'🚫':'👁';
+  btn.innerHTML = hide?qIco('eyeOff'):qIco('eye');
   btn.title = hide?'Hidden — tap to show in quotes':'Visible — tap to hide from quotes';
   peSetDirty();
 }
@@ -1568,7 +1572,7 @@ function buildPriceEditorHtml(){
       ${catTabs}
       <button type="button" class="pe-tab" data-panel="discount" onclick="peSwitchTab('discount')">Discounts <span class="pe-pill" data-count>${DISCOUNTS.length}</span></button>
     </div>
-    <div class="pe-search-wrap"><span class="pe-ico">🔍</span>
+    <div class="pe-search-wrap"><span class="pe-ico" data-ico="search"></span>
       <input class="pe-search" id="peSearch" placeholder="Search by name…" oninput="peFilter()">
       <button type="button" class="pe-search-clear" id="peSearchClear" onclick="peClearSearch()">✕</button>
     </div></div>`;
@@ -2216,6 +2220,27 @@ function catIcon(id){
   };
   return s+(ic[id]||ic['default'])+'</svg>';
 }
+// UI-chrome icons (buttons, toggles) in the same outline style. Returns an SVG
+// string; used both in static markup (via [data-ico] placeholders, filled on
+// init) and when JS rebuilds a button's icon.
+function qIco(name){
+  const s='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="width:1.05em;height:1.05em;vertical-align:-.16em">';
+  const ic={
+    doc:'<path d="M6 3.5h8l4 4V20.5H6Z"/><path d="M13.5 3.5V8h4.5"/><path d="M9 12.5h6M9 15.5h6"/>',
+    receipt:'<path d="M6 2.6h12v18.8l-2-1.2-2 1.2-2-1.2-2 1.2-2-1.2V2.6Z"/><path d="M9 7.5h6M9 11h6"/>',
+    edit:'<path d="M4 20h4L19 9l-4-4L4 16Z"/><path d="M14 6l4 4"/>',
+    save:'<path d="M5 3.5h11l3 3V20.5H5Z"/><path d="M8 3.5v5h7v-5"/><rect x="8" y="13" width="8" height="5.5"/>',
+    printer:'<path d="M7 9V3.5h10V9"/><rect x="3.5" y="9" width="17" height="7" rx="1.5"/><rect x="7" y="14" width="10" height="6"/><path d="M17 12h.01"/>',
+    share:'<circle cx="6" cy="12" r="2.4"/><circle cx="17.5" cy="6" r="2.4"/><circle cx="17.5" cy="18" r="2.4"/><path d="M8.1 10.9 15.4 7.1M8.1 13.1l7.3 3.8"/>',
+    search:'<circle cx="11" cy="11" r="6.5"/><path d="M16 16l4 4"/>',
+    eye:'<path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z"/><circle cx="12" cy="12" r="2.7"/>',
+    eyeOff:'<path d="M4 4l16 16"/><path d="M9.5 5.9A9.9 9.9 0 0 1 12 5.5c6 0 9.5 6.5 9.5 6.5a16 16 0 0 1-3 3.6M6 7.4A16 16 0 0 0 2.5 12S6 18.5 12 18.5a9.6 9.6 0 0 0 3.3-.6"/><path d="M9.7 9.9a2.7 2.7 0 0 0 3.8 3.8"/>',
+    warn:'<path d="M12 3.5 21 19H3l9-15.5Z"/><path d="M12 9.5v4.5M12 16.8h.01"/>'
+  };
+  return s+(ic[name]||'')+'</svg>';
+}
+// Fill every <span data-ico="…"> placeholder with its outline icon.
+function fillIcons(root){ (root||document).querySelectorAll('[data-ico]').forEach(el=>{ el.innerHTML=qIco(el.dataset.ico); }); }
 // Build a tile per rendered category. data-search packs the card's text (option
 // labels + item names) so the search box finds products, not just category names.
 function buildCatMenu(){
@@ -2384,7 +2409,7 @@ function cabinetCardHtml(){
   const groupOpts = CABINET.map((g,i)=>`<option value="${i}">${g.name}</option>`).join('');
   const optOpts = CABINET[0].options.map((o,i)=>`<option value="${i}">${o.name}</option>`).join('');
   const warn = CABINET_PRICES_SET ? '' :
-    `<div class="cab-warn">⚠️ <b>Example prices in use.</b> The cabinet tier rates are placeholders — set your real rates in the <code>CABINET</code> table before quoting customers.</div>`;
+    `<div class="cab-warn">${qIco('warn')} <b>Example prices in use.</b> The cabinet tier rates are placeholders — set your real rates in the <code>CABINET</code> table before quoting customers.</div>`;
   return `
   <div class="cat open" data-cat="cabinet">
     <div class="cat-hd" onclick="this.parentElement.classList.toggle('open')">
@@ -2820,7 +2845,7 @@ async function convertToSO(){
 function updateDocLabels(){
   const name=docName();
   const pv=document.getElementById('previewBtn'); if(pv) pv.textContent='Preview '+name;
-  ['saveBtn','saveBtnModal'].forEach(id=>{const b=document.getElementById(id); if(b&&!b.dataset.busy){b.textContent='💾 Save '+name; b.dataset.label='💾 Save '+name;}});
+  ['saveBtn','saveBtnModal'].forEach(id=>{const b=document.getElementById(id); if(b&&!b.dataset.busy){const L=b.querySelector('.blabel')||b; L.textContent='Save '+name; b.dataset.label='Save '+name;}});
   const ql=document.getElementById('qno_label'); if(ql) ql.textContent=name+' No.';
   const hd=document.getElementById('detailsHd'); if(hd) hd.textContent='Customer & '+name+' Details';
 }
@@ -2869,9 +2894,10 @@ function setSaving(b){
 function flashSaved(msg){
   ['saveBtn','saveBtnModal'].forEach(id=>{
     const b=document.getElementById(id); if(!b||b.dataset.busy) return;
-    const t=b.dataset.label||b.textContent; b.dataset.label=t; b.dataset.busy='1';
-    b.textContent=msg||'Saved ✓';
-    setTimeout(()=>{b.textContent=t; delete b.dataset.busy;}, 2000);
+    const L=b.querySelector('.blabel')||b;
+    const t=b.dataset.label||L.textContent; b.dataset.label=t; b.dataset.busy='1';
+    L.textContent=msg||'Saved ✓';
+    setTimeout(()=>{L.textContent=t; delete b.dataset.busy;}, 2000);
   });
 }
 
@@ -3115,7 +3141,9 @@ function shouldShare(){
 }
 function refreshShareButton(){
   const b=document.getElementById('shareBtn'); if(!b) return;
-  b.textContent = shouldShare() ? '📤 Share PDF' : '🖨 Print / PDF';
+  const share=shouldShare();
+  const ico=b.querySelector('.bico'); if(ico) ico.innerHTML=qIco(share?'share':'printer');
+  const L=b.querySelector('.blabel')||b; L.textContent = share ? 'Share PDF' : 'Print / PDF';
 }
 function loadScript(src){
   return new Promise((res,rej)=>{ const s=document.createElement('script'); s.src=src; s.async=true; s.onload=res; s.onerror=()=>rej(new Error('Failed to load '+src)); document.head.appendChild(s); });
@@ -3184,12 +3212,13 @@ function downloadBlob(blob,name){
 }
 async function printOrShare(btn){
   if(!shouldShare()){ window.print(); return; }   // desktop → normal print dialog
-  const label=btn.textContent;
+  const lblEl=btn.querySelector('.blabel')||btn;  // keep the icon span intact
+  const label=lblEl.textContent;
   try{
     if(!_shareFile){            // background build not finished yet — wait for it
-      btn.disabled=true; btn.textContent='Preparing…';
+      btn.disabled=true; lblEl.textContent='Preparing…';
       try{ await (_sharePrep||prepareSharePdf()); }catch(e){}
-      btn.disabled=false; btn.textContent=label;
+      btn.disabled=false; lblEl.textContent=label;
     }
     if(_shareFile && navigator.canShare && navigator.canShare({files:[_shareFile]})){
       await navigator.share({files:[_shareFile], title:_shareFile.name.replace(/\.pdf$/,''), text:docName()+' from Tenn Fasteners'});
@@ -3200,7 +3229,7 @@ async function printOrShare(btn){
     }
   }catch(e){
     if(!(e&&e.name==='AbortError')){ try{ window.print(); }catch(_){} }  // ignore user-cancelled share
-  }finally{ btn.disabled=false; btn.textContent=label; }
+  }finally{ btn.disabled=false; lblEl.textContent=label; }
 }
 
 /* ---------- start a new document ---------- */
@@ -3232,6 +3261,8 @@ async function newQuote(){
 
 /* ---------- init ---------- */
 (function init(){
+  // Fill the static button/search icon placeholders (and the share button label).
+  fillIcons(document);
   // Stamp stable ids on built-in products, then snapshot coded defaults BEFORE
   // loadPricing()/applyOverrides() mutate the arrays — powers the editor's
   // "changed" badges, reset-to-default, and the id-keyed overlay merge.

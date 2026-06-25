@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import { Layout } from '../components/Layout'
+import { Icon } from '../components/Icon'
 import { postAnnouncement } from '../lib/push'
 
 type Pay = { bank_name?: string; account_name?: string; account_number?: string; note?: string }
@@ -94,7 +95,7 @@ export default function AdminSettings() {
     <Layout title="Settings" back={<BackLink />}>
       {/* Payment details (admin) */}
       <section className="mb-4 rounded-xl bg-white p-4 shadow-sm">
-        <h2 className="mb-1 text-sm font-semibold text-slate-700">💳 Payment details</h2>
+        <h2 className="mb-1 flex items-center gap-1.5 text-sm font-semibold text-slate-700"><Icon name="card" className="h-4 w-4 text-slate-500" /> Payment details</h2>
         <p className="mb-3 text-xs text-slate-500">
           Shown to staff via the mobile payment button. Put your QR image at <code>public/payment-qr.png</code>.
         </p>
@@ -127,7 +128,7 @@ export default function AdminSettings() {
 
       {/* Announcement composer (boss only) */}
       <section className="rounded-xl bg-white p-4 shadow-sm">
-        <h2 className="mb-1 text-sm font-semibold text-slate-700">📢 Announcement</h2>
+        <h2 className="mb-1 flex items-center gap-1.5 text-sm font-semibold text-slate-700"><Icon name="megaphone" className="h-4 w-4 text-slate-500" /> Announcement</h2>
         {isBoss ? (
           <>
             <p className="mb-3 text-xs text-slate-500">

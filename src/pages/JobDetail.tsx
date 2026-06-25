@@ -6,6 +6,8 @@ import type { Appointment, Claim, Job, JobEvent, JobWork } from '../lib/types'
 import { STAGES, getStage } from '../lib/stages'
 import { CATEGORIES, getCategory } from '../lib/categories'
 import { getApptType } from '../lib/appointments'
+import { eventIconName } from '../lib/jobEvents'
+import { Icon } from '../components/Icon'
 import { Layout } from '../components/Layout'
 import { StageBar } from '../components/StageBar'
 import { ClaimsSection } from '../components/ClaimsSection'
@@ -164,9 +166,9 @@ export default function JobDetail() {
           {job.project ? (
             <Link
               to={`/units?project=${encodeURIComponent(job.project)}`}
-              className="inline-block rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600 active:bg-slate-200"
+              className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600 active:bg-slate-200"
             >
-              📁 {job.project}
+              <Icon name="folder" className="h-3.5 w-3.5" /> {job.project}
             </Link>
           ) : (
             <span />
@@ -179,17 +181,23 @@ export default function JobDetail() {
           </Link>
         </div>
 
-        <p className="text-base font-semibold text-slate-900">👤 {job.customer_name}</p>
+        <p className="flex items-center gap-1.5 text-base font-semibold text-slate-900">
+          <Icon name="user" className="h-4 w-4 shrink-0 text-slate-400" /> {job.customer_name}
+        </p>
         {(job.unit_code || job.address) && (
-          <p className="mt-1 text-slate-700">🏠 {job.unit_code || job.address}</p>
-        )}
-        {job.phone && (
-          <p className="mt-1 text-slate-700">
-            📞 <a href={`tel:${job.phone}`} className="underline">{job.phone}</a>
+          <p className="mt-1 flex items-center gap-1.5 text-slate-700">
+            <Icon name="home" className="h-4 w-4 shrink-0 text-slate-400" /> {job.unit_code || job.address}
           </p>
         )}
-        <p className="mt-1 text-sm text-slate-500">
-          {job.is_owner ? '👤 Owner' : `👤 Not owner${job.owner_relationship ? ` · ${job.owner_relationship}` : ''}`}
+        {job.phone && (
+          <p className="mt-1 flex items-center gap-1.5 text-slate-700">
+            <Icon name="phone" className="h-4 w-4 shrink-0 text-slate-400" />
+            <a href={`tel:${job.phone}`} className="underline">{job.phone}</a>
+          </p>
+        )}
+        <p className="mt-1 flex items-center gap-1.5 text-sm text-slate-500">
+          <Icon name="user" className="h-3.5 w-3.5 shrink-0" />
+          {job.is_owner ? 'Owner' : `Not owner${job.owner_relationship ? ` · ${job.owner_relationship}` : ''}`}
         </p>
 
         {job.house_types && job.house_types.length > 0 && (
@@ -210,7 +218,7 @@ export default function JobDetail() {
             </div>
           </div>
           <div className="rounded-lg bg-amber-50 p-2">
-            <div className="text-amber-700/70">🔑 Keys</div>
+            <div className="flex items-center gap-1 text-amber-700/70"><Icon name="key" className="h-3.5 w-3.5" /> Keys</div>
             <div className="font-medium text-amber-800">{job.key_holder || 'Office'}</div>
           </div>
           <div className="rounded-lg bg-slate-50 p-2">
@@ -258,8 +266,8 @@ export default function JobDetail() {
                     className="flex items-center justify-between gap-2 rounded-lg bg-slate-50 px-3 py-2 active:bg-slate-100"
                   >
                     <span className="min-w-0">
-                      <span className="text-sm font-medium text-slate-800">
-                        {getApptType(a.type).icon} {getApptType(a.type).label}
+                      <span className="flex items-center gap-1.5 text-sm font-medium text-slate-800">
+                        <Icon name={getApptType(a.type).icon} className="h-4 w-4 shrink-0 text-slate-400" /> {getApptType(a.type).label}
                       </span>
                       <span className="block text-xs text-slate-500">
                         {new Date(a.starts_at).toLocaleString(undefined, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
@@ -346,7 +354,7 @@ export default function JobDetail() {
           <ul className="space-y-3">
             {events.map((ev) => (
               <li key={ev.id} className="flex gap-3">
-                <div className="mt-1 text-base leading-none">{iconFor(ev.type)}</div>
+                <div className="mt-0.5 text-slate-400"><Icon name={eventIconName(ev.type)} className="h-4 w-4" /></div>
                 <div className="min-w-0 flex-1">
                   <p className="text-sm text-slate-800 whitespace-pre-wrap break-words">{ev.body}</p>
                   <p className="mt-0.5 text-xs text-slate-400">
@@ -481,7 +489,7 @@ function WorkCard({
             onClick={() => setEditing(true)}
             className="flex w-full items-start gap-1 text-left text-sm text-slate-500 active:text-slate-700"
           >
-            <span className="text-slate-400">📝</span>
+            <span className="mt-0.5 text-slate-400"><Icon name="note" className="h-4 w-4" /></span>
             <span className="flex-1">{work.remarks || <span className="italic text-slate-400">Add remarks…</span>}</span>
           </button>
         )}
@@ -567,15 +575,3 @@ function BackLink() {
   )
 }
 
-function iconFor(type: JobEvent['type']): string {
-  switch (type) {
-    case 'stage':
-      return '📈'
-    case 'key':
-      return '🔑'
-    case 'created':
-      return '🏁'
-    default:
-      return '📝'
-  }
-}

@@ -1,9 +1,11 @@
 // Shown when the Supabase environment variables are missing, so the app
 // gives clear instructions instead of a blank white screen.
+import { Icon } from '../components/Icon'
+
 export default function SetupNotice() {
   return (
     <div className="mx-auto max-w-lg p-6">
-      <h1 className="text-xl font-bold text-slate-900">Almost there 🛠️</h1>
+      <h1 className="flex items-center gap-2 text-xl font-bold text-slate-900">Almost there <Icon name="wrench" className="h-5 w-5 text-slate-500" /></h1>
       <p className="mt-2 text-slate-600">
         The app isn’t connected to its database yet. Add your Supabase keys:
       </p>

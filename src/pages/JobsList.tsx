@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import type { Job, JobWork } from '../lib/types'
 import { Layout } from '../components/Layout'
+import { Icon } from '../components/Icon'
 import { PercentBar } from '../components/StageBar'
 import { getStage, overallPercent, STAGES } from '../lib/stages'
 import { getCategory, CATEGORIES } from '../lib/categories'
@@ -323,9 +324,9 @@ export default function JobsList() {
                 <button
                   onClick={() => togglePin(g.project)}
                   title={pinned.has(g.project) ? 'Unpin project' : 'Pin project to top'}
-                  className={`shrink-0 text-sm ${pinned.has(g.project) ? 'text-amber-500' : 'text-slate-300 active:text-slate-500'}`}
+                  className={`shrink-0 ${pinned.has(g.project) ? 'text-amber-500' : 'text-slate-300 active:text-slate-500'}`}
                 >
-                  📌
+                  <Icon name="pin" className="h-[18px] w-[18px]" />
                 </button>
               </div>
               {!isCollapsed && (
@@ -352,14 +353,15 @@ export default function JobsList() {
                               </p>
                             )}
                           </div>
-                          <span className="shrink-0 rounded-full bg-amber-100 px-2 py-1 text-xs font-medium text-amber-800">
-                            🔑 {job.key_holder}
+                          <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-amber-100 px-2 py-1 text-xs font-medium text-amber-800">
+                            <Icon name="key" className="h-3.5 w-3.5" /> {job.key_holder}
                           </span>
                         </div>
 
                         {showNudge && (
-                          <div className="mb-2 rounded-md bg-amber-50 px-2 py-1 text-[11px] font-medium text-amber-800">
-                            ⚠️ Work starts {dueIn === 0 ? 'today' : dueIn === 1 ? 'tomorrow' : `in ${dueIn} days`} — confirm any modifications with the client
+                          <div className="mb-2 flex items-start gap-1.5 rounded-md bg-amber-50 px-2 py-1 text-[11px] font-medium text-amber-800">
+                            <Icon name="alert" className="mt-px h-3.5 w-3.5 shrink-0" />
+                            <span>Work starts {dueIn === 0 ? 'today' : dueIn === 1 ? 'tomorrow' : `in ${dueIn} days`} — confirm any modifications with the client</span>
                           </div>
                         )}
 

@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import type { Appointment } from '../lib/types'
 import { Layout } from '../components/Layout'
+import { Icon } from '../components/Icon'
 import { NotificationSettings } from '../components/NotificationSettings'
 import { useAutoRefresh } from '../lib/useAutoRefresh'
 import { cacheGet, cacheSet } from '../lib/pageCache'
@@ -98,7 +99,7 @@ export default function Schedule() {
             (showNotif ? 'border-slate-900 bg-slate-900 text-white' : 'border-slate-300 bg-white text-slate-600')
           }
         >
-          🔔
+          <Icon name="bell" className="h-5 w-5" />
         </button>
         <button
           onClick={() => navigate('/schedule/new')}
@@ -344,8 +345,8 @@ export function ApptRow({ a, overdue }: { a: Appointment; overdue?: boolean }) {
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <span className={`rounded-full border px-2 py-0.5 text-[11px] font-medium ${t.accent}`}>
-                {t.icon} {t.label}
+              <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium ${t.accent}`}>
+                <Icon name={t.icon} className="h-3.5 w-3.5" /> {t.label}
               </span>
               <span className="text-sm font-medium text-slate-700">{timeLabel(a.starts_at)}</span>
             </div>

@@ -7,6 +7,8 @@ import { Layout } from '../components/Layout'
 import { STAGES, getStage, overallPercent } from '../lib/stages'
 import { CATEGORIES } from '../lib/categories'
 import { getApptType, startOfDay, addDays, dayLabel, timeLabel } from '../lib/appointments'
+import { eventIconName } from '../lib/jobEvents'
+import { Icon } from '../components/Icon'
 import { relativeTime, formatDateTime } from '../lib/format'
 import { collectedTotal, money } from '../lib/claims'
 import { useAutoRefresh } from '../lib/useAutoRefresh'
@@ -269,8 +271,9 @@ export default function Dashboard() {
                       className="flex items-center justify-between gap-2 rounded-xl bg-white p-3 shadow-sm active:bg-slate-50"
                     >
                       <div className="min-w-0">
-                        <p className="truncate font-medium text-slate-800">
-                          {getApptType(a.type).icon} {a.title || a.customer_name || getApptType(a.type).label}
+                        <p className="flex items-center gap-1.5 truncate font-medium text-slate-800">
+                          <Icon name={getApptType(a.type).icon} className="h-4 w-4 shrink-0 text-slate-400" />
+                          <span className="truncate">{a.title || a.customer_name || getApptType(a.type).label}</span>
                         </p>
                         <p className="truncate text-xs text-slate-500">
                           {dayLabel(new Date(a.starts_at))} · {timeLabel(a.starts_at)}
@@ -320,7 +323,11 @@ export default function Dashboard() {
           {/* Needs attention */}
           <Section title="Needs attention">
             {attention.length === 0 ? (
-              <Empty>All good — nothing overdue or stale. 🎉</Empty>
+              <Empty>
+                <span className="inline-flex items-center gap-1.5">
+                  All good — nothing overdue or stale. <Icon name="sparkles" className="h-4 w-4 text-amber-500" />
+                </span>
+              </Empty>
             ) : (
               <ul className="space-y-2">
                 {attention.map((u) => (
@@ -455,7 +462,7 @@ export default function Dashboard() {
                     to={`/units?q=${encodeURIComponent(holder)}`}
                     className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-3 py-1.5 text-sm text-amber-900 active:bg-amber-100"
                   >
-                    🔑 <span className="font-medium">{holder}</span>
+                    <Icon name="key" className="h-4 w-4" /> <span className="font-medium">{holder}</span>
                     <span className="rounded-full bg-amber-200/70 px-1.5 text-xs font-semibold">{count}</span>
                   </Link>
                 ))}
@@ -471,7 +478,7 @@ export default function Dashboard() {
               <ul className="max-h-[26rem] space-y-3 overflow-y-auto rounded-xl bg-white p-4 shadow-sm">
                 {events.map((ev) => (
                   <li key={ev.id} className="flex gap-3">
-                    <div className="mt-0.5 text-base leading-none">{iconFor(ev.type)}</div>
+                    <div className="mt-0.5 text-slate-400"><Icon name={eventIconName(ev.type)} className="h-4 w-4" /></div>
                     <div className="min-w-0 flex-1">
                       <p className="text-sm text-slate-800">
                         {ev.job_id && jobName.has(ev.job_id) && (
@@ -496,19 +503,6 @@ export default function Dashboard() {
       )}
     </Layout>
   )
-}
-
-function iconFor(type: JobEvent['type']): string {
-  switch (type) {
-    case 'stage':
-      return '📈'
-    case 'key':
-      return '🔑'
-    case 'created':
-      return '🏁'
-    default:
-      return '📝'
-  }
 }
 
 // Map an average percent back to the nearest stage colour for the bar.

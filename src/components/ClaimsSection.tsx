@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 import type { Claim, Job } from '../lib/types'
 import { collectedTotal, money } from '../lib/claims'
 import { formatDate } from '../lib/format'
+import { Icon } from './Icon'
 
 // The claim-entry modes shown in the dropdown. Percentage modes show the live
 // ringgit value based on the unit's order total.
@@ -112,7 +113,7 @@ export function ClaimsSection({
 
   return (
     <section className="mt-4 rounded-xl bg-white p-4 shadow-sm">
-      <h2 className="mb-3 text-sm font-semibold text-slate-700">💰 Customer collection</h2>
+      <h2 className="mb-3 flex items-center gap-1.5 text-sm font-semibold text-slate-700"><Icon name="cash" className="h-4 w-4 text-emerald-600" /> Customer collection</h2>
 
       {/* Order total + progress */}
       <div className="mb-3">

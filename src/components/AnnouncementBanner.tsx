@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import { useAutoRefresh } from '../lib/useAutoRefresh'
+import { Icon } from './Icon'
 
 // Current boss announcement, stored in app_settings key 'announcement'.
 // Shape: { id, text, by, at }. A new post gets a new id; dismissing remembers
@@ -67,7 +68,7 @@ export function AnnouncementBanner() {
   return (
     <div className="shrink-0 border-b border-amber-200 bg-amber-50">
       <div className="mx-auto flex w-full max-w-6xl items-start gap-3 px-4 py-2.5 lg:px-8">
-        <span className="mt-0.5 text-base leading-none">📢</span>
+        <span className="mt-0.5 text-amber-700"><Icon name="megaphone" className="h-[18px] w-[18px]" /></span>
         <div className="min-w-0 flex-1">
           <p className="whitespace-pre-wrap break-words text-sm font-medium text-amber-900">{text}</p>
           {ann?.by && <p className="mt-0.5 text-[11px] text-amber-700/80">— {ann.by}</p>}

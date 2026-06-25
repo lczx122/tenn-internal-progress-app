@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import type { Profile, Role } from '../lib/types'
 import { Layout } from '../components/Layout'
+import { Icon } from '../components/Icon'
 import { STAFF_PICS } from '../lib/units'
 import { useAutoRefresh } from '../lib/useAutoRefresh'
 
@@ -90,14 +91,14 @@ export default function StaffAdmin() {
           to="/projects"
           className="flex items-center justify-between rounded-xl bg-white p-3 shadow-sm active:bg-slate-50"
         >
-          <span className="text-sm font-medium text-slate-700">📁 Manage projects</span>
+          <span className="flex items-center gap-1.5 text-sm font-medium text-slate-700"><Icon name="folder" className="h-4 w-4 text-slate-500" /> Manage projects</span>
           <span className="text-xs font-medium text-slate-400">Add / rename ›</span>
         </Link>
         <Link
           to="/settings"
           className="flex items-center justify-between rounded-xl bg-white p-3 shadow-sm active:bg-slate-50"
         >
-          <span className="text-sm font-medium text-slate-700">⚙️ Payment & announcements</span>
+          <span className="flex items-center gap-1.5 text-sm font-medium text-slate-700"><Icon name="settings" className="h-4 w-4 text-slate-500" /> Payment & announcements</span>
           <span className="text-xs font-medium text-slate-400">Settings ›</span>
         </Link>
       </div>

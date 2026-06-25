@@ -9,6 +9,7 @@ import {
   setLead,
   sendTest,
 } from '../lib/push'
+import { Icon } from './Icon'
 
 // Only this account sees the test-notification button.
 const TEST_EMAIL = 'lczx122@gmail.com'
@@ -109,7 +110,7 @@ export function NotificationSettings() {
     <div className="mb-3 rounded-xl bg-white p-4 shadow-sm">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="font-semibold text-slate-800">🔔 Reminder notifications</p>
+          <p className="flex items-center gap-1.5 font-semibold text-slate-800"><Icon name="bell" className="h-4 w-4 text-slate-500" /> Reminder notifications</p>
           <p className="mt-0.5 text-xs text-slate-500">
             Get a notification before appointments assigned to you.
           </p>
