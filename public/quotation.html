@@ -513,6 +513,14 @@
    ============================================================ */
 const CATALOG = [
   {
+    id:'waterproofing', name:'Waterproofing',
+    note:'No-Hacking, anti-slip waterproofing toilet solution — Smart Epoxy Tile Flake Set (interior). Package includes paint material, accessories, painting work, and 1 layer primer + 1 layer flakes + 1 layer topcoat with anti-slip polymer. Additional charges may apply depending on floor condition.',
+    variants:[],
+    items:[
+      {v:0,label:'Epoxy Tile Flake',sub:'Toilet · build-up < 40 sqft · choose from 18 colours',price:1250},
+    ]
+  },
+  {
     id:'smarthome', name:'Smart Home',
     variants:[],
     items:[
@@ -616,6 +624,11 @@ const TERMS = {
   // Triggered by: Painting work.
   'Painting': [
     // 'Wall cracks and surface defects are patched, not structurally repaired.',
+  ],
+
+  // Triggered by: Waterproofing (Epoxy Tile Flake) items.
+  'Waterproofing': [
+    'Anti-slip epoxy tile-flake waterproofing is for interior toilet floors. Surface preparation and additional treatment may be quoted after inspection if the floor is cracked, damp, previously coated, or otherwise unsuitable.',
   ],
 
   // Triggered by: Smart Home items.
@@ -2330,6 +2343,7 @@ function catIcon(id){
     ironwork:'<rect x="3.5" y="3.5" width="17" height="17" rx="1.6"/><path d="M9 3.5v17M15 3.5v17M3.5 9h17M3.5 15h17"/>',
     aluwork:'<path d="M3 9l2.2-3.3h13.6L21 9"/><path d="M3 9h18"/><path d="M5.5 9v11M18.5 9v11"/>',
     paint:'<rect x="3.5" y="4" width="12" height="5.5" rx="1.3"/><path d="M15.5 6.75H19V11h-7.5"/><rect x="9.5" y="11" width="4" height="8.5" rx="1.2"/>',
+    waterproofing:'<path d="M12 3.2s6.2 6.6 6.2 10.6a6.2 6.2 0 0 1-12.4 0c0-4 6.2-10.6 6.2-10.6Z"/><path d="M9.3 13.8a2.8 2.8 0 0 0 2.7 2.4"/>',
     smarthome:'<path d="M3.5 11 12 3.5l8.5 7.5"/><path d="M5.5 9.8V20h13V9.8"/><path d="M9.8 16.2a3 3 0 0 1 4.4 0"/><circle cx="12" cy="18" r=".6" fill="currentColor" stroke="none"/>',
     smartlock:'<rect x="5" y="10" width="14" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/><circle cx="12" cy="14.6" r="1.2"/><path d="M12 15.8v1.8"/>',
     ee:'<path d="M13 2.5 4.5 13.5H11l-1 8 8.5-11H12l1-8Z"/>',
@@ -2688,6 +2702,7 @@ function setQty(catId,idx,val){
    cabinet groups use 'cab:'+id; grill groups use 'grill:'+id; plus 'paint'
    and 'alucab'. */
 const WORK_MAP = {
+  'waterproofing': ['Waterproofing'],
   'smarthome': ['Smart Home'],
   'smartlock': ['Smart Lock'],
   'ee':        ['EE'],

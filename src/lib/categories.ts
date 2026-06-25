@@ -17,6 +17,7 @@ export const CATEGORIES: Category[] = [
   { key: 'Iron Work',        label: 'Iron Work',        accent: 'text-slate-700 bg-slate-100 border-slate-300' },
   { key: 'Aluminium Work',   label: 'Aluminium Work',   accent: 'text-sky-700 bg-sky-50 border-sky-200' },
   { key: 'Painting',         label: 'Painting',         accent: 'text-fuchsia-700 bg-fuchsia-50 border-fuchsia-200' },
+  { key: 'Waterproofing',    label: 'Waterproofing',    accent: 'text-blue-700 bg-blue-50 border-blue-200' },
   { key: 'Smart Home',     label: 'Smart Home',      accent: 'text-teal-700 bg-teal-50 border-teal-200' },
   { key: 'Smart Lock',     label: 'Smart Lock',      accent: 'text-violet-700 bg-violet-50 border-violet-200' },
   { key: 'EE',             label: 'EE / Electrical', accent: 'text-rose-700 bg-rose-50 border-rose-200' },
