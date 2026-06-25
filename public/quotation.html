@@ -970,6 +970,24 @@ const PG_PACKAGES = [
       ]},
     ],
   },
+  {
+    id:'painting', name:'PG Painting Package', cat:'Painting',
+    note:'Pick the wall-painting type for the colour package, then add the add-ons (Door & Frame / Frame are per set — set the quantity).',
+    colour:false, exhaust:false, codeLabels:false,
+    colourLabel:'Colour Package', qtyLabel:'Quantity (sets)',
+    typeLabel:'Section', productLabel:'Item',
+    groups:[
+      { id:'wall', name:'Wall Painting', items:[
+        { id:'wall', name:'Wall Painting', spec:'688 sqft (Type A)', spec3:'1088 sqft (Type B)', p2:1499, p3:1999,
+          colours:['Option 01','Option 02','Option 03','Option 04','Option 05'] },
+      ]},
+      { id:'addon', name:'Add-ons', items:[
+        { id:'ceiling',   name:'Ceiling',                spec:'', spec3:'', p2:499, p3:699 },
+        { id:'doorframe', name:'Door & Frame (per set)', spec:'', spec3:'', p2:100, p3:100, qty:true },
+        { id:'frame',     name:'Frame (per set)',        spec:'', spec3:'', p2:50,  p3:50,  qty:true },
+      ]},
+    ],
+  },
 ];
 const pgRoom = {};   // {pkgId:'2'|'3'}
 const pgLines = {};  // {pkgId:[lines]}
@@ -1011,7 +1029,9 @@ function pgBodyHtml(pid){
   const pkgHasColour = P.colour || P.groups.some(g=>g.items.some(it=>it.colours));
   const colSel = pkgHasColour ? `<label class="fld" id="pg-${pid}-colour-wrap">${P.colourLabel||'Powder Coat Colour'} <select id="pg-${pid}-colour"></select></label>` : '';
   const exSel = P.exhaust ? `<label class="fld">Prepare exhaust-fan opening? <select id="pg-${pid}-exhaust" onchange="pgExhaustChange('${pid}')"><option value="no">No</option><option value="yes">Yes</option></select></label>` : '';
-  const optRow = (colSel||exSel) ? `<div class="cab-grid">${colSel}${exSel}</div>` : '';
+  const pkgHasQty = P.groups.some(g=>g.items.some(it=>it.qty));
+  const qtySel = pkgHasQty ? `<label class="fld" id="pg-${pid}-qty-wrap" style="display:none">${P.qtyLabel||'Quantity'} <input id="pg-${pid}-qty" type="number" min="1" step="1" value="1" oninput="pgPreview('${pid}')"></label>` : '';
+  const optRow = (colSel||exSel||qtySel) ? `<div class="cab-grid">${colSel}${exSel}${qtySel}</div>` : '';
   const holeWrap=P.exhaust?`<div id="pg-${pid}-hole-wrap" style="display:none;margin-bottom:10px"><div style="font-size:11.5px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px">Exhaust hole location — tap a cell (grill face, L × H)</div>${pgHoleTableHtml(pid)}</div>`:'';
   return `
       <div class="cab-note">${P.note} Prices follow the Room type.</div>
@@ -1045,8 +1065,13 @@ function pgProductChange(pid){
     if(cols&&cols.length){ if(sel) sel.innerHTML=cols.map(c=>`<option>${c}</option>`).join(''); wrap.style.display=''; }
     else wrap.style.display='none';
   }
+  const qwrap=document.getElementById('pg-'+pid+'-qty-wrap');
+  if(qwrap){ qwrap.style.display=o.qty?'':'none'; const qel=document.getElementById('pg-'+pid+'-qty'); if(qel&&!o.qty) qel.value='1'; }
   pgPreview(pid);
 }
+// Quantity for the selected item (1 unless the item is sold per-set/per-unit).
+function pgQtyVal(pid,o){ if(!o||!o.qty) return 1; const el=document.getElementById('pg-'+pid+'-qty'); return Math.max(1, parseInt((el||{}).value)||1); }
+function pgLineQty(l){ return Math.max(1, +l.qty||1); }
 function pgSetRoom(pid,r){
   pgRoom[pid]=r;
   document.querySelectorAll('.pg-room-btn[data-pid="'+pid+'"]').forEach(b=>b.classList.toggle('on',b.dataset.room===r));
@@ -1071,10 +1096,10 @@ function pgSpec(pid,o){ return pgRoom[pid]==='2' ? (o.spec||'') : (o.spec3||'');
 function pgLineSpec(pid,l){ return pgRoom[pid]==='2' ? (l.spec||'') : (l.spec3||''); }
 function pgPreview(pid){
   const {o}=pgSel(pid);
-  const price=pgPrice(pid,o); const sz=pgSpec(pid,o);
+  const price=pgPrice(pid,o); const sz=pgSpec(pid,o); const q=pgQtyVal(pid,o);
   let html=`<div class="cab-tiers">${sz?`<b>${sz}</b> · `:''}${pgRoomLabel(pid)}</div>`;
   if(price==null) html+=`<div class="cab-calc" style="color:#b45309">${o.name} — 3-Room price not set yet → <b>RM 0.00</b></div>`;
-  else html+=`<div class="cab-calc">${o.name} → <b>RM ${fmt(price)}</b></div>`;
+  else html+=`<div class="cab-calc">${o.name}${q>1?` × ${q}`:''} → <b>RM ${fmt(price*q)}</b></div>`;
   const pv=document.getElementById('pg-'+pid+'-preview'); if(pv) pv.innerHTML=html;
 }
 function pgAdd(pid){
@@ -1085,7 +1110,9 @@ function pgAdd(pid){
   const eEl=document.getElementById('pg-'+pid+'-exhaust');
   const exhaust=(P.exhaust&&eEl)?eEl.value==='yes':false;
   const hole=exhaust?pgHole[pid].map((v,i)=>v?i:-1).filter(i=>i>=0):[];
-  pgLines[pid].push({grp:g.name,code:o.id,name:o.name,room:(o.room||''),spec:(o.spec||''),spec3:(o.spec3||''),p2:o.p2,p3:o.p3,colour,exhaust,hole});
+  const qty=pgQtyVal(pid,o);
+  pgLines[pid].push({grp:g.name,code:o.id,name:o.name,room:(o.room||''),spec:(o.spec||''),spec3:(o.spec3||''),p2:o.p2,p3:o.p3,colour,exhaust,hole,qty});
+  if(o.qty){ const qel=document.getElementById('pg-'+pid+'-qty'); if(qel) qel.value='1'; }
   if(P.exhaust&&eEl){ eEl.value='no'; const w=document.getElementById('pg-'+pid+'-hole-wrap'); if(w) w.style.display='none'; pgHole[pid]=[false,false,false,false,false,false]; pgRefreshHole(pid); }
   pgPreview(pid); renderPgLines(pid); recalc();
 }
@@ -1096,6 +1123,7 @@ function pgDimStr(l,pid){
   const parts=[];
   if(l.grp) parts.push(l.grp);
   const sz=pgLineSpec(pid,l); if(sz) parts.push(sz);
+  const q=pgLineQty(l); if(q>1) parts.push(`× ${q}`);
   if(l.colour) parts.push(l.colour);
   if(l.exhaust){ const h=pgHoleLabel(l.hole); parts.push('exhaust opening'+(h?` (${h})`:'')); }
   return parts.join(' · ');
@@ -1105,7 +1133,7 @@ function renderPgLines(pid){
   const rows=(pgLines[pid]||[]).map((l,i)=>({l,i})).filter(x=>!x.l.room||x.l.room===pgRoom[pid]);
   if(!rows.length){ box.innerHTML='<div class="cab-empty">No package items added yet.</div>'; return; }
   box.innerHTML=rows.map(({l,i})=>{
-    const price=pgLinePrice(pid,l);
+    const price=pgLinePrice(pid,l)*pgLineQty(l);
     const note=(pgRoom[pid]==='3'&&l.p3==null)?' <span style="color:#b45309;font-weight:400">(3-Room price not set)</span>':'';
     return `<div class="cab-line">
       <div class="cab-line-info"><b>${pgLineLabel(pid,l)}</b><br><span class="cab-dim">${pgDimStr(l,pid)}</span></div>
@@ -1489,7 +1517,7 @@ function buildPriceEditorHtml(){
   const pgCount=id=>{ const P=PG_PACKAGES.find(p=>p.id===id); return P?P.groups.reduce((n,g)=>n+g.items.length,0):0; };
   const ironCount=GRILL.reduce((n,g)=>n+g.options.length,0)+pgCount('iron')+pgCount('invisible');
   const aluworkCount=pgCount('yard');
-  const paintCount=PAINT.length;
+  const paintCount=PAINT.length+pgCount('painting');
   const aluCount=ALUCAB.length;
   const shortCat=name=>{ const m=/\(([^)]+)\)\s*$/.exec(name); return m?m[1]:name; };
   const catTabs=CATALOG.filter(c=>c.id!=='other').map(c=>`<button type="button" class="pe-tab" data-panel="cat-${c.id}" onclick="peSwitchTab('cat-${c.id}')">${shortCat(c.name)} <span class="pe-pill" data-count>${c.items.length}</span></button>`).join('');
@@ -1592,7 +1620,9 @@ function buildPriceEditorHtml(){
     h+=`<div class="pe-cab" data-search="${peSafe(o.name)}">${peCardHead(o.name)}
       <div class="pe-cab-grid">${peTextField('paint',o.id,'name',o.name,'Name',d.name)}${peField('paint',o.id,'rate',o.rate,'RM/sqft',{money:true,def:d.rate})}</div></div>`;
   });
-  h+='</div></div>';
+  h+='</div>';
+  PG_PACKAGES.filter(P=>P.cat==='Painting').forEach(P=>{ h+=pgSectionHtml(P); });
+  h+='</div>';
 
   // Aluminium Cabinet — per linear foot of length
   h+=`<div class="pe-panel" data-panel="alucab"><div class="pe-noresults">No matching cabinets.</div>
@@ -1959,16 +1989,10 @@ function renderPaintLines(){
     <button class="cab-x" title="Remove" onclick="paintRemove(${i})">✕</button>
   </div>`).join('');
 }
-function paintCardHtml(){
+// Simple per-sqft painting body (measure & auto-price).
+function paintBodyHtml(){
   const optOpts=PAINT.map((o,i)=>`<option value="${i}">${o.name}</option>`).join('');
   return `
-  <div class="cat" data-cat="paint">
-    <div class="cat-hd" onclick="this.parentElement.classList.toggle('open')">
-      <span class="chev">▶</span>
-      <span class="cname">Painting</span>
-      <span class="count zero" id="cnt-paint">0</span>
-    </div>
-    <div class="cat-bd">
       <div class="cab-note">Pick a paint area, enter the area (sqft) or Width × Height — the price is auto-calculated. Set <b>Storeys</b> to 2 for a double-storey house (price ×2). House type / lot can be noted in Remarks.</div>
       <div style="display:flex;justify-content:flex-end;margin:-4px 0 8px"><button type="button" class="edit-prices-btn" id="unitBtn-paint" onclick="toggleUnit('paint')">Units: FT</button></div>
       <div class="cab-grid">
@@ -1982,9 +2006,32 @@ function paintCardHtml(){
       </div>
       <div class="cab-preview" id="pnt-preview"></div>
       <button class="act b-primary" style="padding:11px 16px;font-size:13px" onclick="paintAdd()">+ Add Painting to Quote</button>
-      <div id="pnt-lines" style="margin-top:14px"></div>
+      <div id="pnt-lines" style="margin-top:14px"></div>`;
+}
+// PAINTING card — Type selector: simple per-sqft painting + PG Painting Package.
+function paintCardHtml(){
+  return `
+  <div class="cat" data-cat="paint">
+    <div class="cat-hd" onclick="this.parentElement.classList.toggle('open')">
+      <span class="chev">▶</span>
+      <span class="cname">Painting</span>
+      <span class="count zero" id="cnt-paint">0</span>
+    </div>
+    <div class="cat-bd">
+      <div class="cab-grid">
+        <label class="fld">Type <select id="pw-mode" onchange="pwModeChange()">
+          <option value="paint">Painting (measure &amp; price)</option>
+          <option value="pg_painting">PG Painting Package</option>
+        </select></label>
+      </div>
+      <div id="pw-body-paint" class="pw-body">${paintBodyHtml()}</div>
+      <div id="pw-body-pg_painting" class="pw-body" style="display:none">${pgBodyHtml('painting')}</div>
     </div>
   </div>`;
+}
+function pwModeChange(){
+  const m=(document.getElementById('pw-mode')||{}).value||'paint';
+  ['paint','pg_painting'].forEach(k=>{ const el=document.getElementById('pw-body-'+k); if(el) el.style.display=(k===m)?'':'none'; });
 }
 
 /* ============================================================
@@ -2073,6 +2120,8 @@ function renderCatalog(){
   awModeChange();
   root.insertAdjacentHTML('beforeend', paintCardHtml());
   renderPaintLines();
+  pgGroupChange('painting'); renderPgLines('painting');
+  pwModeChange();
   CATALOG.forEach((cat,ci)=>{
     if(cat.id==='other') return; // 'Aluminium Work' products are rendered inside the Aluminium Work card
     if(activeVariant[cat.id]===undefined) activeVariant[cat.id]=0;
@@ -2412,8 +2461,8 @@ function collectLines(){
   });
   PG_PACKAGES.forEach(P=>{
     pgVisLines(P.id).forEach(l=>{
-      const amt=pgLinePrice(P.id,l);
-      lines.push({cat:P.cat,variantName:'',label:pgLineLabel(P.id,l),sub:pgDimStr(l,P.id),price:amt,qty:1,amount:amt});
+      const unit=pgLinePrice(P.id,l); const q=pgLineQty(l);
+      lines.push({cat:P.cat,variantName:'',label:pgLineLabel(P.id,l),sub:pgDimStr(l,P.id),price:unit,qty:q,amount:unit*q});
     });
   });
   paintLines.forEach(l=>{
@@ -2451,8 +2500,9 @@ function recalc(){
   const _oc=aluCat(); let _othSel=0; if(_oc) _oc.items.forEach((it,idx)=>{ if((state[_oc.id+':'+idx]||0)>0) _othSel++; });
   const awN=pgVisLines('yard').length+_othSel;
   const awEl=document.getElementById('cnt-aluwork'); if(awEl){ awEl.textContent=awN; awEl.classList.toggle('zero',awN===0); }
+  const pntN=paintLines.length+pgVisLines('painting').length;
   const pntEl=document.getElementById('cnt-paint');
-  if(pntEl){pntEl.textContent=paintLines.length;pntEl.classList.toggle('zero',paintLines.length===0);}
+  if(pntEl){pntEl.textContent=pntN;pntEl.classList.toggle('zero',pntN===0);}
   const aluEl=document.getElementById('cnt-alucab');
   if(aluEl){aluEl.textContent=alucabLines.length;aluEl.classList.toggle('zero',alucabLines.length===0);}
   const othEl=document.getElementById('cnt-othersvc');
@@ -2502,7 +2552,7 @@ function buildDoc(){
 
   // group lines by category (cabinet groups first, then catalog categories)
   let rowsHtml='';
-  const order=[...CABINET.map(gp=>gp.name), ALUCAB_CAT, 'Iron Work', 'Aluminium Work', PAINT_CAT, ...CATALOG.map(c=>c.name), 'Other Services'];
+  const order=[...CABINET.map(gp=>gp.name), ALUCAB_CAT, 'Iron Work', 'Aluminium Work', PAINT_CAT, 'Painting', ...CATALOG.map(c=>c.name), 'Other Services'];
   const seen=new Set();
   order.forEach(cname=>{
     if(seen.has(cname)) return; seen.add(cname);
