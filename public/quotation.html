@@ -914,8 +914,8 @@ const PG_PACKAGES = [
       { id:'window', name:'Window Grill ADDON (Type A)', items:[
         { id:'WA1', name:'Master Room',        spec:"6' × 4'", p2:500, p3:null },
         { id:'WA2', name:'Room 2',             spec:"4' × 4'", p2:330, p3:null },
-        { id:'WA3', name:'Room 3',             spec:"4' × 4'", p2:367, p3:null },
-        { id:'WA4', name:'Master Room Toilet', spec:"2' × 4'", p2:195, p3:null },
+        { id:'WA3', name:'Room 3',             room:'3', spec:'', spec3:"4' × 4'", p2:null, p3:367 },
+        { id:'WA4', name:'Master Room Toilet', room:'3', spec:'', spec3:"2' × 4'", p2:null, p3:195 },
       ]},
     ],
   },
@@ -1000,12 +1000,14 @@ function pgHoleTableHtml(pid){
 // package-level set (e.g. Yard package shows colours for Moru items only).
 function pgColours(P,o){ return (o&&o.colours) ? o.colours : (P.colour ? (P.colours||[]) : null); }
 function pgOptLabel(P,o){ return P.codeLabels===false ? o.name : (o.id+') '+o.name); }
+// Room-exclusive items (e.g. 3-Room-only addons) only show for their room.
+function pgVisible(o,pid){ return !o.room || o.room===pgRoom[pid]; }
 function pgLineLabel(pid,l){ const P=pgPkg(pid); return (P.codeLabels===false?'':(l.code+') '))+l.name; }
 // Package entry body (embedded under the Iron / Aluminium Work Type selector).
 function pgBodyHtml(pid){
   const P=pgPkg(pid);
   const groupOpts=P.groups.map((g,i)=>`<option value="${i}">${g.name}</option>`).join('');
-  const optOpts=P.groups[0].items.map((o,i)=>`<option value="${i}">${pgOptLabel(P,o)}</option>`).join('');
+  const optOpts=P.groups[0].items.map((o,i)=>pgVisible(o,pid)?`<option value="${i}">${pgOptLabel(P,o)}</option>`:'').join('');
   const pkgHasColour = P.colour || P.groups.some(g=>g.items.some(it=>it.colours));
   const colSel = pkgHasColour ? `<label class="fld" id="pg-${pid}-colour-wrap">${P.colourLabel||'Powder Coat Colour'} <select id="pg-${pid}-colour"></select></label>` : '';
   const exSel = P.exhaust ? `<label class="fld">Prepare exhaust-fan opening? <select id="pg-${pid}-exhaust" onchange="pgExhaustChange('${pid}')"><option value="no">No</option><option value="yes">Yes</option></select></label>` : '';
@@ -1031,7 +1033,7 @@ function pgBodyHtml(pid){
 function pgGroupChange(pid){
   const P=pgPkg(pid);
   const gi=+document.getElementById('pg-'+pid+'-group').value;
-  document.getElementById('pg-'+pid+'-option').innerHTML=P.groups[gi].items.map((o,i)=>`<option value="${i}">${pgOptLabel(P,o)}</option>`).join('');
+  document.getElementById('pg-'+pid+'-option').innerHTML=P.groups[gi].items.map((o,i)=>pgVisible(o,pid)?`<option value="${i}">${pgOptLabel(P,o)}</option>`:'').join('');
   pgProductChange(pid);
 }
 // Refresh the colour selector for the chosen item (shown only when it has colours).
@@ -1048,7 +1050,8 @@ function pgProductChange(pid){
 function pgSetRoom(pid,r){
   pgRoom[pid]=r;
   document.querySelectorAll('.pg-room-btn[data-pid="'+pid+'"]').forEach(b=>b.classList.toggle('on',b.dataset.room===r));
-  pgPreview(pid); renderPgLines(pid); recalc();
+  pgGroupChange(pid);   // re-list products (some are room-exclusive)
+  renderPgLines(pid); recalc();
 }
 function pgExhaustChange(pid){
   const sel=document.getElementById('pg-'+pid+'-exhaust'); const yes=!!(sel&&sel.value==='yes');
@@ -1082,11 +1085,13 @@ function pgAdd(pid){
   const eEl=document.getElementById('pg-'+pid+'-exhaust');
   const exhaust=(P.exhaust&&eEl)?eEl.value==='yes':false;
   const hole=exhaust?pgHole[pid].map((v,i)=>v?i:-1).filter(i=>i>=0):[];
-  pgLines[pid].push({grp:g.name,code:o.id,name:o.name,spec:(o.spec||''),spec3:(o.spec3||''),p2:o.p2,p3:o.p3,colour,exhaust,hole});
+  pgLines[pid].push({grp:g.name,code:o.id,name:o.name,room:(o.room||''),spec:(o.spec||''),spec3:(o.spec3||''),p2:o.p2,p3:o.p3,colour,exhaust,hole});
   if(P.exhaust&&eEl){ eEl.value='no'; const w=document.getElementById('pg-'+pid+'-hole-wrap'); if(w) w.style.display='none'; pgHole[pid]=[false,false,false,false,false,false]; pgRefreshHole(pid); }
   pgPreview(pid); renderPgLines(pid); recalc();
 }
 function pgRemove(pid,i){ pgLines[pid].splice(i,1); renderPgLines(pid); recalc(); }
+// Lines visible for the current room (room-exclusive lines only count in their room).
+function pgVisLines(pid){ return (pgLines[pid]||[]).filter(l=>!l.room||l.room===pgRoom[pid]); }
 function pgDimStr(l,pid){
   const parts=[];
   if(l.grp) parts.push(l.grp);
@@ -1097,9 +1102,9 @@ function pgDimStr(l,pid){
 }
 function renderPgLines(pid){
   const box=document.getElementById('pg-'+pid+'-lines'); if(!box) return;
-  const arr=pgLines[pid]||[];
-  if(!arr.length){ box.innerHTML='<div class="cab-empty">No package items added yet.</div>'; return; }
-  box.innerHTML=arr.map((l,i)=>{
+  const rows=(pgLines[pid]||[]).map((l,i)=>({l,i})).filter(x=>!x.l.room||x.l.room===pgRoom[pid]);
+  if(!rows.length){ box.innerHTML='<div class="cab-empty">No package items added yet.</div>'; return; }
+  box.innerHTML=rows.map(({l,i})=>{
     const price=pgLinePrice(pid,l);
     const note=(pgRoom[pid]==='3'&&l.p3==null)?' <span style="color:#b45309;font-weight:400">(3-Room price not set)</span>':'';
     return `<div class="cab-line">
@@ -2406,7 +2411,7 @@ function collectLines(){
     lines.push({cat:l.gname,variantName:'',label:l.oname,sub:grillDimStr(l),price:l.price,qty:1,amount:l.price});
   });
   PG_PACKAGES.forEach(P=>{
-    (pgLines[P.id]||[]).forEach(l=>{
+    pgVisLines(P.id).forEach(l=>{
       const amt=pgLinePrice(P.id,l);
       lines.push({cat:P.cat,variantName:'',label:pgLineLabel(P.id,l),sub:pgDimStr(l,P.id),price:amt,qty:1,amount:amt});
     });
@@ -2441,10 +2446,10 @@ function recalc(){
   });
   const cabEl=document.getElementById('cnt-cabinet');
   if(cabEl){cabEl.textContent=cabinetLines.length;cabEl.classList.toggle('zero',cabinetLines.length===0);}
-  const ironN=grillLines.filter(l=>l.gid==='iron').length+(pgLines.iron||[]).length+(pgLines.invisible||[]).length;
+  const ironN=grillLines.filter(l=>l.gid==='iron').length+pgVisLines('iron').length+pgVisLines('invisible').length;
   const iwEl=document.getElementById('cnt-ironwork'); if(iwEl){ iwEl.textContent=ironN; iwEl.classList.toggle('zero',ironN===0); }
   const _oc=aluCat(); let _othSel=0; if(_oc) _oc.items.forEach((it,idx)=>{ if((state[_oc.id+':'+idx]||0)>0) _othSel++; });
-  const awN=(pgLines.yard||[]).length+_othSel;
+  const awN=pgVisLines('yard').length+_othSel;
   const awEl=document.getElementById('cnt-aluwork'); if(awEl){ awEl.textContent=awN; awEl.classList.toggle('zero',awN===0); }
   const pntEl=document.getElementById('cnt-paint');
   if(pntEl){pntEl.textContent=paintLines.length;pntEl.classList.toggle('zero',paintLines.length===0);}
