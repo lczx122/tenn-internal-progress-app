@@ -188,6 +188,13 @@ export default function JobsList() {
           placeholder="Search unit, address, category, key holder…"
           className="flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-slate-900"
         />
+        <Link
+          to="/quote"
+          title="New quotation"
+          className="flex shrink-0 items-center gap-1.5 rounded-lg bg-slate-900 px-3 py-2 text-sm font-medium text-white active:bg-slate-700"
+        >
+          <Icon name="receipt" className="h-4 w-4" /> Quote
+        </Link>
       </div>
 
       {staffPic && (

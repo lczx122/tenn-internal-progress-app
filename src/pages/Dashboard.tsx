@@ -221,6 +221,12 @@ export default function Dashboard() {
 
   return (
     <Layout title="Dashboard" bottomNav onRefresh={load}>
+      <Link
+        to="/quote"
+        className="mb-4 flex items-center justify-center gap-2 rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm active:bg-slate-700"
+      >
+        <Icon name="receipt" className="h-4 w-4" /> New Quotation
+      </Link>
       {staffPic && (
         <div className="mb-4 flex gap-2">
           {(['mine', 'all'] as const).map((s) => (

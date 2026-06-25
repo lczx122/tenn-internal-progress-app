@@ -146,6 +146,13 @@ export function Icon({ name, className = 'inline-block h-[18px] w-[18px] align-[
           <path d="M14.5 9.5a3.5 3.5 0 0 0-5 0l-3 3a3.5 3.5 0 0 0 5 5l1.3-1.3" />
         </svg>
       )
+    case 'receipt': // quotation / document
+      return (
+        <svg {...p}>
+          <path d="M6 2.6h12v18.8l-2-1.2-2 1.2-2-1.2-2 1.2-2-1.2V2.6Z" />
+          <path d="M9 7.5h6M9 11h6" />
+        </svg>
+      )
     case 'sparkles':
       return (
         <svg {...p}>
