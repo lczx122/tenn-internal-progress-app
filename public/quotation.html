@@ -194,6 +194,28 @@
   .cat.open .cat-bd{display:block}
   .cat-note{font-size:12px;color:var(--muted);background:var(--accent-soft);border:1px solid #f6d6dc;color:#8a2230;padding:7px 11px;border-radius:8px;margin:8px 0 12px}
 
+  /* ---------- category grid menu + search ---------- */
+  #catTopbar{position:sticky;top:0;z-index:4;background:var(--card);padding:4px 0 12px;margin-bottom:4px}
+  #catBack{display:flex;align-items:center;gap:12px;margin-bottom:2px}
+  .cat-back-btn{flex:0 0 auto;font-family:'Archivo';font-weight:700;font-size:13px;color:var(--navy);background:#f0f3fb;border:1px solid var(--line);border-radius:9px;padding:8px 13px;cursor:pointer;transition:.15s}
+  .cat-back-btn:hover{background:#e7ecf8}
+  #catTitle{font-family:'Archivo';font-weight:700;font-size:15px;color:var(--ink,#1a2240)}
+  #catSearchWrap{position:relative;display:flex;align-items:center}
+  .cat-search-ico{position:absolute;left:11px;font-size:13px;opacity:.6;pointer-events:none}
+  #catSearch{width:100%;font-size:14px;padding:10px 34px 10px 32px;border:1px solid var(--line);border-radius:10px;background:#fff}
+  .cat-search-clear{position:absolute;right:8px;display:none;border:0;background:#e7ecf8;color:var(--muted);border-radius:20px;width:22px;height:22px;cursor:pointer;font-size:12px;line-height:1}
+  .cat-search-clear.show{display:block}
+  #catMenu{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  @media(min-width:560px){#catMenu{grid-template-columns:1fr 1fr 1fr}}
+  .cat-tile{display:flex;align-items:center;justify-content:space-between;gap:8px;text-align:left;border:1px solid var(--line);border-radius:12px;background:#fbfcfe;padding:16px 14px;cursor:pointer;transition:.15s;min-height:58px}
+  .cat-tile:hover{background:#f5f7fc;border-color:#c7d0e6}
+  .cat-tile .ct-name{font-family:'Archivo';font-weight:700;font-size:14px;line-height:1.25;color:var(--ink,#1a2240)}
+  .cat-tile .ct-count{flex:0 0 auto;font-size:11px;font-weight:700;color:#fff;background:var(--navy);border-radius:20px;padding:2px 9px;min-width:22px;text-align:center}
+  .cat-tile .ct-count.zero{background:#cfd5e4;color:#fff}
+  .cat-noresults{font-size:13px;color:var(--muted);text-align:center;padding:18px 0}
+  #catalog.detail .cat-hd{display:none}
+  #catalog.detail .cat{margin-bottom:0}
+
   /* cabinet module */
   .cab-warn{background:#fff5e0;border:1px solid #f3c873;color:#8a5a00;font-size:12px;padding:9px 12px;border-radius:8px;margin:10px 0 6px;line-height:1.5}
   .cab-warn code{background:#f4e3bd;padding:1px 5px;border-radius:4px;font-size:11.5px}
@@ -389,7 +411,18 @@
 
     <div class="card">
       <div class="hd" style="justify-content:space-between"><h2>Select Products</h2><button id="editPricesBtn" class="edit-prices-btn" style="display:none" onclick="openPriceEditor()">✏️ Edit Prices</button></div>
-      <div class="bd" id="catalog"><!-- categories injected here --></div>
+      <div class="bd">
+        <div id="catTopbar">
+          <div id="catBack" style="display:none"><button type="button" class="cat-back-btn" onclick="showCatMenu()">← All categories</button><span id="catTitle"></span></div>
+          <div id="catSearchWrap"><span class="cat-search-ico">🔍</span>
+            <input id="catSearch" placeholder="Search a product…" oninput="catSearch()">
+            <button type="button" id="catSearchClear" class="cat-search-clear" onclick="catClearSearch()">✕</button>
+          </div>
+        </div>
+        <div id="catMenu"></div>
+        <div id="catNoResults" class="cat-noresults" style="display:none">No matching products.</div>
+        <div id="catalog"><!-- categories injected here --></div>
+      </div>
     </div>
   </div>
 
@@ -2148,8 +2181,84 @@ function renderCatalog(){
   root.insertAdjacentHTML('beforeend', othCardHtml());
   renderOthLines();
   root.insertAdjacentHTML('beforeend', discountCardHtml());
+  buildCatMenu();
+  showCatMenu();
   recalc();
 }
+
+/* ---------- category grid menu ----------
+   The product list is a long stack of category cards; on a phone it's a lot to
+   scroll. Instead we show a grid of category tiles (name + live count) and open
+   ONE category at a time with a Back button. Every card stays in the DOM (just
+   hidden) so the DOM-driven save serialization still sees all inputs. */
+let currentCat=null;  // null = grid menu; otherwise the open category's data-cat
+function catName(id){ const c=document.querySelector('#catalog .cat[data-cat="'+id+'"] .cname'); return c?c.textContent:''; }
+// Build a tile per rendered category. data-search packs the card's text (option
+// labels + item names) so the search box finds products, not just category names.
+function buildCatMenu(){
+  const menu=document.getElementById('catMenu'); if(!menu) return;
+  let h='';
+  document.querySelectorAll('#catalog .cat').forEach(c=>{
+    const id=c.dataset.cat; const nm=(c.querySelector('.cname')||{}).textContent||id;
+    const cnt=document.getElementById('cnt-'+id); const n=cnt?cnt.textContent:'0';
+    const zero=cnt?cnt.classList.contains('zero'):true;
+    const search=(c.textContent||'').toLowerCase().replace(/\s+/g,' ').replace(/"/g,'');
+    h+=`<button type="button" class="cat-tile" data-cat="${id}" data-search="${search}" onclick="openCat('${id}')">
+      <span class="ct-name">${nm}</span>
+      <span class="ct-count ${zero?'zero':''}" id="tile-cnt-${id}">${n}</span>
+    </button>`;
+  });
+  menu.innerHTML=h;
+}
+// Mirror each category's live count onto its tile badge (called from recalc).
+function syncTileCounts(){
+  document.querySelectorAll('#catMenu .cat-tile').forEach(t=>{
+    const cnt=document.getElementById('cnt-'+t.dataset.cat);
+    const tb=document.getElementById('tile-cnt-'+t.dataset.cat);
+    if(cnt&&tb){ tb.textContent=cnt.textContent; tb.classList.toggle('zero',cnt.classList.contains('zero')); }
+  });
+}
+// Show the grid (home) — hide every category card.
+function showCatMenu(){
+  currentCat=null;
+  const cat=document.getElementById('catalog'); if(cat) cat.classList.remove('detail');
+  const menu=document.getElementById('catMenu'); if(menu) menu.style.display='';
+  const sw=document.getElementById('catSearchWrap'); if(sw) sw.style.display='';
+  const back=document.getElementById('catBack'); if(back) back.style.display='none';
+  document.querySelectorAll('#catalog .cat').forEach(c=>{ c.style.display='none'; c.classList.remove('open'); });
+  catSearch();          // re-apply any active filter to the tiles
+  syncTileCounts();
+}
+// Open one category full-width with a Back bar; hide the rest (kept in the DOM).
+function openCat(id){
+  currentCat=id;
+  const cat=document.getElementById('catalog'); if(cat) cat.classList.add('detail');
+  const menu=document.getElementById('catMenu'); if(menu) menu.style.display='none';
+  const sw=document.getElementById('catSearchWrap'); if(sw) sw.style.display='none';
+  const nr=document.getElementById('catNoResults'); if(nr) nr.style.display='none';
+  const back=document.getElementById('catBack'); if(back) back.style.display='flex';
+  const ttl=document.getElementById('catTitle'); if(ttl) ttl.textContent=catName(id);
+  document.querySelectorAll('#catalog .cat').forEach(c=>{
+    const on=c.dataset.cat===id;
+    c.style.display=on?'block':'none';
+    c.classList.toggle('open',on);
+  });
+  const top=document.getElementById('catTopbar'); if(top&&top.scrollIntoView) top.scrollIntoView({block:'start'});
+}
+// Filter the tiles by product/category text. Only meaningful on the grid.
+function catSearch(){
+  const inp=document.getElementById('catSearch'); if(!inp) return;
+  const q=(inp.value||'').trim().toLowerCase();
+  const clr=document.getElementById('catSearchClear'); if(clr) clr.classList.toggle('show',q.length>0);
+  if(currentCat!==null) return;   // detail view: nothing to filter
+  let any=false;
+  document.querySelectorAll('#catMenu .cat-tile').forEach(t=>{
+    const show=!q||(t.dataset.search||'').indexOf(q)>=0;
+    t.style.display=show?'':'none'; if(show) any=true;
+  });
+  const nr=document.getElementById('catNoResults'); if(nr) nr.style.display=(q&&!any)?'block':'none';
+}
+function catClearSearch(){ const inp=document.getElementById('catSearch'); if(inp) inp.value=''; catSearch(); }
 
 /* ---------- Other Services — ad-hoc custom line items ----------
    A free-form section: the salesperson types a description + price and adds it
@@ -2534,6 +2643,7 @@ function recalc(){
   const rebLine=document.getElementById('t_rebate_line');
   if(rebLine){ rebLine.hidden=discounts.length===0; document.getElementById('t_rebate').textContent=fmt(reb); }
   document.getElementById('t_bal').textContent='RM '+fmt(bal);
+  syncTileCounts();
 }
 document.getElementById('t_dep').addEventListener('input',recalc);
 document.getElementById('t_disc').addEventListener('input',recalc);
