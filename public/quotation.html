@@ -654,14 +654,14 @@ function dispFromMM(v){ v=+v||0; return UNITS.cab==='ft' ? +(v/FT_MM).toFixed(2)
 function ftFromInput(v,cat){ v=+v||0; return UNITS[cat]==='ft' ? v : v/FT_MM; }
 function dispFromFt(v,cat){ v=+v||0; return UNITS[cat]==='ft' ? +(+v).toFixed(2) : Math.round(v*FT_MM); }
 function relabelUnits(){
-  ['cab','grill','paint','alu'].forEach(cat=>{
+  ['cab','grill','alu'].forEach(cat=>{
     document.querySelectorAll('.ulin-'+cat).forEach(s=>{ s.textContent=UNITS[cat]; });
     const lbl='Units: '+UNITS[cat].toUpperCase();
     const btn=document.getElementById('unitBtn-'+cat); if(btn) btn.textContent=lbl;           // single-button cards
     document.querySelectorAll('.unitBtn-'+cat).forEach(b=>{ b.textContent=lbl; });            // multi-button (grill: iron + alu)
   });
 }
-const UNIT_FIELDS = { cab:['cab-L','cab-H','cab-D'], grill:['grl-iron-W','grl-iron-H','grl-iron-L'], paint:['pnt-W','pnt-H'], alu:['alu-L'] };
+const UNIT_FIELDS = { cab:['cab-L','cab-H','cab-D'], grill:['grl-iron-W','grl-iron-H','grl-iron-L'], alu:['alu-L'] };
 function toggleUnit(cat){
   const to = UNITS[cat]==='ft' ? 'mm' : 'ft';
   // Convert whatever is currently typed into this category's entry fields.
@@ -674,7 +674,6 @@ function toggleUnit(cat){
   relabelUnits();
   if(cat==='cab'){ cabPreview(); renderCabLines(); }
   else if(cat==='grill'){ grillPreview('iron'); renderGrillLines('iron'); }
-  else if(cat==='paint'){ paintPreview(); renderPaintLines(); }
   else if(cat==='alu'){ alucabPreview(); renderAlucabLines(); }
 }
 
@@ -1010,24 +1009,6 @@ const PG_PACKAGES = [
       ]},
     ],
   },
-  {
-    id:'painting', name:'PG Painting Package', cat:'Painting',
-    note:'Pick the wall-painting type for the colour package, then add the add-ons (Door & Frame / Frame are per set — set the quantity).',
-    colour:false, exhaust:false, codeLabels:false,
-    colourLabel:'Colour Package', qtyLabel:'Quantity (sets)',
-    typeLabel:'Section', productLabel:'Item',
-    groups:[
-      { id:'wall', name:'Wall Painting', items:[
-        { id:'wall', name:'Wall Painting', spec:'688 sqft (Type A)', spec3:'1088 sqft (Type B)', p2:1499, p3:1999,
-          colours:['Option 01','Option 02','Option 03','Option 04','Option 05'] },
-      ]},
-      { id:'addon', name:'Add-ons', items:[
-        { id:'ceiling',   name:'Ceiling',                spec:'', spec3:'', p2:499, p3:699 },
-        { id:'doorframe', name:'Door & Frame (per set)', spec:'', spec3:'', p2:100, p3:100, qty:true },
-        { id:'frame',     name:'Frame (per set)',        spec:'', spec3:'', p2:50,  p3:50,  qty:true },
-      ]},
-    ],
-  },
 ];
 const pgRoom = {};   // {pkgId:'2'|'3'}
 const pgLines = {};  // {pkgId:[lines]}
@@ -1210,7 +1191,7 @@ function areaTierTableHtml(tiers){
    Item prices and cabinet tier parameters can be overridden by an admin and
    stored in Supabase (app_settings key='pricing'). The overlay is applied over
    the coded defaults on load; everyone reads it, only admins can save it. */
-let priceOverlay = { items:{}, catalog:{}, cabinets:{}, grills:{}, paints:{}, alucabs:{}, areaTiers:[], discounts:[], pg:{} };
+let priceOverlay = { items:{}, catalog:{}, cabinets:{}, grills:{}, paints:{}, alucabs:{}, areaTiers:[], discounts:[], pg:{}, paintpkg:{} };
 let isAdminUser = false;
 let isGuestUser = false;
 function getGuest(){
@@ -1293,12 +1274,21 @@ function applyOverrides(ov){
     if(v.rate!=null) o.rate=+v.rate;
     if(o.tier && v.overRate!=null) o.tier.overRate=+v.overRate;
   }));
-  PAINT.forEach(o=>{
-    const v=pnts[o.id];
-    if(!v) return;
-    if(v.name) o.name=v.name;
-    if(v.rate!=null) o.rate=+v.rate;
-  });
+  // Painting package (types keyed cat:type; add-ons addon:id; oversize oversize:k; repairs repair:id).
+  const ppk=ov.paintpkg||{};
+  PAINT_PKG.cats.forEach(c=>c.types.forEach(t=>{
+    const v=ppk[c.id+':'+t.id]; if(!v) return;
+    if(v.name) t.name=v.name;
+    if(v.size!=null) t.size=v.size;
+    if(c.scoped){
+      if(v.int!=null && !isNaN(+v.int)) t.int=+v.int;
+      if('ext' in v) t.ext=(v.ext==null||v.ext===''||isNaN(+v.ext))?null:+v.ext;
+      if('combo' in v) t.combo=(v.combo==null||v.combo===''||isNaN(+v.combo))?null:+v.combo;
+    } else if(v.price!=null && !isNaN(+v.price)) t.price=+v.price;
+  }));
+  PAINT_PKG.addons.forEach(a=>{ const v=ppk['addon:'+a.id]; if(!v) return; if(v.name) a.name=v.name; if(v.price!=null && !isNaN(+v.price)) a.price=+v.price; });
+  ['std','condo'].forEach(k=>{ const o=PAINT_PKG.oversize[k]; const v=ppk['oversize:'+k]; if(!v) return; if(v.name) o.name=v.name; if(v.price!=null && !isNaN(+v.price)) o.price=+v.price; });
+  PAINT_PKG.repairs.forEach(r=>{ const v=ppk['repair:'+r.id]; if(!v) return; if(v.name) r.name=v.name; if(v.price!=null && !isNaN(+v.price)) r.price=+v.price; });
   const alus=ov.alucabs||{};
   ALUCAB.forEach(o=>{
     const v=alus[o.id]; if(!v) return;
@@ -1321,7 +1311,7 @@ async function loadPricing(){
     await ready(supa);
     const {data}=await supa.from('app_settings').select('value').eq('key','pricing').maybeSingle();
     if(data&&data.value){
-      priceOverlay={items:(data.value.items||{}), catalog:(data.value.catalog||{}), cabinets:(data.value.cabinets||{}), grills:(data.value.grills||{}), paints:(data.value.paints||{}), alucabs:(data.value.alucabs||{}), areaTiers:(data.value.areaTiers||[]), discounts:(data.value.discounts||[]), pg:(data.value.pg||{})};
+      priceOverlay={items:(data.value.items||{}), catalog:(data.value.catalog||{}), cabinets:(data.value.cabinets||{}), grills:(data.value.grills||{}), paints:(data.value.paints||{}), alucabs:(data.value.alucabs||{}), areaTiers:(data.value.areaTiers||[]), discounts:(data.value.discounts||[]), pg:(data.value.pg||{}), paintpkg:(data.value.paintpkg||{})};
       applyOverrides(priceOverlay);
     }
   }catch(e){}
@@ -1343,7 +1333,7 @@ function normalizeCatalog(){
     if(it.hidden==null) it.hidden=false;
   }));
 }
-const PRICE_DEFAULTS = { items:{}, catalog:{}, cabinets:{}, grills:{}, paints:{}, alucabs:{}, areaTiers:[], discounts:[], pg:{} };
+const PRICE_DEFAULTS = { items:{}, catalog:{}, cabinets:{}, grills:{}, paints:{}, alucabs:{}, areaTiers:[], discounts:[], pg:{}, paintpkg:{} };
 function capturePriceDefaults(){
   PRICE_DEFAULTS.items={}; PRICE_DEFAULTS.catalog={}; PRICE_DEFAULTS.cabinets={}; PRICE_DEFAULTS.grills={}; PRICE_DEFAULTS.paints={}; PRICE_DEFAULTS.alucabs={};
   PRICE_DEFAULTS.discounts=DEFAULT_DISCOUNTS.map(d=>({...d}));
@@ -1354,7 +1344,11 @@ function capturePriceDefaults(){
   PRICE_DEFAULTS.pg={};
   PG_PACKAGES.forEach(P=>P.groups.forEach(g=>g.items.forEach(o=>{ PRICE_DEFAULTS.pg[P.id+':'+g.id+':'+o.id]={name:o.name,spec:(o.spec||''),spec3:(o.spec3||''),p2:o.p2,p3:o.p3}; })));
   GRILL.forEach(g=>g.options.forEach(o=>{ PRICE_DEFAULTS.grills[g.id+':'+o.id]={rate:o.rate,overRate:(o.tier?o.tier.overRate:null),name:o.name}; }));
-  PAINT.forEach(o=>{ PRICE_DEFAULTS.paints[o.id]={rate:o.rate,name:o.name}; });
+  PRICE_DEFAULTS.paintpkg={};
+  PAINT_PKG.cats.forEach(c=>c.types.forEach(t=>{ PRICE_DEFAULTS.paintpkg[c.id+':'+t.id]=c.scoped?{name:t.name,size:t.size,int:t.int,ext:t.ext,combo:t.combo}:{name:t.name,size:t.size,price:t.price}; }));
+  PAINT_PKG.addons.forEach(a=>{ PRICE_DEFAULTS.paintpkg['addon:'+a.id]={name:a.name,price:a.price}; });
+  ['std','condo'].forEach(k=>{ const o=PAINT_PKG.oversize[k]; PRICE_DEFAULTS.paintpkg['oversize:'+k]={name:o.name,price:o.price}; });
+  PAINT_PKG.repairs.forEach(r=>{ PRICE_DEFAULTS.paintpkg['repair:'+r.id]={name:r.name,price:r.price}; });
   ALUCAB.forEach(o=>{ PRICE_DEFAULTS.alucabs[o.id]={rate:o.rate,name:o.name}; });
   PRICE_DEFAULTS.areaTiers=DEFAULT_AREA_TIERS.map(t=>({minM2:t.minM2,pct:t.pct}));
 }
@@ -1558,7 +1552,7 @@ function buildPriceEditorHtml(){
   const pgCount=id=>{ const P=PG_PACKAGES.find(p=>p.id===id); return P?P.groups.reduce((n,g)=>n+g.items.length,0):0; };
   const ironCount=GRILL.reduce((n,g)=>n+g.options.length,0)+pgCount('iron')+pgCount('invisible');
   const aluworkCount=pgCount('yard');
-  const paintCount=PAINT.length+pgCount('painting');
+  const paintCount=PAINT_PKG.cats.reduce((n,c)=>n+c.types.length,0)+PAINT_PKG.addons.length+2+PAINT_PKG.repairs.length;
   const aluCount=ALUCAB.length;
   const shortCat=name=>{ const m=/\(([^)]+)\)\s*$/.exec(name); return m?m[1]:name; };
   const catTabs=CATALOG.filter(c=>c.id!=='other').map(c=>`<button type="button" class="pe-tab" data-panel="cat-${c.id}" onclick="peSwitchTab('cat-${c.id}')">${shortCat(c.name)} <span class="pe-pill" data-count>${c.items.length}</span></button>`).join('');
@@ -1653,16 +1647,44 @@ function buildPriceEditorHtml(){
   h+=catCardHtml(aluCat());
   h+='</div>';
 
-  // Paint
-  h+=`<div class="pe-panel" data-panel="paint"><div class="pe-noresults">No matching paint items.</div>
-    <div class="pe-cat">${peSectionHead('Painting — rate')}<p class="pe-note">RM / sqft per area. Rates start at 0.</p>`;
-  PAINT.forEach(o=>{
-    const d=PRICE_DEFAULTS.paints[o.id]||{};
-    h+=`<div class="pe-cab" data-search="${peSafe(o.name)}">${peCardHead(o.name)}
-      <div class="pe-cab-grid">${peTextField('paint',o.id,'name',o.name,'Name',d.name)}${peField('paint',o.id,'rate',o.rate,'RM/sqft',{money:true,def:d.rate})}</div></div>`;
+  // Paint — the PG Painting Package: per-category type tables + add-ons + repairs.
+  const ppd=PRICE_DEFAULTS.paintpkg||{};
+  h+=`<div class="pe-panel" data-panel="paint"><div class="pe-noresults">No matching paint items.</div>`;
+  PAINT_PKG.cats.forEach(c=>{
+    h+=`<div class="pe-cat" data-search="${peSafe(c.name+' painting package')}">${peSectionHead(c.name+' — types & prices')}<p class="pe-note">${c.scoped?'Interior / Exterior / Interior+Exterior (combined, 10% off) prices per type. Leave Exterior / Int+Ext blank to disable (e.g. SOHO).':'Single price per unit type (colour selection included).'}</p>`;
+    c.types.forEach(t=>{
+      const k=c.id+':'+t.id, d=ppd[k]||{};
+      const priceFields = c.scoped
+        ? `${peField('paintpkg',k,'int',t.int,'Interior RM',{money:true,def:d.int})}${peField('paintpkg',k,'ext',t.ext,'Exterior RM',{money:true,def:d.ext})}${peField('paintpkg',k,'combo',t.combo,'Int+Ext RM',{money:true,def:d.combo})}`
+        : `${peField('paintpkg',k,'price',t.price,'Price RM',{money:true,def:d.price})}`;
+      h+=`<div class="pe-cab" data-search="${peSafe(t.name+' '+t.size)}">${peCardHead(t.name)}
+        <div class="pe-cab-grid">
+          ${peTextField('paintpkg',k,'name',t.name,'Name',d.name)}
+          ${peTextField('paintpkg',k,'size',t.size,'Build-up size',d.size)}
+          ${priceFields}
+        </div></div>`;
+    });
+    h+='</div>';
+  });
+  h+=`<div class="pe-cat" data-search="${peSafe('painting add-ons ceiling door colour build-up oversize extra')}">${peSectionHead('Painting — add-ons & extras')}`;
+  PAINT_PKG.addons.forEach(a=>{
+    const d=ppd['addon:'+a.id]||{};
+    h+=`<div class="pe-cab" data-search="${peSafe(a.name)}">${peCardHead(a.name+(a.per?' · '+a.per:''))}
+      <div class="pe-cab-grid">${peTextField('paintpkg','addon:'+a.id,'name',a.name,'Name',d.name)}${peField('paintpkg','addon:'+a.id,'price',a.price,'RM',{money:true,def:d.price})}</div></div>`;
+  });
+  ['std','condo'].forEach(kk=>{
+    const o=PAINT_PKG.oversize[kk], d=ppd['oversize:'+kk]||{};
+    h+=`<div class="pe-cab" data-search="${peSafe(o.name+' build-up oversize')}">${peCardHead(o.name+(o.per?' · '+o.per:''))}
+      <div class="pe-cab-grid">${peTextField('paintpkg','oversize:'+kk,'name',o.name,'Name',d.name)}${peField('paintpkg','oversize:'+kk,'price',o.price,'RM',{money:true,def:d.price})}</div></div>`;
   });
   h+='</div>';
-  PG_PACKAGES.filter(P=>P.cat==='Painting').forEach(P=>{ h+=pgSectionHtml(P); });
+  h+=`<div class="pe-cat" data-search="${peSafe('painting wall condition repairs primer sealer')}">${peSectionHead('Painting — wall-condition repairs')}<p class="pe-note">Optional add-ons, each per 400 sqft.</p>`;
+  PAINT_PKG.repairs.forEach(r=>{
+    const d=ppd['repair:'+r.id]||{};
+    h+=`<div class="pe-cab" data-search="${peSafe(r.name+' '+r.problem)}">${peCardHead(r.name+' · '+r.problem)}
+      <div class="pe-cab-grid">${peTextField('paintpkg','repair:'+r.id,'name',r.name,'Name',d.name)}${peField('paintpkg','repair:'+r.id,'price',r.price,'RM / 400 sqft',{money:true,def:d.price})}</div></div>`;
+  });
+  h+='</div>';
   h+='</div>';
 
   // Aluminium Cabinet — per linear foot of length
@@ -1853,8 +1875,8 @@ function peValidate(){
     if(inp.dataset.text){ inp.classList.remove('pe-invalid'); return; }   // free-text (name / size)
     const v=parseFloat(inp.value);
     let invalid;
-    if(inp.dataset.kind==='areatier' || (inp.dataset.kind==='pg' && inp.dataset.field==='p3')){
-      // May be left blank (= unused / 3-Room price not set yet); only non-blank negatives are bad.
+    if(inp.dataset.kind==='areatier' || (inp.dataset.kind==='pg' && inp.dataset.field==='p3') || (inp.dataset.kind==='paintpkg' && (inp.dataset.field==='ext'||inp.dataset.field==='combo'))){
+      // May be left blank (= unused / price not offered); only non-blank negatives are bad.
       invalid = inp.value!=='' && (isNaN(v)||v<0);
     } else {
       invalid = (inp.value===''||isNaN(v)||v<0);
@@ -1873,7 +1895,7 @@ async function savePrices(){
     alert('Please fix '+val.count+' highlighted field'+(val.count>1?'s':'')+' (blank or negative) before saving.');
     return;
   }
-  const overlay={items:{},catalog:{},cabinets:{},grills:{},paints:{},alucabs:{},areaTiers:[],discounts:[],pg:{}};
+  const overlay={items:{},catalog:{},cabinets:{},grills:{},paints:{},alucabs:{},areaTiers:[],discounts:[],pg:{},paintpkg:{}};
   // Discounts — admin-managed selectable rebates (name + flat amount).
   document.querySelectorAll('#priceBody .pe-cat[data-disc="1"] .pe-item').forEach(row=>{
     const label=(((row.querySelector('input[data-field="label"]')||{}).value)||'').trim();
@@ -1917,10 +1939,11 @@ async function savePrices(){
     let v; if(inp.dataset.text){ v=(inp.value||'').trim(); } else { v=parseFloat(inp.value); v=isNaN(v)?0:v; }
     (overlay.grills[k]=overlay.grills[k]||{})[f]=v;
   });
-  document.querySelectorAll('#priceBody input[data-kind="paint"]').forEach(inp=>{
-    const k=inp.dataset.key,f=inp.dataset.field;
-    let v; if(inp.dataset.text){ v=(inp.value||'').trim(); } else { v=parseFloat(inp.value); v=isNaN(v)?0:v; }
-    (overlay.paints[k]=overlay.paints[k]||{})[f]=v;
+  document.querySelectorAll('#priceBody input[data-kind="paintpkg"]').forEach(inp=>{
+    const k=inp.dataset.key,f=inp.dataset.field,raw=(inp.value||'').trim(),v=parseFloat(raw);
+    // text fields (name / size) saved as strings; blank ext/combo price stays unset (null)
+    let out; if(inp.dataset.text){ out=raw; } else if((f==='ext'||f==='combo')&&raw===''){ out=null; } else { out=isNaN(v)?0:v; }
+    (overlay.paintpkg[k]=overlay.paintpkg[k]||{})[f]=out;
   });
   document.querySelectorAll('#priceBody input[data-kind="alucab"]').forEach(inp=>{
     const k=inp.dataset.key,f=inp.dataset.field;
@@ -1974,83 +1997,169 @@ const fmt = n => n.toLocaleString('en-MY',{minimumFractionDigits:2,maximumFracti
 
 
 /* ============================================================
-   PAINT MODULE — measure & auto-price (per sqft)
-   Pick the area, enter sqft (or Width × Height in feet).
-   Rates start at 0 — set them in Edit Prices.
+   PAINTING MODULE — PG Painting Package (3 categories)
+   Pick a category → type → scope (Interior / Exterior / both),
+   add the base line, then add optional extras (ceiling, doors,
+   extra colours, build-up oversize, wall-condition repairs).
+   All prices are admin-editable in Edit Prices.
    ============================================================ */
-const PAINT_CAT='Cat (Painting)';
-const PAINT = [
-  { id:'dalaman', name:'Interior House Painting', rate:4.8 },
-  { id:'luar',    name:'Exterior Wall Painting',  rate:9.8 },
-  { id:'bilik1',  name:'Bedroom 1 Painting',      rate:4.8 },
-  { id:'bilik2',  name:'Bedroom 2 Painting',      rate:4.8 },
-  { id:'bilik3',  name:'Bedroom 3 Painting',      rate:4.8 },
-  { id:'bilik4',  name:'Bedroom 4 Painting',      rate:4.8 },
-  { id:'seluruh', name:'Whole House Painting',    rate:4.8 },
-];
-function paintSel(){ return PAINT[+document.getElementById('pnt-option').value]; }
-function paintStoreys(){ return Math.max(1, parseInt(document.getElementById('pnt-storey').value)||1); }
-function paintCalcArea(){
-  const W=ftFromInput(document.getElementById('pnt-W').value,'paint');
-  const H=ftFromInput(document.getElementById('pnt-H').value,'paint');
-  if(W>0&&H>0) document.getElementById('pnt-area').value=(W*H).toFixed(2);
+const PAINT_CAT='Painting';
+const PAINT_PKG = {
+  note:'Interior: Eco Wall / Vinyl Glo · Exterior: Cool Weather · Sealer: Eco Sealer. Package includes paints, accessories, work, 1 sealer + 2 finishing coats.',
+  cats:[
+    { id:'commercial', name:'Commercial Building', scoped:true, typeLabel:'Building Type', types:[
+      { id:'ground',   name:'Ground floor Shop Lot',   size:'<1700', int:4000, intC:2, ext:4000, extC:2, combo:7200 },
+      { id:'double',   name:'Double Storey Shop Lot',  size:'<3500', int:5500, intC:2, ext:5000, extC:2, combo:9450 },
+      { id:'triple',   name:'Triple Storey Shop Lot',  size:'<5000', int:6500, intC:2, ext:6000, extC:2, combo:11250 },
+      { id:'soho',     name:'SOHO / Sofo / Sovo / Vos', size:'<900', int:4000, intC:2, ext:null, extC:null, combo:null },
+      { id:'detached', name:'Detached Factory',        size:'<6000', int:6500, intC:2, ext:6500, extC:2, combo:11700 },
+      { id:'semid',    name:'Semi-D Factory',          size:'<7500', int:8000, intC:2, ext:8000, extC:2, combo:14400 },
+    ]},
+    { id:'landed', name:'Landed House', scoped:true, typeLabel:'House Type', types:[
+      { id:'sst',    name:'Single Storey Terrace',           size:'<1800', int:4000,  intC:3, ext:4000,  extC:2, combo:7200 },
+      { id:'dst',    name:'Double Storey Terrace',           size:'<2000', int:5000,  intC:4, ext:5000,  extC:2, combo:9000 },
+      { id:'dscl',   name:'Double Storey Corner Lot',        size:'<2800', int:6000,  intC:4, ext:6000,  extC:2, combo:10800 },
+      { id:'cds',    name:'Cluster Double Storey',           size:'<3200', int:6500,  intC:5, ext:6500,  extC:2, combo:11700 },
+      { id:'cts',    name:'Cluster Triple Storey',           size:'<4200', int:7000,  intC:5, ext:7000,  extC:2, combo:12600 },
+      { id:'sdds',   name:'Semi-D Double Storey',            size:'<3500', int:6500,  intC:5, ext:6500,  extC:2, combo:11700 },
+      { id:'sdts',   name:'Semi-D Triple Storey',            size:'<4500', int:7500,  intC:5, ext:7500,  extC:2, combo:13500 },
+      { id:'sdclds', name:'Semi-D Corner Lot Double Storey', size:'<4500', int:8000,  intC:5, ext:8000,  extC:2, combo:14400 },
+      { id:'sdclts', name:'Semi-D Corner Lot Triple Storey', size:'<5500', int:9000,  intC:5, ext:9000,  extC:2, combo:16200 },
+      { id:'dds',    name:'Detach Double Storey',            size:'<4500', int:9000,  intC:5, ext:9000,  extC:2, combo:16200 },
+      { id:'dts',    name:'Detach Triple Storey',            size:'<5500', int:10000, intC:5, ext:10000, extC:2, combo:18000 },
+    ]},
+    { id:'condo', name:'Condo / Apartment', scoped:false, typeLabel:'Unit Type', types:[
+      { id:'studio', name:'Studio',    colors:'1 Base + 1 Feature Wall', size:'<600',  price:2500 },
+      { id:'b1',     name:'1 Bedroom', colors:'1 Base + 2 Feature Wall', size:'<800',  price:3000 },
+      { id:'b2',     name:'2 Bedroom', colors:'1 Base + 3 Feature Wall', size:'<1000', price:3500 },
+      { id:'b3',     name:'3 Bedroom', colors:'1 Base + 4 Feature Wall', size:'<1200', price:4000 },
+      { id:'b4',     name:'4 Bedroom', colors:'1 Base + 5 Feature Wall', size:'<1400', price:4500 },
+      { id:'b5',     name:'5 Bedroom', colors:'1 Base + 6 Feature Wall', size:'<1700', price:5000 },
+    ]},
+  ],
+  addons:[
+    { id:'ceiling', name:'Ceiling',                  price:399, per:'per 500 sqft',         qtyLabel:'500-sqft units' },
+    { id:'door',    name:'Door & Frame',             price:100, per:'per door, incl frame', qtyLabel:'doors' },
+    { id:'color1',  name:'Extra Colour Selection +1', price:200, per:'',                     qtyLabel:'sets' },
+    { id:'color2',  name:'Extra Colour Selection +2', price:400, per:'',                     qtyLabel:'sets' },
+  ],
+  oversize:{
+    std:   { id:'over_std',   name:'Extra build-up (Commercial / Landed)', price:400, per:'per 200 sqft over', qtyLabel:'200-sqft blocks' },
+    condo: { id:'over_condo', name:'Extra build-up (Condo / Apartment)',   price:200, per:'per 100 sqft over', qtyLabel:'100-sqft blocks' },
+  },
+  repairs:[
+    { id:'primer', name:'Penetrating Primer',         problem:'Powdery / Chalking',             price:350, per:'per 400 sqft' },
+    { id:'damp',   name:'Damp Sealer',                problem:'Dampness',                       price:350, per:'per 400 sqft' },
+    { id:'fungi',  name:'Fungicidal Wash',            problem:'Fungus Attack',                  price:150, per:'per 400 sqft' },
+    { id:'stain',  name:'Stain Resistant 950 Sealer', problem:'Stubborn Stain',                 price:250, per:'per 400 sqft' },
+    { id:'elasto', name:'Elasto T-288',               problem:'Efflorescence / hairline crack', price:250, per:'per 400 sqft' },
+  ],
+};
+// paintLines entries:
+//   base : {kind:'base', catId, catName, typeId, typeName, size, scope, scopeName, scoped, colorsInfo, price}
+//   extra: {kind:'extra', id, name, unit, qty, per}
+
+function paintCat(){ return PAINT_PKG.cats[+(document.getElementById('pnt-cat')||{}).value||0] || PAINT_PKG.cats[0]; }
+function paintType(){ const c=paintCat(); return c.types[+(document.getElementById('pnt-type')||{}).value||0] || c.types[0]; }
+function paintScopeVal(){ return (document.getElementById('pnt-scope')||{}).value || 'int'; }
+function paintScopeName(s){ return s==='ext'?'Exterior' : s==='combo'?'Interior + Exterior' : 'Interior'; }
+// Price for the current selection (null = not available, e.g. SOHO exterior).
+function paintBasePrice(c,t,s){
+  if(!c.scoped) return (+t.price||0);
+  if(s==='ext')   return t.ext==null?null:(+t.ext||0);
+  if(s==='combo') return t.combo==null?null:(+t.combo||0);
+  return t.int==null?null:(+t.int||0);
+}
+function paintColorsInfo(c,t,s){
+  if(!c.scoped) return t.colors||'';
+  if(s==='combo') return `Up to ${t.intC} interior + ${t.extC} exterior colours`;
+  if(s==='ext')   return `Up to ${t.extC} colours`;
+  return `Up to ${t.intC} colours`;
+}
+// Repopulate the Type dropdown when the Category changes; toggle the Scope row.
+function paintCatChange(){
+  const c=paintCat();
+  const ts=document.getElementById('pnt-type');
+  if(ts) ts.innerHTML=c.types.map((t,i)=>`<option value="${i}">${t.name} (${t.size})</option>`).join('');
+  const lbl=document.getElementById('pnt-typelabel'); if(lbl) lbl.textContent=c.typeLabel;
+  const sw=document.getElementById('pnt-scope-wrap'); if(sw) sw.style.display=c.scoped?'':'none';
+  paintTypeChange();
+}
+// Disable scope options that aren't priced for this type (e.g. SOHO ext/combo).
+function paintTypeChange(){
+  const c=paintCat(), t=paintType();
+  if(c.scoped){
+    const sel=document.getElementById('pnt-scope');
+    if(sel){
+      const map={int:t.int, ext:t.ext, combo:t.combo};
+      [...sel.options].forEach(o=>{ o.disabled = map[o.value]==null; });
+      if(sel.selectedOptions[0] && sel.selectedOptions[0].disabled){ const first=[...sel.options].find(o=>!o.disabled); if(first) sel.value=first.value; }
+    }
+  }
   paintPreview();
 }
+function paintScopeChange(){ paintPreview(); }
 function paintPreview(){
-  const o=paintSel();
-  const area=parseFloat(document.getElementById('pnt-area').value)||0;
-  const st=paintStoreys();
-  let html=`<div class="cab-tiers"><b>RM ${fmt(+o.rate||0)}</b> / sqft</div>`;
-  if(area>0) html+=`<div class="cab-calc">${area} sqft${st>1?` × ${st} storeys`:''} → <b>RM ${fmt(area*st*(+o.rate||0))}</b></div>`;
-  document.getElementById('pnt-preview').innerHTML=html;
+  const c=paintCat(), t=paintType(), s=c.scoped?paintScopeVal():'int';
+  const price=paintBasePrice(c,t,s), info=paintColorsInfo(c,t,s);
+  let html=`<div class="cab-tiers"><b>${t.size}</b> build-up · ${info}</div>`;
+  if(price==null) html+=`<div class="cab-calc" style="color:#b45309">${paintScopeName(s)} not available for this type</div>`;
+  else html+=`<div class="cab-calc">${c.name} — ${t.name}${c.scoped?` (${paintScopeName(s)}${s==='combo'?', 10% off':''})`:''} → <b>RM ${fmt(price)}</b></div>`;
+  const pv=document.getElementById('pnt-preview'); if(pv) pv.innerHTML=html;
 }
 function paintAdd(){
-  const o=paintSel();
-  const W=ftFromInput(document.getElementById('pnt-W').value,'paint');
-  const H=ftFromInput(document.getElementById('pnt-H').value,'paint');
-  const area=parseFloat(document.getElementById('pnt-area').value)||0;
-  const st=paintStoreys();
-  if(!(area>0)){ alert('Enter area (sqft) or Width × Height ('+unitLabel('paint')+').'); return; }
-  paintLines.push({oid:o.id,oname:o.name,W,H,sqft:area,storeys:st,price:area*st*(+o.rate||0)});
-  document.getElementById('pnt-W').value=''; document.getElementById('pnt-H').value=''; document.getElementById('pnt-area').value=''; document.getElementById('pnt-storey').value='1';
-  paintPreview(); renderPaintLines(); recalc();
+  const c=paintCat(), t=paintType(), s=c.scoped?paintScopeVal():'int';
+  const price=paintBasePrice(c,t,s);
+  if(price==null){ alert(paintScopeName(s)+' is not available for this type.'); return; }
+  paintLines.push({kind:'base', catId:c.id, catName:c.name, typeId:t.id, typeName:t.name, size:t.size, scope:s, scopeName:paintScopeName(s), scoped:!!c.scoped, colorsInfo:paintColorsInfo(c,t,s), price});
+  renderPaintLines(); recalc();
+}
+// Flat list of extras (add-ons + the two oversize rows + repairs) for the dropdown.
+function paintExtras(){
+  const ex=[];
+  PAINT_PKG.addons.forEach(a=>ex.push({id:a.id, name:a.name, unit:+a.price||0, per:a.per}));
+  ['std','condo'].forEach(k=>{ const o=PAINT_PKG.oversize[k]; ex.push({id:o.id, name:o.name, unit:+o.price||0, per:o.per}); });
+  PAINT_PKG.repairs.forEach(r=>ex.push({id:r.id, name:`${r.name} — ${r.problem}`, unit:+r.price||0, per:r.per}));
+  return ex;
+}
+function paintExtraSel(){ const ex=paintExtras(); return ex[+(document.getElementById('pnt-extra')||{}).value||0] || ex[0]; }
+function paintExtraQty(){ return Math.max(1, parseInt((document.getElementById('pnt-extra-qty')||{}).value)||1); }
+function paintExtraPreview(){
+  const e=paintExtraSel(), q=paintExtraQty();
+  const pv=document.getElementById('pnt-extra-preview'); if(!pv) return;
+  pv.innerHTML=`<div class="cab-calc">${e.name}${q>1?` × ${q}`:''}${e.per?` (${e.per})`:''} → <b>RM ${fmt(e.unit*q)}</b></div>`;
+}
+function paintExtraAdd(){
+  const e=paintExtraSel(), q=paintExtraQty();
+  paintLines.push({kind:'extra', id:e.id, name:e.name, unit:e.unit, qty:q, per:e.per});
+  const qel=document.getElementById('pnt-extra-qty'); if(qel) qel.value='1';
+  paintExtraPreview(); renderPaintLines(); recalc();
 }
 function paintRemove(i){ paintLines.splice(i,1); renderPaintLines(); recalc(); }
+function paintLineAmount(l){ return l.kind==='extra' ? (+l.unit||0)*Math.max(1,+l.qty||1) : (+l.price||0); }
+function paintLineLabel(l){ return l.kind==='extra' ? l.name : `${l.catName} — ${l.typeName}`; }
 function paintDimStr(l){
-  const st=(+l.storeys>1)?` × ${l.storeys} storeys`:'';
-  if(l.W>0 && l.H>0) return `${dispFromFt(l.W,'paint')} × ${dispFromFt(l.H,'paint')} ${unitLabel('paint')} = ${(+l.sqft).toFixed(2)} sqft${st}`;
-  return `${(+l.sqft).toFixed(2)} sqft${st}`;
+  if(l.kind==='extra'){ const q=Math.max(1,+l.qty||1); const bits=[]; if(q>1) bits.push(`× ${q}`); if(l.per) bits.push(l.per); return bits.join(' · '); }
+  const parts=[`${l.size} build-up`];
+  if(l.scoped) parts.push(`${l.scopeName}${l.scope==='combo'?', 10% off':''}`);
+  if(l.colorsInfo) parts.push(l.colorsInfo);
+  return parts.join(' · ');
 }
 function renderPaintLines(){
   const box=document.getElementById('pnt-lines'); if(!box) return;
   if(!paintLines.length){ box.innerHTML='<div class="cab-empty">No painting added yet.</div>'; return; }
   box.innerHTML=paintLines.map((l,i)=>`<div class="cab-line">
-    <div class="cab-line-info"><b>${l.oname}</b><br><span class="cab-dim">${paintDimStr(l)}</span></div>
-    <div class="cab-amt">RM ${fmt(l.price)}</div>
+    <div class="cab-line-info"><b>${paintLineLabel(l)}</b><br><span class="cab-dim">${paintDimStr(l)}</span></div>
+    <div class="cab-amt">RM ${fmt(paintLineAmount(l))}</div>
     <button class="cab-x" title="Remove" onclick="paintRemove(${i})">✕</button>
   </div>`).join('');
 }
-// Simple per-sqft painting body (measure & auto-price).
-function paintBodyHtml(){
-  const optOpts=PAINT.map((o,i)=>`<option value="${i}">${o.name}</option>`).join('');
-  return `
-      <div class="cab-note">Pick a paint area, enter the area (sqft) or Width × Height — the price is auto-calculated. Set <b>Storeys</b> to 2 for a double-storey house (price ×2). House type / lot can be noted in Remarks.</div>
-      <div style="display:flex;justify-content:flex-end;margin:-4px 0 8px"><button type="button" class="edit-prices-btn" id="unitBtn-paint" onclick="toggleUnit('paint')">Units: FT</button></div>
-      <div class="cab-grid">
-        <label class="fld">Paint Area <select id="pnt-option" onchange="paintPreview()">${optOpts}</select></label>
-        <label class="fld">Area (sqft) <input id="pnt-area" type="number" min="0" step="0.1" oninput="paintPreview()"></label>
-      </div>
-      <div class="cab-grid3">
-        <label class="fld"><span>Width (<span class="ulin-paint">ft</span>)</span> <input id="pnt-W" type="number" min="0" step="0.1" oninput="paintCalcArea()"></label>
-        <label class="fld"><span>Height (<span class="ulin-paint">ft</span>)</span> <input id="pnt-H" type="number" min="0" step="0.1" oninput="paintCalcArea()"></label>
-        <label class="fld">Storeys <input id="pnt-storey" type="number" min="1" step="1" value="1" oninput="paintPreview()"></label>
-      </div>
-      <div class="cab-preview" id="pnt-preview"></div>
-      <button class="act b-primary" style="padding:11px 16px;font-size:13px" onclick="paintAdd()">+ Add Painting to Quote</button>
-      <div id="pnt-lines" style="margin-top:14px"></div>`;
-}
-// PAINTING card — Type selector: simple per-sqft painting + PG Painting Package.
+// PAINTING card — a single PG Painting Package (category → type → scope + extras).
 function paintCardHtml(){
+  const c0=PAINT_PKG.cats[0];
+  const catOpts=PAINT_PKG.cats.map((c,i)=>`<option value="${i}">${c.name}</option>`).join('');
+  const typeOpts=c0.types.map((t,i)=>`<option value="${i}">${t.name} (${t.size})</option>`).join('');
+  const extraOpts=paintExtras().map((e,i)=>`<option value="${i}">${e.name}</option>`).join('');
   return `
   <div class="cat" data-cat="paint">
     <div class="cat-hd" onclick="this.parentElement.classList.toggle('open')">
@@ -2059,20 +2168,32 @@ function paintCardHtml(){
       <span class="count zero" id="cnt-paint">0</span>
     </div>
     <div class="cat-bd">
+      <div class="cab-note">${PAINT_PKG.note}</div>
       <div class="cab-grid">
-        <label class="fld">Type <select id="pw-mode" onchange="pwModeChange()">
-          <option value="paint">Painting (measure &amp; price)</option>
-          <option value="pg_painting">PG Painting Package</option>
+        <label class="fld">Category <select id="pnt-cat" onchange="paintCatChange()">${catOpts}</select></label>
+        <label class="fld"><span id="pnt-typelabel">${c0.typeLabel}</span> <select id="pnt-type" onchange="paintTypeChange()">${typeOpts}</select></label>
+      </div>
+      <div class="cab-grid" id="pnt-scope-wrap">
+        <label class="fld">Scope <select id="pnt-scope" onchange="paintScopeChange()">
+          <option value="int">Interior</option>
+          <option value="ext">Exterior</option>
+          <option value="combo">Interior + Exterior (−10%)</option>
         </select></label>
       </div>
-      <div id="pw-body-paint" class="pw-body">${paintBodyHtml()}</div>
-      <div id="pw-body-pg_painting" class="pw-body" style="display:none">${pgBodyHtml('painting')}</div>
+      <div class="cab-preview" id="pnt-preview"></div>
+      <button class="act b-primary" style="padding:11px 16px;font-size:13px" onclick="paintAdd()">+ Add Package to Quote</button>
+
+      <div style="font-size:11.5px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.6px;margin:18px 0 8px">Add-ons &amp; Extras</div>
+      <div class="cab-grid">
+        <label class="fld">Add-on <select id="pnt-extra" onchange="paintExtraPreview()">${extraOpts}</select></label>
+        <label class="fld">Quantity <input id="pnt-extra-qty" type="number" min="1" step="1" value="1" oninput="paintExtraPreview()"></label>
+      </div>
+      <div class="cab-preview" id="pnt-extra-preview"></div>
+      <button class="act b-primary" style="padding:11px 16px;font-size:13px" onclick="paintExtraAdd()">+ Add Add-on to Quote</button>
+
+      <div id="pnt-lines" style="margin-top:14px"></div>
     </div>
   </div>`;
-}
-function pwModeChange(){
-  const m=(document.getElementById('pw-mode')||{}).value||'paint';
-  ['paint','pg_painting'].forEach(k=>{ const el=document.getElementById('pw-body-'+k); if(el) el.style.display=(k===m)?'':'none'; });
 }
 
 /* ============================================================
@@ -2160,9 +2281,7 @@ function renderCatalog(){
   { const oc=aluCat(); if(oc){ if(activeVariant[oc.id]===undefined) activeVariant[oc.id]=0; renderItems(oc); } }
   awModeChange();
   root.insertAdjacentHTML('beforeend', paintCardHtml());
-  renderPaintLines();
-  pgGroupChange('painting'); renderPgLines('painting');
-  pwModeChange();
+  paintCatChange(); paintPreview(); paintExtraPreview(); renderPaintLines();
   CATALOG.forEach((cat,ci)=>{
     if(cat.id==='other') return; // 'Aluminium Work' products are rendered inside the Aluminium Work card
     if(activeVariant[cat.id]===undefined) activeVariant[cat.id]=0;
@@ -2624,7 +2743,9 @@ function collectLines(){
     });
   });
   paintLines.forEach(l=>{
-    lines.push({cat:PAINT_CAT,variantName:'',label:l.oname,sub:paintDimStr(l),price:l.price,qty:1,amount:l.price});
+    const q=l.kind==='extra'?Math.max(1,+l.qty||1):1;
+    const unit=l.kind==='extra'?(+l.unit||0):(+l.price||0);
+    lines.push({cat:PAINT_CAT,variantName:'',label:paintLineLabel(l),sub:paintDimStr(l),price:unit,qty:q,amount:unit*q});
   });
   alucabLines.forEach(l=>{
     lines.push({cat:ALUCAB_CAT,variantName:'',label:l.oname,sub:alucabDimStr(l),price:l.price,qty:1,amount:l.price});
@@ -2658,7 +2779,7 @@ function recalc(){
   const _oc=aluCat(); let _othSel=0; if(_oc) _oc.items.forEach((it,idx)=>{ if((state[_oc.id+':'+idx]||0)>0) _othSel++; });
   const awN=pgVisLines('yard').length+_othSel;
   const awEl=document.getElementById('cnt-aluwork'); if(awEl){ awEl.textContent=awN; awEl.classList.toggle('zero',awN===0); }
-  const pntN=paintLines.length+pgVisLines('painting').length;
+  const pntN=paintLines.length;
   const pntEl=document.getElementById('cnt-paint');
   if(pntEl){pntEl.textContent=pntN;pntEl.classList.toggle('zero',pntN===0);}
   const aluEl=document.getElementById('cnt-alucab');
@@ -2711,7 +2832,7 @@ function buildDoc(){
 
   // group lines by category (cabinet groups first, then catalog categories)
   let rowsHtml='';
-  const order=[...CABINET.map(gp=>gp.name), ALUCAB_CAT, 'Iron Work', 'Aluminium Work', PAINT_CAT, 'Painting', ...CATALOG.map(c=>c.name), 'Other Services'];
+  const order=[...CABINET.map(gp=>gp.name), ALUCAB_CAT, 'Iron Work', 'Aluminium Work', PAINT_CAT, ...CATALOG.map(c=>c.name), 'Other Services'];
   const seen=new Set();
   order.forEach(cname=>{
     if(seen.has(cname)) return; seen.add(cname);
@@ -3246,7 +3367,6 @@ async function newQuote(){
   ['c_name','c_ic','c_unit','c_project','c_phone','c_email','c_remarks'].forEach(id=>document.getElementById(id).value='');
   document.querySelectorAll('#c_pics .pic-chk').forEach(c=>{ c.checked=false; });
   syncPicChips();
-  const _ps=document.getElementById('pnt-storey'); if(_ps) _ps.value='1';
   const _gc=document.getElementById('grl-color'); if(_gc) _gc.value='';
   document.getElementById('t_dep').value=0;
   document.getElementById('t_disc').value=0;
