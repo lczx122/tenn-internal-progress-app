@@ -209,8 +209,12 @@
   @media(min-width:560px){#catMenu{grid-template-columns:1fr 1fr 1fr}}
   .cat-tile{display:flex;align-items:center;justify-content:space-between;gap:8px;text-align:left;border:1px solid var(--line);border-radius:12px;background:#fbfcfe;padding:16px 14px;cursor:pointer;transition:.15s;min-height:58px}
   .cat-tile:hover{background:#f5f7fc;border-color:#c7d0e6}
-  .cat-tile .ct-name{font-family:'Archivo';font-weight:700;font-size:14px;line-height:1.25;color:var(--ink,#1a2240)}
+  .cat-tile .ct-ico{flex:0 0 auto;display:flex;color:var(--navy)}
+  .cat-tile .ct-ico svg{width:22px;height:22px}
+  .cat-tile .ct-name{flex:1;font-family:'Archivo';font-weight:700;font-size:14px;line-height:1.25;color:var(--ink,#1a2240)}
   .cat-tile .ct-count{flex:0 0 auto;font-size:11px;font-weight:700;color:#fff;background:var(--navy);border-radius:20px;padding:2px 9px;min-width:22px;text-align:center}
+  #catTitle .ct-ico{display:inline-flex;vertical-align:-5px;margin-right:7px;color:var(--navy)}
+  #catTitle .ct-ico svg{width:20px;height:20px}
   .cat-tile .ct-count.zero{background:#cfd5e4;color:#fff}
   .cat-noresults{font-size:13px;color:var(--muted);text-align:center;padding:18px 0}
   #catalog.detail .cat-hd{display:none}
@@ -2193,6 +2197,25 @@ function renderCatalog(){
    hidden) so the DOM-driven save serialization still sees all inputs. */
 let currentCat=null;  // null = grid menu; otherwise the open category's data-cat
 function catName(id){ const c=document.querySelector('#catalog .cat[data-cat="'+id+'"] .cname'); return c?c.textContent:''; }
+// Outline SVG per category, matching the app's bottom-nav icon style
+// (24×24, no fill, currentColor stroke, round joins). Keyed by data-cat id.
+function catIcon(id){
+  const s='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">';
+  const ic={
+    cabinet:'<rect x="4" y="3.5" width="16" height="17" rx="1.6"/><path d="M4 12h16"/><path d="M10.5 7.7h3M10.5 16.3h3"/>',
+    alucab:'<rect x="4" y="3.5" width="16" height="17" rx="1.6"/><path d="M12 3.5v17"/><path d="M9.7 10.5v3M14.3 10.5v3"/>',
+    ironwork:'<rect x="3.5" y="3.5" width="17" height="17" rx="1.6"/><path d="M9 3.5v17M15 3.5v17M3.5 9h17M3.5 15h17"/>',
+    aluwork:'<path d="M3 9l2.2-3.3h13.6L21 9"/><path d="M3 9h18"/><path d="M5.5 9v11M18.5 9v11"/>',
+    paint:'<rect x="3.5" y="4" width="12" height="5.5" rx="1.3"/><path d="M15.5 6.75H19V11h-7.5"/><rect x="9.5" y="11" width="4" height="8.5" rx="1.2"/>',
+    smarthome:'<path d="M3.5 11 12 3.5l8.5 7.5"/><path d="M5.5 9.8V20h13V9.8"/><path d="M9.8 16.2a3 3 0 0 1 4.4 0"/><circle cx="12" cy="18" r=".6" fill="currentColor" stroke="none"/>',
+    smartlock:'<rect x="5" y="10" width="14" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/><circle cx="12" cy="14.6" r="1.2"/><path d="M12 15.8v1.8"/>',
+    ee:'<path d="M13 2.5 4.5 13.5H11l-1 8 8.5-11H12l1-8Z"/>',
+    othersvc:'<rect x="3.5" y="3.5" width="17" height="17" rx="2.2"/><path d="M12 8.2v7.6M8.2 12h7.6"/>',
+    discount:'<circle cx="7.7" cy="7.7" r="2.1"/><circle cx="16.3" cy="16.3" r="2.1"/><path d="M18 6 6 18"/>',
+    'default':'<rect x="3.5" y="3.5" width="17" height="17" rx="2.4"/>'
+  };
+  return s+(ic[id]||ic['default'])+'</svg>';
+}
 // Build a tile per rendered category. data-search packs the card's text (option
 // labels + item names) so the search box finds products, not just category names.
 function buildCatMenu(){
@@ -2204,6 +2227,7 @@ function buildCatMenu(){
     const zero=cnt?cnt.classList.contains('zero'):true;
     const search=(c.textContent||'').toLowerCase().replace(/\s+/g,' ').replace(/"/g,'');
     h+=`<button type="button" class="cat-tile" data-cat="${id}" data-search="${search}" onclick="openCat('${id}')">
+      <span class="ct-ico">${catIcon(id)}</span>
       <span class="ct-name">${nm}</span>
       <span class="ct-count ${zero?'zero':''}" id="tile-cnt-${id}">${n}</span>
     </button>`;
@@ -2237,7 +2261,7 @@ function openCat(id){
   const sw=document.getElementById('catSearchWrap'); if(sw) sw.style.display='none';
   const nr=document.getElementById('catNoResults'); if(nr) nr.style.display='none';
   const back=document.getElementById('catBack'); if(back) back.style.display='flex';
-  const ttl=document.getElementById('catTitle'); if(ttl) ttl.textContent=catName(id);
+  const ttl=document.getElementById('catTitle'); if(ttl) ttl.innerHTML=`<span class="ct-ico">${catIcon(id)}</span>${catName(id)}`;
   document.querySelectorAll('#catalog .cat').forEach(c=>{
     const on=c.dataset.cat===id;
     c.style.display=on?'block':'none';
