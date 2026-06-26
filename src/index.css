@@ -26,6 +26,13 @@ body {
    translucent tints so they don't glare on dark cards.
    ============================================================ */
 .dark body { background: #0b1220; color: #e2e8f0; }
+/* native controls (date pickers, dropdown arrows, scrollbars) render dark */
+.dark { color-scheme: dark; }
+
+/* form controls: many inputs don't carry a bg-white class, so theme them all so
+   their text never ends up dark-on-dark (or light-on-white). */
+.dark input, .dark select, .dark textarea { background-color: #1e293b; color: #e7edf5; border-color: #3c4b63; }
+.dark input::placeholder, .dark textarea::placeholder { color: #8a9bb2; }
 
 /* surfaces */
 .dark .bg-white { background-color: #1e293b; }

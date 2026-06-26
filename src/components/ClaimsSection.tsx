@@ -93,7 +93,11 @@ export function ClaimsSection({
 
   const tradeRows = perTradeRows(job, claims)
 
-  const preview = resolve(mode, value, total)
+  // When a collection is tagged to a trade that has its own order amount, the
+  // percentage modes (50% / 100% / Custom %) are of THAT trade, not the whole unit.
+  const tradeOrder = workCat ? Number(job.order_by_category?.[workCat] || 0) : 0
+  const pctBase = tradeOrder > 0 ? tradeOrder : total
+  const preview = resolve(mode, value, pctBase)
   const needsValue = mode === 'Booking Fee / Deposit' || mode === 'Custom amount' || mode === 'Custom %'
 
   async function saveOrderTotal() {
@@ -345,7 +349,8 @@ export function ClaimsSection({
           <p className="mb-2 text-sm text-slate-500">
             {isPercentMode(mode) ? (
               <>
-                {mode === 'Custom %' ? `${parseFloat(value) || 0}%` : mode.replace(' Collected', '')} of {money(total)} ={' '}
+                {mode === 'Custom %' ? `${parseFloat(value) || 0}%` : mode.replace(' Collected', '')} of {money(pctBase)}
+                {tradeOrder > 0 && <span className="text-slate-400"> ({workCat})</span>} ={' '}
                 <span className="font-semibold text-slate-800">{money(preview.amount)}</span>
               </>
             ) : (
