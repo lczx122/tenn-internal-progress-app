@@ -1,8 +1,8 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
-import type { Claim, Job } from '../lib/types'
-import { collectedTotal, money } from '../lib/claims'
+import type { Claim, Job, JobWork } from '../lib/types'
+import { collectedTotal, money, perTradeRows, UNALLOCATED } from '../lib/claims'
 import { formatDate } from '../lib/format'
 import { Icon } from './Icon'
 
@@ -42,6 +42,7 @@ function resolve(mode: Mode, value: string, orderTotal: number) {
 export function ClaimsSection({
   job,
   claims,
+  works,
   displayName,
   session,
   isAdmin,
@@ -49,6 +50,7 @@ export function ClaimsSection({
 }: {
   job: Job
   claims: Claim[]
+  works: JobWork[]
   displayName: string
   session: Session | null
   isAdmin: boolean
@@ -59,12 +61,37 @@ export function ClaimsSection({
   const [value, setValue] = useState('')
   const [note, setNote] = useState('')
   const [date, setDate] = useState('')
+  const [workCat, setWorkCat] = useState('')
   const [busy, setBusy] = useState(false)
+
+  // The unit's trades: its work cards, plus any category that already has an
+  // order amount (e.g. seeded from a Sales Order but no card yet).
+  const tradeCats = useMemo(() => {
+    const out: string[] = []
+    const seen = new Set<string>()
+    for (const w of works) {
+      const c = (w.category || '').trim()
+      if (c && !seen.has(c)) { seen.add(c); out.push(c) }
+    }
+    for (const k of Object.keys(job.order_by_category ?? {})) {
+      if (!seen.has(k)) { seen.add(k); out.push(k) }
+    }
+    return out
+  }, [works, job.order_by_category])
+
+  const [showByTrade, setShowByTrade] = useState(false)
+  const [obc, setObc] = useState<Record<string, string>>(() => {
+    const o: Record<string, string> = {}
+    for (const [k, v] of Object.entries(job.order_by_category ?? {})) o[k] = v ? String(v) : ''
+    return o
+  })
 
   const total = Number(orderTotal) || 0
   const collected = collectedTotal(claims)
   const balance = total - collected
   const pct = total > 0 ? Math.min(100, Math.round((collected / total) * 100)) : 0
+
+  const tradeRows = perTradeRows(job, claims)
 
   const preview = resolve(mode, value, total)
   const needsValue = mode === 'Booking Fee / Deposit' || mode === 'Custom amount' || mode === 'Custom %'
@@ -78,6 +105,23 @@ export function ClaimsSection({
     setBusy(false)
   }
 
+  async function saveOrderByTrade() {
+    const map: Record<string, number> = {}
+    let sum = 0
+    for (const c of tradeCats) {
+      const v = Number(obc[c] || 0) || 0
+      if (v > 0) { map[c] = v; sum += v }
+    }
+    setBusy(true)
+    await supabase
+      .from('jobs')
+      .update({ order_by_category: map, order_total: sum, updated_by: displayName })
+      .eq('id', job.id)
+    setOrderTotal(String(sum || ''))
+    await onChange()
+    setBusy(false)
+  }
+
   async function addClaim() {
     if (!(preview.amount > 0)) {
       alert('Enter an amount greater than zero.')
@@ -87,6 +131,7 @@ export function ClaimsSection({
     await supabase.from('claims').insert({
       job_id: job.id,
       category: preview.category,
+      work_category: workCat || null,
       amount: preview.amount,
       percent: preview.percent,
       note: note.trim(),
@@ -159,6 +204,74 @@ export function ClaimsSection({
         <div className="h-full rounded-full bg-emerald-500 transition-all" style={{ width: `${pct}%` }} />
       </div>
 
+      {/* Per-trade breakdown */}
+      {tradeRows.length > 0 && (
+        <div className="mb-4 overflow-hidden rounded-lg border border-slate-200">
+          <table className="w-full table-fixed text-xs">
+            <thead>
+              <tr className="border-b border-slate-200 bg-slate-50 text-slate-500">
+                <th className="px-2 py-1.5 text-left font-semibold">By trade</th>
+                <th className="px-2 py-1.5 text-right font-semibold">Order</th>
+                <th className="px-2 py-1.5 text-right font-semibold">Collected</th>
+                <th className="px-2 py-1.5 text-right font-semibold">Balance</th>
+              </tr>
+            </thead>
+            <tbody>
+              {tradeRows.map((r) => (
+                <tr key={r.cat} className="border-b border-slate-100 last:border-0">
+                  <td className="truncate px-2 py-1.5 font-medium text-slate-700">{r.cat}</td>
+                  <td className="px-2 py-1.5 text-right tabular-nums text-slate-600">{r.order ? money(r.order) : '—'}</td>
+                  <td className="px-2 py-1.5 text-right tabular-nums font-medium text-emerald-700">{money(r.collected)}</td>
+                  <td className={'px-2 py-1.5 text-right tabular-nums ' + (r.balance > 0 ? 'font-medium text-amber-700' : 'text-slate-400')}>
+                    {r.cat === UNALLOCATED ? '—' : money(r.balance)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Order-by-trade editor */}
+      {tradeCats.length > 0 && (
+        <div className="mb-4">
+          <button
+            onClick={() => setShowByTrade((s) => !s)}
+            className="text-xs font-medium text-slate-500 active:text-slate-700"
+          >
+            {showByTrade ? '▾' : '▸'} Set order amount by trade
+          </button>
+          {showByTrade && (
+            <div className="mt-2 space-y-2 rounded-lg border border-slate-200 p-3">
+              {tradeCats.map((c) => (
+                <div key={c} className="flex items-center gap-2">
+                  <span className="min-w-0 flex-1 truncate text-sm text-slate-600">{c}</span>
+                  <div className="relative w-36 shrink-0">
+                    <span className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-slate-400">RM</span>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={obc[c] ?? ''}
+                      onChange={(e) => setObc({ ...obc, [c]: e.target.value })}
+                      className="w-full rounded-lg border border-slate-300 py-1.5 pl-8 pr-2 text-sm outline-none focus:border-slate-900"
+                      placeholder="0.00"
+                    />
+                  </div>
+                </div>
+              ))}
+              <button
+                onClick={saveOrderByTrade}
+                disabled={busy}
+                className="w-full rounded-lg bg-slate-900 py-2 text-sm font-medium text-white active:bg-slate-700 disabled:opacity-50"
+              >
+                Save order by trade (sets the total)
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Claim list */}
       {claims.length > 0 && (
         <ul className="mb-4 space-y-2">
@@ -168,6 +281,7 @@ export function ClaimsSection({
                 <p className="text-sm font-medium text-slate-800">
                   {c.category}
                   {c.percent != null && <span className="text-slate-400"> · {c.percent}%</span>}
+                  {c.work_category && <span className="text-slate-400"> · {c.work_category}</span>}
                 </p>
                 <p className="text-xs text-slate-400">
                   {c.collected_on ? formatDate(c.collected_on) : formatDate(c.created_at)}
@@ -198,6 +312,17 @@ export function ClaimsSection({
             </option>
           ))}
         </select>
+
+        {tradeCats.length > 0 && (
+          <select value={workCat} onChange={(e) => setWorkCat(e.target.value)} className={`${inp} mb-2`}>
+            <option value="">For: whole unit (unallocated)</option>
+            {tradeCats.map((c) => (
+              <option key={c} value={c}>
+                For: {c}
+              </option>
+            ))}
+          </select>
+        )}
 
         {needsValue && (
           <div className="relative mb-2">

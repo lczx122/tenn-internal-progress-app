@@ -2827,28 +2827,32 @@ function syncPicChips(){
 }
 
 /* ---------- totals + summary ---------- */
+// Resolve a WORK_MAP key (or fall back) to the single work-category name a line
+// belongs to — used to attach `wcat` to each line so the SO can report per-trade
+// order totals (payload.category_totals).
+function wmap(key,fb){ const a=WORK_MAP[key]; return (a&&a[0])||fb; }
 function collectLines(){
   const lines=[];
   // cabinet lines first (qty 1 each; dimensions stored in sub)
   cabinetLines.forEach(l=>{
-    lines.push({cat:l.gname,variantName:'',label:l.oname,sub:dimStr(l),price:l.price,qty:1,amount:l.price});
+    lines.push({cat:l.gname,wcat:wmap('cab:'+l.gid,'Mindhome'),variantName:'',label:l.oname,sub:dimStr(l),price:l.price,qty:1,amount:l.price});
   });
   grillLines.forEach(l=>{
-    lines.push({cat:l.gname,variantName:'',label:l.oname,sub:grillDimStr(l),price:l.price,qty:1,amount:l.price});
+    lines.push({cat:l.gname,wcat:wmap('grill:'+l.gid,'Iron Work'),variantName:'',label:l.oname,sub:grillDimStr(l),price:l.price,qty:1,amount:l.price});
   });
   PG_PACKAGES.forEach(P=>{
     pgVisLines(P.id).forEach(l=>{
       const unit=pgLinePrice(P.id,l); const q=pgLineQty(l);
-      lines.push({cat:P.cat,variantName:'',label:pgLineLabel(P.id,l),sub:pgDimStr(l,P.id),price:unit,qty:q,amount:unit*q});
+      lines.push({cat:P.cat,wcat:P.cat,variantName:'',label:pgLineLabel(P.id,l),sub:pgDimStr(l,P.id),price:unit,qty:q,amount:unit*q});
     });
   });
   paintLines.forEach(l=>{
     const q=l.kind==='extra'?Math.max(1,+l.qty||1):1;
     const unit=l.kind==='extra'?(+l.unit||0):(+l.price||0);
-    lines.push({cat:PAINT_CAT,variantName:'',label:paintLineLabel(l),sub:paintDimStr(l),price:unit,qty:q,amount:unit*q});
+    lines.push({cat:PAINT_CAT,wcat:'Painting',variantName:'',label:paintLineLabel(l),sub:paintDimStr(l),price:unit,qty:q,amount:unit*q});
   });
   alucabLines.forEach(l=>{
-    lines.push({cat:ALUCAB_CAT,variantName:'',label:l.oname,sub:alucabDimStr(l),price:l.price,qty:1,amount:l.price});
+    lines.push({cat:ALUCAB_CAT,wcat:wmap('alucab','Aluminium Cabinet'),variantName:'',label:l.oname,sub:alucabDimStr(l),price:l.price,qty:1,amount:l.price});
   });
   CATALOG.forEach(cat=>{
     cat.items.forEach((it,idx)=>{
@@ -2856,12 +2860,18 @@ function collectLines(){
       const qty=state[key];
       if(qty>0){
         const variantName = cat.variants.length?cat.variants[it.v]:'';
-        lines.push({cat:cat.name,variantName,label:it.label,sub:it.sub||'',price:it.price,qty,amount:qty*it.price});
+        lines.push({cat:cat.name,wcat:wmap(cat.id,cat.name),variantName,label:it.label,sub:it.sub||'',price:it.price,qty,amount:qty*it.price});
       }
     });
   });
-  customLines.forEach(l=>{ const amt=+l.price||0; lines.push({cat:'Other Services',variantName:'',label:escHtml(l.name),sub:'',price:amt,qty:1,amount:amt}); });
+  customLines.forEach(l=>{ const amt=+l.price||0; lines.push({cat:'Other Services',wcat:'Other Services',variantName:'',label:escHtml(l.name),sub:'',price:amt,qty:1,amount:amt}); });
   return lines;
+}
+// Sum line amounts per work category (for payload.category_totals → per-trade order).
+function categoryTotals(lines){
+  const out={};
+  (lines||[]).forEach(l=>{ const k=l.wcat||l.cat; if(!k) return; out[k]=(out[k]||0)+(+l.amount||0); });
+  return out;
 }
 
 function recalc(){
@@ -3155,6 +3165,8 @@ async function saveQuote(){
     variants:Object.assign({},activeVariant),
     // Explicit unit work cards to open when this becomes a Sales Order.
     work_categories:computeWorkCategories(),
+    // Per-work-category order subtotals → seeds the unit's order_by_category.
+    category_totals:categoryTotals(lines),
     // Person(s) in charge — written to the unit's pics[] by the SO trigger.
     pics:selectedPics(),
     units:{cab:UNITS.cab,grill:UNITS.grill,paint:UNITS.paint,alu:UNITS.alu}, ver:2,

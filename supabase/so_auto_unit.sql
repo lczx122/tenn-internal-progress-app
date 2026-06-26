@@ -85,12 +85,15 @@ declare
   v_key       text;
   v_added     int := 0;
   v_pics      text[] := '{}';
+  v_cat_totals jsonb;
+  v_curr      jsonb;
 begin
   if new.doc_type <> 'SO' or new.unit_id is not null then
     return new;
   end if;
 
-  v_project   := nullif(trim(coalesce(new.payload->>'project','')), '');
+  v_project    := nullif(trim(coalesce(new.payload->>'project','')), '');
+  v_cat_totals := coalesce(new.payload->'category_totals', '{}'::jsonb);
   v_unit_norm := lower(regexp_replace(coalesce(new.unit,''), '[^a-z0-9]', '', 'g'));
 
   -- Person(s) in charge: the quote tool sends payload.pics (an array). Fall back
@@ -153,6 +156,21 @@ begin
       values (v_job, 'note',
               'Linked Sales Order ' || new.number,
               coalesce(nullif(new.prepared_by, ''), 'System'));
+  end if;
+
+  -- Seed / accumulate per-trade order amounts from the document's category_totals
+  -- (work category -> RM). Existing keys are added to, so multiple SOs on one unit
+  -- accumulate the same way order_total does.
+  if jsonb_typeof(v_cat_totals) = 'object' then
+    select coalesce(order_by_category, '{}'::jsonb) into v_curr from public.jobs where id = v_job;
+    for v_key in select jsonb_object_keys(v_cat_totals) loop
+      v_curr := jsonb_set(
+        v_curr, array[v_key],
+        to_jsonb(round(coalesce((v_curr->>v_key)::numeric, 0)
+                     + coalesce((v_cat_totals->>v_key)::numeric, 0), 2)),
+        true);
+    end loop;
+    update public.jobs set order_by_category = v_curr where id = v_job;
   end if;
 
   -- Add the work cards the document specifies (resolved in-app), skipping any

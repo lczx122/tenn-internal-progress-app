@@ -236,6 +236,7 @@ export default function JobDetail() {
       <ClaimsSection
         job={job}
         claims={claims}
+        works={works}
         displayName={displayName}
         session={session}
         isAdmin={isAdmin}

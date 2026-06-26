@@ -1,11 +1,12 @@
-import { useEffect, useMemo, useState } from 'react'
+import { Fragment, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import type { Claim, Job } from '../lib/types'
 import { Layout } from '../components/Layout'
 import { CLAIM_CATEGORIES } from '../lib/units'
-import { money, sumByCategory } from '../lib/claims'
+import { CATEGORIES } from '../lib/categories'
+import { money, sumByCategory, perTradeRows, UNALLOCATED } from '../lib/claims'
 import { useAutoRefresh } from '../lib/useAutoRefresh'
 import { FinanceToggle } from '../components/FinanceToggle'
 import { cacheGet, cacheSet } from '../lib/pageCache'
@@ -19,6 +20,7 @@ export default function Claims() {
   const [query, setQuery] = useState('')
   const [project, setProject] = useState('')
   const [scope, setScope] = useState<'mine' | 'all' | null>(null)
+  const [expanded, setExpanded] = useState<Set<string>>(new Set())
   const { isAdmin, staffPic } = useAuth()
   // Default to the signed-in staffer's own collection (if their PIC is set);
   // admins (and anyone without a PIC) default to everything.
@@ -120,6 +122,37 @@ export default function Claims() {
     return { order, collected, balance: order - collected }
   }, [rows])
 
+  // Collected & balance per work category, summed across the visible units —
+  // order from each unit's order_by_category, collected from tagged claims.
+  const tradeAgg = useMemo(() => {
+    const order: Record<string, number> = {}
+    const collected: Record<string, number> = {}
+    for (const r of rows) {
+      for (const [k, v] of Object.entries(r.job.order_by_category ?? {})) order[k] = (order[k] ?? 0) + Number(v || 0)
+      for (const c of claimsByJob.get(r.job.id) ?? []) {
+        const k = (c.work_category && String(c.work_category).trim()) || UNALLOCATED
+        collected[k] = (collected[k] ?? 0) + Number(c.amount || 0)
+      }
+    }
+    const cats = new Set<string>([...Object.keys(order), ...Object.keys(collected)])
+    cats.delete(UNALLOCATED)
+    const ordered = CATEGORIES.map((c) => c.key).filter((k) => cats.has(k))
+    for (const k of cats) if (!ordered.includes(k)) ordered.push(k)
+    const out = ordered.map((k) => ({ cat: k, order: order[k] ?? 0, collected: collected[k] ?? 0, balance: (order[k] ?? 0) - (collected[k] ?? 0) }))
+    if (collected[UNALLOCATED]) out.push({ cat: UNALLOCATED, order: 0, collected: collected[UNALLOCATED], balance: 0 })
+    return out
+  }, [rows, claimsByJob])
+  const hasTradeData = tradeAgg.some((r) => r.cat !== UNALLOCATED)
+
+  function toggleExpand(id: string) {
+    setExpanded((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
   const pct = (collected: number, order: number) =>
     order > 0 ? Math.round((collected / order) * 100) + '%' : '—'
   // Compact RM (rounded, no cents) so the table fits any phone without sideways
@@ -192,6 +225,35 @@ export default function Claims() {
         />
       </div>
 
+      {/* Collected & balance per work category, across the active project + scope */}
+      {hasTradeData && (
+        <div className="mb-4 overflow-hidden rounded-xl bg-white shadow-sm">
+          <div className="border-b border-slate-200 px-3 py-2 text-xs font-semibold text-slate-500">Collected by trade</div>
+          <table className="w-full table-fixed text-xs">
+            <thead>
+              <tr className="border-b border-slate-200">
+                <th className="px-2 py-2 text-left text-xs font-semibold text-slate-500">Trade</th>
+                <th className={head + ' w-[84px]'}>Order</th>
+                <th className={head + ' w-[84px]'}>Collect</th>
+                <th className={head + ' w-[84px]'}>Bal.</th>
+              </tr>
+            </thead>
+            <tbody>
+              {tradeAgg.map((t) => (
+                <tr key={t.cat} className="border-b border-slate-100 last:border-0">
+                  <td className="truncate px-2 py-2 font-medium text-slate-700">{t.cat}</td>
+                  <td className={num + ' text-slate-600'}>{t.order ? rm(t.order) : '—'}</td>
+                  <td className={num + ' font-semibold text-emerald-700'}>{rm(t.collected)}</td>
+                  <td className={num + (t.cat === UNALLOCATED ? ' text-slate-400' : t.balance > 0 ? ' font-semibold text-amber-700' : ' text-slate-400')}>
+                    {t.cat === UNALLOCATED ? '—' : rm(t.balance)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
       {loading ? (
         <p className="py-10 text-center text-slate-400">Loading…</p>
       ) : rows.length === 0 ? (
@@ -211,26 +273,65 @@ export default function Claims() {
               </tr>
             </thead>
             <tbody>
-              {rows.map((r) => (
-                <tr
-                  key={r.job.id}
-                  onClick={() => navigate(`/job/${r.job.id}`)}
-                  className="cursor-pointer border-b border-slate-100 last:border-0 hover:bg-slate-50"
-                >
-                  <td className="px-2 py-2">
-                    <div className="truncate font-medium text-slate-800">
-                      {r.job.customer_name || r.job.unit_code || '—'}
-                    </div>
-                    {r.job.unit_code && <div className="truncate text-[11px] text-slate-400">{r.job.unit_code}</div>}
-                  </td>
-                  <td className={num + ' text-slate-700'}>{r.order ? rm(r.order) : '—'}</td>
-                  <td className={num + ' font-semibold text-emerald-700'}>{rm(r.collected)}</td>
-                  <td className={num + ' text-slate-500'}>{pct(r.collected, r.order)}</td>
-                  <td className={num + (r.balance > 0 ? ' font-semibold text-amber-700' : ' text-slate-400')}>
-                    {rm(r.balance)}
-                  </td>
-                </tr>
-              ))}
+              {rows.map((r) => {
+                const isOpen = expanded.has(r.job.id)
+                const trades = perTradeRows(r.job, claimsByJob.get(r.job.id) ?? [])
+                return (
+                  <Fragment key={r.job.id}>
+                    <tr className="border-b border-slate-100 last:border-0 hover:bg-slate-50">
+                      <td className="px-2 py-2">
+                        <div className="flex items-start gap-1.5">
+                          <button
+                            onClick={() => toggleExpand(r.job.id)}
+                            className="mt-0.5 shrink-0 text-slate-400 active:text-slate-700"
+                            title={isOpen ? 'Hide trades' : 'Show trades'}
+                          >
+                            <span className={'inline-block transition-transform ' + (isOpen ? 'rotate-90' : '')}>▸</span>
+                          </button>
+                          <div className="min-w-0 cursor-pointer" onClick={() => navigate(`/job/${r.job.id}`)}>
+                            <div className="truncate font-medium text-slate-800">
+                              {r.job.customer_name || r.job.unit_code || '—'}
+                            </div>
+                            {r.job.unit_code && <div className="truncate text-[11px] text-slate-400">{r.job.unit_code}</div>}
+                          </div>
+                        </div>
+                      </td>
+                      <td className={num + ' text-slate-700'}>{r.order ? rm(r.order) : '—'}</td>
+                      <td className={num + ' font-semibold text-emerald-700'}>{rm(r.collected)}</td>
+                      <td className={num + ' text-slate-500'}>{pct(r.collected, r.order)}</td>
+                      <td className={num + (r.balance > 0 ? ' font-semibold text-amber-700' : ' text-slate-400')}>
+                        {rm(r.balance)}
+                      </td>
+                    </tr>
+                    {isOpen && (
+                      <tr className="border-b border-slate-100 bg-slate-50/60">
+                        <td colSpan={5} className="px-2 py-1.5">
+                          {trades.length === 0 ? (
+                            <p className="py-1 text-[11px] text-slate-400">
+                              No per-trade breakdown yet — set order amounts by trade on the unit.
+                            </p>
+                          ) : (
+                            <table className="w-full table-fixed">
+                              <tbody>
+                                {trades.map((t) => (
+                                  <tr key={t.cat} className="text-[11px]">
+                                    <td className="truncate py-0.5 pl-5 pr-2 text-slate-500">{t.cat}</td>
+                                    <td className={num + ' w-[84px] text-slate-500'}>{t.order ? rm(t.order) : '—'}</td>
+                                    <td className={num + ' w-[84px] text-emerald-700'}>{rm(t.collected)}</td>
+                                    <td className={num + ' w-[84px] ' + (t.cat === UNALLOCATED ? 'text-slate-400' : t.balance > 0 ? 'text-amber-700' : 'text-slate-400')}>
+                                      {t.cat === UNALLOCATED ? '—' : rm(t.balance)}
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          )}
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
+                )
+              })}
             </tbody>
             <tfoot>
               <tr className="border-t-2 border-slate-200 bg-slate-50 font-semibold">

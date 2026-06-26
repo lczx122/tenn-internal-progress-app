@@ -21,6 +21,9 @@ export interface Job {
   pics: string[]
   key_holder_type: string
   order_total: number
+  // Per-trade order amounts (work category -> RM). Seeded from a Sales Order's
+  // category_totals and/or entered per trade on the unit. Empty = not broken down.
+  order_by_category?: Record<string, number>
 }
 
 export interface Project {
@@ -33,7 +36,8 @@ export interface Project {
 export interface Claim {
   id: string
   job_id: string
-  category: string // one of CLAIM_CATEGORIES
+  category: string // one of CLAIM_CATEGORIES (payment stage)
+  work_category?: string | null // the trade this collection is for (null = Unallocated)
   amount: number // resolved RM collected
   percent: number | null // set when entered as a % of the order total
   note: string
