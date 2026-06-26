@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import { useAuth } from '../contexts/AuthContext'
 import type { Claim, Job } from '../lib/types'
 import { Layout } from '../components/Layout'
 import { CLAIM_CATEGORIES } from '../lib/units'
@@ -17,6 +18,11 @@ export default function Claims() {
   const [loading, setLoading] = useState(!c0)
   const [query, setQuery] = useState('')
   const [project, setProject] = useState('')
+  const [scope, setScope] = useState<'mine' | 'all' | null>(null)
+  const { isAdmin, staffPic } = useAuth()
+  // Default to the signed-in staffer's own collection (if their PIC is set);
+  // admins (and anyone without a PIC) default to everything.
+  const effectiveScope: 'mine' | 'all' = scope ?? (!isAdmin && staffPic ? 'mine' : 'all')
   const navigate = useNavigate()
 
   async function load() {
@@ -66,6 +72,10 @@ export default function Claims() {
   const baseRows = useMemo(() => {
     const q = query.trim().toLowerCase()
     return jobs
+      .filter(
+        (j) =>
+          effectiveScope === 'all' || !staffPic || j.pics?.includes(staffPic) || j.pic === staffPic,
+      )
       .map((j) => {
         const list = claimsByJob.get(j.id) ?? []
         const byCat = sumByCategory(list)
@@ -81,7 +91,7 @@ export default function Claims() {
           r.job.unit_code.toLowerCase().includes(q) ||
           r.job.project.toLowerCase().includes(q),
       )
-  }, [jobs, claimsByJob, query])
+  }, [jobs, claimsByJob, query, effectiveScope, staffPic])
 
   // One spreadsheet per project, switchable with chips.
   const projects = useMemo(() => {
@@ -122,6 +132,26 @@ export default function Claims() {
   return (
     <Layout title="Collection" bottomNav wide onRefresh={load}>
       <FinanceToggle current="collection" />
+
+      {staffPic && (
+        <div className="mb-3 flex gap-2">
+          {(['mine', 'all'] as const).map((s) => (
+            <button
+              key={s}
+              onClick={() => setScope(s)}
+              className={
+                'flex-1 rounded-lg border px-2 py-2 text-sm font-medium ' +
+                (effectiveScope === s
+                  ? 'border-slate-900 bg-slate-900 text-white'
+                  : 'border-slate-300 bg-white text-slate-600 active:bg-slate-50')
+              }
+            >
+              {s === 'mine' ? 'My collection' : 'All collections'}
+            </button>
+          ))}
+        </div>
+      )}
+
       <div className="mb-3">
         <input
           value={query}
