@@ -70,7 +70,7 @@ export function Layout({
   const progress = Math.min(1, pull / PULL_THRESHOLD)
 
   return (
-    <div className="flex h-[var(--app-h,100dvh)] min-h-full flex-col overflow-hidden lg:h-screen lg:flex-row">
+    <div className="flex h-[var(--app-h,100dvh)] min-h-full flex-col overflow-hidden lg:fixed lg:inset-0 lg:h-auto lg:flex-row">
       <Sidebar />
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         <AppHeader title={title} back={back} wide={wide} />
@@ -102,14 +102,6 @@ export function Layout({
         {bottomNav && <BottomNav />}
       </div>
       <PaymentButton />
-      {/* Tablet/desktop: the area under the home indicator (viewport-fit=cover)
-          isn't reachable by the shell on iPad, so it shows the white body. Paint
-          that strip to match the sidebar (left) and content (right). 0-height
-          where there's no safe-area inset (desktop), so it's invisible there. */}
-      <div className="pointer-events-none fixed inset-x-0 bottom-0 z-30 hidden h-[env(safe-area-inset-bottom)] lg:flex">
-        <div className="w-60 shrink-0 bg-slate-900" />
-        <div className="flex-1 bg-slate-100" />
-      </div>
     </div>
   )
 }
