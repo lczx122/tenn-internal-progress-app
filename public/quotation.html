@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Tenn Fasteners — Quotation Generator</title>
+<!-- Match the parent app's theme (passed as ?theme=dark) before first paint. -->
+<script>try{if(new URLSearchParams(location.search).get('theme')==='dark')document.documentElement.classList.add('dark');}catch(e){}</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
@@ -370,6 +372,68 @@
   .sigcol .sigline{margin-top:64px;border-top:1px solid #333}
   .sigcol .snm{margin-top:7px;font-size:11px;color:#555}
   .hint{font-size:12px;color:var(--muted);margin-top:14px;text-align:center}
+
+  /* ============================================================
+     DARK MODE — redefine the palette vars + override the hardcoded light
+     builder surfaces. The printable .doc preview keeps light-theme vars so the
+     generated quotation/SO always looks like paper. Applied via ?theme=dark.
+     ============================================================ */
+  html.dark{
+    --ink:#e7edf5; --muted:#9aa6bb; --line:#334155;
+    --bg:#0b1220; --card:#1e293b; --accent-soft:rgba(200,16,46,.22);
+    --shadow:0 1px 2px rgba(0,0,0,.35),0 10px 28px rgba(0,0,0,.45);
+  }
+  html.dark input,html.dark select,html.dark textarea{background:#0f1828;color:var(--ink)}
+  html.dark .cat{background:var(--card)}
+  html.dark .cat-hd{background:#202c42}
+  html.dark .cat-hd:hover{background:#26344e}
+  html.dark .cat-tile{background:#202c42}
+  html.dark .cat-tile:hover{background:#26344e;border-color:#3c4b63}
+  html.dark .count.zero,html.dark .ct-count.zero{background:#3c4b63}
+  html.dark .cab-preview{background:#16213a}
+  html.dark .cab-line{background:#16213a}
+  html.dark .cab-empty{color:var(--muted)}
+  html.dark .doctype{background:var(--card)}
+  html.dark .dt:hover:not(.active){background:#26344e}
+  html.dark .pe-tab{background:#202c42}
+  html.dark .pe-tab:hover{background:#26344e}
+  html.dark .pe-pill{background:rgba(255,255,255,.12);color:#cbd5e1}
+  html.dark .pe-search-clear{background:#26344e;color:#cbd5e1}
+  html.dark .pe-item{border-bottom-color:#2a3650}
+  html.dark .vtab{background:var(--card)}
+  html.dark .b-ghost{background:var(--card)}
+  html.dark .b-ghost:hover{background:#26344e}
+  html.dark .b-clear{background:var(--card)}
+  html.dark #c_pics label{background:#202c42;border-color:#334155;color:#cbd5e1}
+  html.dark #c_pics label.on{background:#e2e8f0;border-color:#e2e8f0;color:#0f172a}
+  html.dark .fed-card{background:var(--card)}
+  html.dark .fed-input{background:#0f1828}
+  html.dark .fed-cancel{background:var(--card)}
+  /* navy is used as a TEXT colour in many builder spots — lighten it on dark */
+  html.dark .card .hd h2,
+  html.dark .pe-cat-hd h3,
+  html.dark .pe-cab-name,
+  html.dark .cab-preview .cab-calc,
+  html.dark .cab-amt,
+  html.dark .it-amt,
+  html.dark .grand,
+  html.dark .cat-tile .ct-ico,
+  html.dark #catTitle .ct-ico,
+  html.dark .cat-back-btn,
+  html.dark .b-ghost,
+  html.dark .ui-confirm-msg{color:#b9c8ee}
+  html.dark .sum-items{background:#16213a}
+  html.dark .pe-chip{background:rgba(96,140,230,.16);border-color:#33507e;color:#b9c8ee}
+  html.dark .pe-additem{background:var(--card);color:#b9c8ee;border-color:#3c4b63}
+  html.dark .cat-back-btn{background:#202c42}
+  html.dark .disc-row.on{background:rgba(96,140,230,.14)}
+  html.dark .cab-warn{background:rgba(245,158,11,.14);border-color:#7c5e1e;color:#fcd34d}
+  html.dark .cab-warn code{background:rgba(245,158,11,.22)}
+  /* preview modal: dark backdrop around the white paper; price-editor gets a solid dark panel */
+  html.dark .modal-inner{background:transparent}
+  html.dark #priceModal .modal-inner{background:var(--card)}
+  /* the generated document always renders light-themed (paper) */
+  html.dark .doc{ --ink:#1a1c22; --muted:#6b7280; --line:#e3e6ee; --card:#ffffff; --bg:#ffffff; color:#1a1c22; background:#fff; }
 </style>
 </head>
 <body>

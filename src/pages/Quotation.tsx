@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom'
 import { AppHeader } from '../components/Layout'
 import { BottomNav } from '../components/BottomNav'
 import { Sidebar } from '../components/Sidebar'
+import { resolvedTheme } from '../lib/theme'
 
 // The quotation / sales-order generator is a self-contained static tool at
 // public/quotation.html. It's embedded full-width here under the app's standard
@@ -22,6 +23,7 @@ export default function Quotation() {
   const usp = new URLSearchParams(params)
   usp.set('embed', '1')
   usp.set('v', cacheBust)
+  usp.set('theme', resolvedTheme())
   const qs = usp.toString()
   const src = `/quotation.html?${qs}`
   return (
