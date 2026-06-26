@@ -6,7 +6,11 @@
     <meta name="theme-color" content="#0f172a" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <!-- "black" (not the deprecated "black-translucent"): black-translucent +
+         viewport-fit=cover shifts the document up and leaves a white strip at
+         the bottom on iOS standalone (esp. iPad). "black" keeps the dark status
+         bar without the translucent overlay, so no shift / no bottom strip. -->
+    <meta name="apple-mobile-web-app-status-bar-style" content="black" />
     <meta name="apple-mobile-web-app-title" content="Tenn Renovation" />
     <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="icon" type="image/png" href="/icons/icon-192.png" />
