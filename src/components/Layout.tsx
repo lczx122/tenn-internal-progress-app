@@ -102,6 +102,14 @@ export function Layout({
         {bottomNav && <BottomNav />}
       </div>
       <PaymentButton />
+      {/* Tablet/desktop: the area under the home indicator (viewport-fit=cover)
+          isn't reachable by the shell on iPad, so it shows the white body. Paint
+          that strip to match the sidebar (left) and content (right). 0-height
+          where there's no safe-area inset (desktop), so it's invisible there. */}
+      <div className="pointer-events-none fixed inset-x-0 bottom-0 z-30 hidden h-[env(safe-area-inset-bottom)] lg:flex">
+        <div className="w-60 shrink-0 bg-slate-900" />
+        <div className="flex-1 bg-slate-100" />
+      </div>
     </div>
   )
 }
