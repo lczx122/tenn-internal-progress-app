@@ -29,6 +29,7 @@ export const STAFF_PICS = [
   'Angel',
   'Melissa',
   'CAM',
+  'Others',
 ] as const
 
 // Relationship to the owner when the contact person is not the owner.
