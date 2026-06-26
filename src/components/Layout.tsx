@@ -5,6 +5,7 @@ import { BottomNav } from './BottomNav'
 import { Sidebar } from './Sidebar'
 import { AnnouncementBanner } from './AnnouncementBanner'
 import { PaymentButton } from './PaymentButton'
+import { Icon } from './Icon'
 import { usePullToRefresh, PULL_THRESHOLD } from '../lib/usePullToRefresh'
 
 // Content-width helper: phones use a comfortable single column; tablet/desktop
@@ -24,17 +25,15 @@ export function AppHeader({ title, back, wide }: { title: string; back?: ReactNo
       <div className={`mx-auto flex w-full items-center gap-3 px-4 py-3 lg:px-8 ${contentWidth(wide)}`}>
         {back}
         <h1 className="flex-1 truncate text-lg font-semibold">{title}</h1>
-        {isAdmin ? (
-          <Link to="/staff" className="text-right active:opacity-70 lg:hidden" title="Staff & roles">
-            <div className="text-xs leading-tight text-amber-300">Admin ⚙︎</div>
-            <div className="text-sm font-medium leading-tight">{displayName}</div>
-          </Link>
-        ) : (
-          <div className="text-right lg:hidden">
-            <div className="text-xs leading-tight text-slate-300">Signed in</div>
+        <Link to="/settings" className="flex items-center gap-1.5 text-right active:opacity-70 lg:hidden" title="Settings">
+          <div>
+            <div className={'text-xs leading-tight ' + (isAdmin ? 'text-amber-300' : 'text-slate-300')}>
+              {isAdmin ? 'Admin' : 'Settings'}
+            </div>
             <div className="text-sm font-medium leading-tight">{displayName}</div>
           </div>
-        )}
+          <Icon name="settings" className="h-4 w-4 shrink-0 text-slate-300" />
+        </Link>
         <button
           onClick={signOut}
           className="rounded-md bg-slate-700 px-2 py-1 text-xs font-medium active:bg-slate-600 lg:hidden"

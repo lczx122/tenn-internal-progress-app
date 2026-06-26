@@ -1,6 +1,7 @@
 import { Link, NavLink, useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { TabIcon, useNavTabs, isTabActive } from './navItems'
+import { Icon } from './Icon'
 
 // Left navigation rail for tablet/desktop (lg+). Hidden on phones, where the
 // BottomNav is used instead. Shows the brand, the same tabs as the bottom bar,
@@ -36,17 +37,15 @@ export function Sidebar() {
       </nav>
 
       <div className="border-t border-slate-800 px-3 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
-        {isAdmin ? (
-          <Link to="/staff" className="block rounded-lg px-3 py-2 hover:bg-white/5" title="Staff & roles">
-            <div className="text-[11px] font-medium text-amber-300">Admin ⚙︎</div>
-            <div className="truncate text-sm font-medium">{displayName}</div>
-          </Link>
-        ) : (
-          <div className="px-3 py-2">
-            <div className="text-[11px] text-slate-400">Signed in</div>
+        <Link to="/settings" className="flex items-center justify-between gap-2 rounded-lg px-3 py-2 hover:bg-white/5" title="Settings">
+          <div className="min-w-0">
+            <div className={'text-[11px] font-medium ' + (isAdmin ? 'text-amber-300' : 'text-slate-400')}>
+              {isAdmin ? 'Admin' : 'Settings'}
+            </div>
             <div className="truncate text-sm font-medium">{displayName}</div>
           </div>
-        )}
+          <Icon name="settings" className="h-4 w-4 shrink-0 text-slate-400" />
+        </Link>
         <button
           onClick={signOut}
           className="mt-1 w-full rounded-lg bg-slate-800 px-3 py-2 text-sm font-medium text-slate-200 hover:bg-slate-700"
