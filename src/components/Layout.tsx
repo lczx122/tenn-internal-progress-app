@@ -70,7 +70,7 @@ export function Layout({
   const progress = Math.min(1, pull / PULL_THRESHOLD)
 
   return (
-    <div className="flex h-[var(--app-h,100dvh)] min-h-full flex-col overflow-hidden lg:flex-row">
+    <div className="flex h-[var(--app-h,100dvh)] min-h-full flex-col overflow-hidden lg:h-screen lg:flex-row">
       <Sidebar />
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         <AppHeader title={title} back={back} wide={wide} />
@@ -78,8 +78,8 @@ export function Layout({
         <main
           ref={mainRef}
           className={
-            'relative flex-1 overflow-y-auto overscroll-y-contain bg-slate-100 ' +
-            (bottomNav ? 'pb-[calc(2.75rem+max(0.125rem,calc(env(safe-area-inset-bottom)-1.875rem)))] lg:pb-0' : '')
+            'relative flex-1 overflow-y-auto overscroll-y-contain bg-slate-100 lg:pb-[env(safe-area-inset-bottom)] ' +
+            (bottomNav ? 'pb-[calc(2.75rem+max(0.125rem,calc(env(safe-area-inset-bottom)-1.875rem)))]' : '')
           }
         >
           {onRefresh && (

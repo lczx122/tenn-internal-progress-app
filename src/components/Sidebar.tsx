@@ -35,7 +35,7 @@ export function Sidebar() {
         ))}
       </nav>
 
-      <div className="border-t border-slate-800 px-3 py-3">
+      <div className="border-t border-slate-800 px-3 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
         {isAdmin ? (
           <Link to="/staff" className="block rounded-lg px-3 py-2 hover:bg-white/5" title="Staff & roles">
             <div className="text-[11px] font-medium text-amber-300">Admin ⚙︎</div>
