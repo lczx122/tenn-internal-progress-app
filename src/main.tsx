@@ -5,7 +5,13 @@ import App from './App'
 import { AuthProvider } from './contexts/AuthContext'
 import FieldEditor from './components/FieldEditor'
 import { TopProgressBar } from './components/TopProgressBar'
+import { applyTheme, initThemeListener } from './lib/theme'
 import './index.css'
+
+// Apply the saved theme (the index.html inline script avoids the first-paint
+// flash; this keeps it in sync) and react to OS scheme changes when on "system".
+applyTheme()
+initThemeListener()
 
 // Pin the app shell to the TRUE visible viewport height. iOS browsers and
 // in-app webviews report an unreliable 100dvh — sometimes too short (a dead

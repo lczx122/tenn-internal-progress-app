@@ -18,8 +18,8 @@ export interface NavTab {
 const baseTabs: NavTab[] = [
   { to: '/', label: 'Dashboard', end: true, icon: 'dashboard' },
   { to: '/units', label: 'Units', end: false, icon: 'home' },
-  { to: '/schedule', label: 'Schedule', end: false, icon: 'calendar' },
   { to: '/quotes', label: 'Quotes', end: false, icon: 'ledger', match: ['/quote'] },
+  { to: '/schedule', label: 'Schedule', end: false, icon: 'calendar' },
   { to: '/claims', label: 'Money', end: false, icon: 'wallet', match: ['/costing'] },
 ]
 

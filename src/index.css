@@ -17,6 +17,71 @@ body {
   overscroll-behavior: none;
 }
 
+/* ============================================================
+   DARK MODE
+   Re-theme the common neutral utilities under `.dark` (higher specificity than
+   the base utility, so no per-element edits needed). The app chrome (slate-900
+   header / sidebar / primary buttons) is already dark, so it's intentionally
+   left untouched and stays dark in both themes. Accent "soft" chips become dark
+   translucent tints so they don't glare on dark cards.
+   ============================================================ */
+.dark body { background: #0b1220; color: #e2e8f0; }
+
+/* surfaces */
+.dark .bg-white { background-color: #1e293b; }
+.dark .bg-slate-50 { background-color: #1e293b; }
+.dark .bg-slate-100 { background-color: #0b1220; }
+.dark .bg-slate-200 { background-color: #334155; }
+
+/* text */
+.dark .text-slate-900 { color: #f1f5f9; }
+.dark .text-slate-800 { color: #e7edf5; }
+.dark .text-slate-700 { color: #cbd5e1; }
+.dark .text-slate-600 { color: #b4c0d4; }
+.dark .text-slate-500 { color: #94a3b8; }
+.dark .text-slate-400 { color: #8a9bb2; }
+
+/* borders / dividers */
+.dark .border-slate-100 { border-color: #243044; }
+.dark .border-slate-200 { border-color: #334155; }
+.dark .border-slate-300 { border-color: #3c4b63; }
+.dark .divide-slate-100 > * + * { border-color: #243044; }
+.dark .divide-slate-200 > * + * { border-color: #334155; }
+
+/* input focus ring colour (slate-900 is dark-on-dark otherwise) */
+.dark .focus\:border-slate-900:focus { border-color: #64748b; }
+
+/* soft accent chips → dark translucent tints */
+.dark .bg-emerald-50 { background-color: rgba(16, 185, 129, 0.13); }
+.dark .bg-amber-50 { background-color: rgba(245, 158, 11, 0.14); }
+.dark .bg-rose-50 { background-color: rgba(244, 63, 94, 0.14); }
+.dark .bg-sky-50 { background-color: rgba(14, 165, 233, 0.14); }
+.dark .bg-indigo-50 { background-color: rgba(99, 102, 241, 0.15); }
+.dark .bg-cyan-50 { background-color: rgba(6, 182, 212, 0.14); }
+.dark .bg-fuchsia-50 { background-color: rgba(217, 70, 239, 0.14); }
+.dark .bg-teal-50 { background-color: rgba(20, 184, 166, 0.14); }
+.dark .bg-violet-50 { background-color: rgba(139, 92, 246, 0.15); }
+.dark .bg-blue-50 { background-color: rgba(59, 130, 246, 0.15); }
+.dark .bg-amber-100 { background-color: rgba(245, 158, 11, 0.2); }
+.dark .bg-emerald-100 { background-color: rgba(16, 185, 129, 0.2); }
+.dark .bg-rose-100 { background-color: rgba(244, 63, 94, 0.2); }
+.dark .bg-slate-100\/70 { background-color: rgba(11, 18, 32, 0.7); }
+
+/* lift accent label text so it reads on dark tints */
+.dark .text-emerald-700 { color: #6ee7b7; }
+.dark .text-emerald-600 { color: #34d399; }
+.dark .text-amber-700, .dark .text-amber-800, .dark .text-amber-900 { color: #fcd34d; }
+.dark .text-amber-600 { color: #fbbf24; }
+.dark .text-rose-700 { color: #fda4af; }
+.dark .text-rose-600 { color: #fb7185; }
+.dark .text-sky-700 { color: #7dd3fc; }
+.dark .text-indigo-700 { color: #a5b4fc; }
+.dark .text-cyan-700 { color: #67e8f9; }
+.dark .text-fuchsia-700 { color: #f0abfc; }
+.dark .text-teal-700 { color: #5eead4; }
+.dark .text-violet-700 { color: #c4b5fd; }
+.dark .text-blue-700 { color: #93c5fd; }
+
 body {
   margin: 0;
   /* White, not slate: iOS paints the strip around the standalone web view (below

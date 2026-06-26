@@ -6,6 +6,7 @@ import { Layout } from '../components/Layout'
 import { Icon } from '../components/Icon'
 import { NotificationSettings } from '../components/NotificationSettings'
 import { postAnnouncement } from '../lib/push'
+import { getTheme, setTheme, type Theme } from '../lib/theme'
 
 type Pay = { bank_name?: string; account_name?: string; account_number?: string; note?: string }
 type Announcement = { id?: string; text?: string; by?: string }
@@ -18,6 +19,12 @@ export default function AdminSettings() {
   const [pay, setPay] = useState<Pay>({})
   const [paySaved, setPaySaved] = useState(false)
   const [payBusy, setPayBusy] = useState(false)
+
+  const [theme, setThemeState] = useState<Theme>(getTheme())
+  function pickTheme(t: Theme) {
+    setThemeState(t)
+    setTheme(t)
+  }
 
   const [ann, setAnn] = useState<Announcement>({})
   const [draft, setDraft] = useState('')
@@ -115,6 +122,32 @@ export default function AdminSettings() {
             Sign out
           </button>
         </div>
+      </section>
+
+      {/* Appearance (everyone) */}
+      <section className="mb-4 rounded-xl bg-white p-4 shadow-sm">
+        <h2 className="mb-3 flex items-center gap-1.5 text-sm font-semibold text-slate-700">
+          <Icon name="moon" className="h-4 w-4 text-slate-500" /> Appearance
+        </h2>
+        <div className="grid grid-cols-3 gap-2">
+          {(['light', 'dark', 'system'] as const).map((t) => (
+            <button
+              key={t}
+              onClick={() => pickTheme(t)}
+              className={
+                'rounded-lg border px-2 py-2 text-sm font-medium capitalize ' +
+                (theme === t
+                  ? 'border-slate-900 bg-slate-900 text-white'
+                  : 'border-slate-300 bg-white text-slate-600 active:bg-slate-50')
+              }
+            >
+              {t === 'system' ? 'System' : t}
+            </button>
+          ))}
+        </div>
+        <p className="mt-2 text-xs text-slate-500">
+          “System” follows your device’s light/dark setting automatically.
+        </p>
       </section>
 
       {/* Notifications (everyone) */}

@@ -174,6 +174,12 @@ export function Icon({ name, className = 'inline-block h-[18px] w-[18px] align-[
           <path d="M12 9.5v4.5M12 16.8h.01" />
         </svg>
       )
+    case 'moon': // appearance / theme
+      return (
+        <svg {...p}>
+          <path d="M20 13.5A8 8 0 1 1 10.5 4a6.5 6.5 0 0 0 9.5 9.5Z" />
+        </svg>
+      )
     case 'settings': // gear
       return (
         <svg {...p}>
