@@ -160,18 +160,24 @@ begin
 
   -- Seed / accumulate per-trade order amounts from the document's category_totals
   -- (work category -> RM). Existing keys are added to, so multiple SOs on one unit
-  -- accumulate the same way order_total does.
-  if jsonb_typeof(v_cat_totals) = 'object' then
-    select coalesce(order_by_category, '{}'::jsonb) into v_curr from public.jobs where id = v_job;
-    for v_key in select jsonb_object_keys(v_cat_totals) loop
-      v_curr := jsonb_set(
-        v_curr, array[v_key],
-        to_jsonb(round(coalesce((v_curr->>v_key)::numeric, 0)
-                     + coalesce((v_cat_totals->>v_key)::numeric, 0), 2)),
-        true);
-    end loop;
-    update public.jobs set order_by_category = v_curr where id = v_job;
-  end if;
+  -- accumulate the same way order_total does. Wrapped in its own block so that a
+  -- failure here (e.g. claims_by_category.sql not run yet, so order_by_category
+  -- doesn't exist) can NEVER roll back the unit creation above.
+  begin
+    if jsonb_typeof(v_cat_totals) = 'object' then
+      select coalesce(order_by_category, '{}'::jsonb) into v_curr from public.jobs where id = v_job;
+      for v_key in select jsonb_object_keys(v_cat_totals) loop
+        v_curr := jsonb_set(
+          v_curr, array[v_key],
+          to_jsonb(round(coalesce((v_curr->>v_key)::numeric, 0)
+                       + coalesce((v_cat_totals->>v_key)::numeric, 0), 2)),
+          true);
+      end loop;
+      update public.jobs set order_by_category = v_curr where id = v_job;
+    end if;
+  exception when others then
+    raise warning 'tg_so_create_unit: category_totals skipped for %: %', new.number, sqlerrm;
+  end;
 
   -- Add the work cards the document specifies (resolved in-app), skipping any
   -- the unit already has.
@@ -214,7 +220,13 @@ $$;
 
 drop trigger if exists trg_so_create_unit on public.quotations;
 create trigger trg_so_create_unit
-  after insert on public.quotations
+  after insert or update on public.quotations
   for each row
   when (new.doc_type = 'SO')
   execute function public.tg_so_create_unit();
+
+-- Self-heal any Sales Orders that were saved but never got a unit (e.g. an
+-- earlier trigger error). The no-op update re-fires the trigger; SOs that already
+-- have a unit return immediately. Safe to run any time.
+update public.quotations set unit_id = unit_id
+ where doc_type = 'SO' and unit_id is null;
