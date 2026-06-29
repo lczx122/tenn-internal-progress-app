@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import { realtimeChannel } from '../lib/realtime'
 import { useAuth } from '../contexts/AuthContext'
 import type { Costing, JobWork } from '../lib/types'
 import { Layout } from '../components/Layout'
@@ -105,8 +106,7 @@ export default function CostingList() {
     }
     load()
     loadProgress()
-    const channel = supabase
-      .channel('costings')
+    const channel = realtimeChannel('costings')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'costings' }, () => {
         if (!editingRef.current) load() // don't clobber an in-progress edit
       })

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import { realtimeChannel } from '../lib/realtime'
 import { useAuth } from '../contexts/AuthContext'
 import type { Appointment, Claim, Job, JobEvent, JobWork } from '../lib/types'
 import { STAGES, getStage } from '../lib/stages'
@@ -48,8 +49,7 @@ export default function JobDetail() {
 
   useEffect(() => {
     loadAll()
-    const channel = supabase
-      .channel(`job-${id}`)
+    const channel = realtimeChannel(`job-${id}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'jobs', filter: `id=eq.${id}` }, () => loadAll())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'job_works', filter: `job_id=eq.${id}` }, () => loadAll())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'job_events', filter: `job_id=eq.${id}` }, () => loadAll())

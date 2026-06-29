@@ -1,6 +1,7 @@
 import { Fragment, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import { realtimeChannel } from '../lib/realtime'
 import { useAuth } from '../contexts/AuthContext'
 import type { Claim, Job } from '../lib/types'
 import { Layout } from '../components/Layout'
@@ -47,8 +48,7 @@ export default function Claims() {
 
   useEffect(() => {
     load()
-    const channel = supabase
-      .channel('claims-page')
+    const channel = realtimeChannel('claims-page')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'claims' }, () => load())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'jobs' }, () => load())
       .subscribe()

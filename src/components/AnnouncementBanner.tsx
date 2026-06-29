@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import { realtimeChannel } from '../lib/realtime'
 import { useAuth } from '../contexts/AuthContext'
 import { useAutoRefresh } from '../lib/useAutoRefresh'
 import { Icon } from './Icon'
@@ -32,8 +33,7 @@ export function AnnouncementBanner() {
 
   useEffect(() => {
     load()
-    const ch = supabase
-      .channel('announcement-banner')
+    const ch = realtimeChannel('announcement-banner')
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'app_settings', filter: 'key=eq.announcement' },

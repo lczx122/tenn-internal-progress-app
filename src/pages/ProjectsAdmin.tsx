@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import { realtimeChannel } from '../lib/realtime'
 import { useAuth } from '../contexts/AuthContext'
 import type { Project } from '../lib/types'
 import { Layout } from '../components/Layout'
@@ -31,8 +32,7 @@ export default function ProjectsAdmin() {
 
   useEffect(() => {
     load()
-    const channel = supabase
-      .channel('projects-admin')
+    const channel = realtimeChannel('projects-admin')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'projects' }, () => load())
       .subscribe()
     return () => {

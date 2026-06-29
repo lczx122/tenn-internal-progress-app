@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import { realtimeChannel } from '../lib/realtime'
 import { useAuth } from '../contexts/AuthContext'
 import type { Appointment, Claim, Job, JobEvent, JobWork } from '../lib/types'
 import { Layout } from '../components/Layout'
@@ -80,8 +81,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     load()
-    const channel = supabase
-      .channel('dashboard')
+    const channel = realtimeChannel('dashboard')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'jobs' }, () => load())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'job_works' }, () => load())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'job_events' }, () => load())

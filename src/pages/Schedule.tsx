@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import { realtimeChannel } from '../lib/realtime'
 import { useAuth } from '../contexts/AuthContext'
 import type { Appointment } from '../lib/types'
 import { Layout } from '../components/Layout'
@@ -55,8 +56,7 @@ export default function Schedule() {
 
   useEffect(() => {
     load()
-    const channel = supabase
-      .channel('schedule')
+    const channel = realtimeChannel('schedule')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'appointments' }, () => load())
       .subscribe()
     return () => {

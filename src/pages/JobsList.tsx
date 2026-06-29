@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type Dispatch, type SetStateAction } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import { realtimeChannel } from '../lib/realtime'
 import { useAuth } from '../contexts/AuthContext'
 import type { Job, JobWork } from '../lib/types'
 import { Layout } from '../components/Layout'
@@ -92,8 +93,7 @@ export default function JobsList() {
   useEffect(() => {
     load()
     // Live updates on units and their work categories.
-    const channel = supabase
-      .channel('jobs-list')
+    const channel = realtimeChannel('jobs-list')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'jobs' }, () => load())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'job_works' }, () => load())
       .subscribe()
