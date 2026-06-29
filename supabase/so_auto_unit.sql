@@ -108,21 +108,29 @@ begin
     v_pics := array[new.prepared_by];
   end if;
 
-  -- Reuse a unit whose code matches; otherwise create a new one. Unit codes
-  -- often carry the full address ("A-10-06, Ambience…") while the SO unit is
-  -- just the short code ("A-10-06"), so for codes of 3+ chars we match on
-  -- prefix (unit_code starts with the SO unit). Shorter codes match exactly to
-  -- avoid over-broad hits.
-  if length(v_unit_norm) >= 3 then
+  -- Reuse a matching ACTIVE unit; otherwise create a new one. Two safe tiers
+  -- (archived units are never matched, so a new SO always makes a fresh unit):
+  --   1. the codes are identical ignoring separators ("D-07-03" == "D0703"); else
+  --   2. an existing code that BEGINS with this exact short code at a word
+  --      boundary, for units stored with the full address
+  --      ("D-07-03, Ambience…"). The boundary check stops "D-07-03" from grabbing
+  --      an unrelated "D-07-031".
+  if v_unit_norm <> '' then
     select id into v_job from public.jobs
-      where lower(regexp_replace(coalesce(unit_code,''), '[^a-z0-9]', '', 'g')) like v_unit_norm || '%'
+      where is_archived = false
+        and lower(regexp_replace(coalesce(unit_code,''), '[^a-z0-9]', '', 'g')) = v_unit_norm
       order by created_at desc
       limit 1;
-  elsif v_unit_norm <> '' then
-    select id into v_job from public.jobs
-      where lower(regexp_replace(coalesce(unit_code,''), '[^a-z0-9]', '', 'g')) = v_unit_norm
-      order by created_at desc
-      limit 1;
+
+    if v_job is null and length(trim(coalesce(new.unit,''))) >= 3 then
+      select id into v_job from public.jobs
+        where is_archived = false
+          and lower(coalesce(unit_code,'')) like lower(trim(new.unit)) || '%'
+          and coalesce(substring(lower(coalesce(unit_code,''))
+                       from length(trim(new.unit)) + 1 for 1), '') !~ '[a-z0-9]'
+        order by created_at desc
+        limit 1;
+    end if;
   end if;
 
   if v_job is null then
