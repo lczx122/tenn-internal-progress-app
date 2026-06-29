@@ -16,6 +16,11 @@
 alter table public.quotations
   add column if not exists unit_id uuid references public.jobs (id);
 
+-- true when this Sales Order created a brand-new unit, false when it attached to
+-- an existing one. Lets the quote tool tell the user which happened.
+alter table public.quotations
+  add column if not exists unit_created boolean;
+
 -- ---------------------------------------------------------------------------
 --  Editable documents: only the creator or an admin may update a saved row.
 --  (Numbering columns — number/seq/doc_type/yymm — are intentionally untouched.)
@@ -87,6 +92,7 @@ declare
   v_pics      text[] := '{}';
   v_cat_totals jsonb;
   v_curr      jsonb;
+  v_created   boolean := false;   -- did we create a new unit (vs link an existing)?
 begin
   if new.doc_type <> 'SO' or new.unit_id is not null then
     return new;
@@ -146,6 +152,7 @@ begin
        coalesce(new.total, 0),
        coalesce(nullif(new.prepared_by, ''), 'System'))
     returning id into v_job;
+    v_created := true;
 
     insert into public.job_events (job_id, type, body, author_name)
       values (v_job, 'created',
@@ -216,7 +223,7 @@ begin
               coalesce(nullif(new.prepared_by, ''), 'System'));
   end if;
 
-  update public.quotations set unit_id = v_job where id = new.id;
+  update public.quotations set unit_id = v_job, unit_created = v_created where id = new.id;
 
   return new;
 exception when others then

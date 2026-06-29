@@ -3052,6 +3052,17 @@ async function ready(supa){ try{ await supa.auth.getSession(); }catch(e){} }
 
 function currentNumber(){return committedNo||pendingNo||'—';}
 function setQnoStatus(t){const el=document.getElementById('qno_status');if(el)el.textContent=t;}
+// After a Sales Order saves, the DB trigger either creates a new unit or attaches
+// to an existing one (quotations.unit_created flags which). Surface it to the user.
+async function showUnitOutcome(supa, qid){
+  try{
+    const {data:q}=await supa.from('quotations').select('unit_id,unit_created').eq('id',qid).single();
+    if(!q||!q.unit_id) return;
+    const {data:j}=await supa.from('jobs').select('unit_code').eq('id',q.unit_id).single();
+    const code=(j&&(j.unit_code||'').trim())||'the unit';
+    setQnoStatus(q.unit_created ? ('✓ '+code+' unit created') : ('✓ Work saved to '+code));
+  }catch(e){}
+}
 
 // The "Convert to Sales Order" button only makes sense for a SAVED quotation
 // (we need its register id to link the new SO back to it). Guests never save.
@@ -3202,6 +3213,7 @@ async function saveQuote(){
       if(error) throw error;
       committedNo=data.number; savedId=data.id;
       setQnoStatus('✓ Saved to shared register');
+      if(docType==='SO') showUnitOutcome(supa, savedId);
     }else{
       const ym=yymm(); const m=loadJSON(SK_LOCALSEQ); m[docType]=m[docType]||{};
       const seq=(m[docType][ym]||0)+1; m[docType][ym]=seq; saveJSON(SK_LOCALSEQ,m);
