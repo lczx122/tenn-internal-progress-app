@@ -9,7 +9,7 @@ export function StageBar({ stageKey }: { stageKey: string }) {
         <span className="font-medium text-slate-700">{stage.label}</span>
         <span className="text-slate-500">{stage.percent}%</span>
       </div>
-      <div className="h-2 w-full rounded-full bg-slate-200 overflow-hidden">
+      <div className="h-2 w-full rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden">
         <div
           className={`h-full rounded-full transition-all duration-500 ${stage.color}`}
           style={{ width: `${stage.percent}%` }}
@@ -28,9 +28,9 @@ export function PercentBar({ percent, label }: { percent: number; label: string 
         <span className="font-medium text-slate-700">{label}</span>
         <span className="text-slate-500">{percent}%</span>
       </div>
-      <div className="h-2 w-full rounded-full bg-slate-200 overflow-hidden">
+      <div className="h-2 w-full rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden">
         <div
-          className="h-full rounded-full bg-slate-800 transition-all duration-500"
+          className="h-full rounded-full bg-slate-800 dark:bg-slate-100 transition-all duration-500"
           style={{ width: `${percent}%` }}
         />
       </div>
