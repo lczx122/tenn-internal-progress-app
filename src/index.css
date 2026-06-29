@@ -74,6 +74,18 @@ body {
 .dark .bg-rose-100 { background-color: rgba(244, 63, 94, 0.2); }
 .dark .bg-slate-100\/70 { background-color: rgba(11, 18, 32, 0.7); }
 
+/* press / hover feedback: the light active:/hover: backgrounds flash white on
+   dark, so give them a subtle dark highlight instead (one step up from a card). */
+.dark .active\:bg-slate-50:active,
+.dark .active\:bg-slate-100:active,
+.dark .active\:bg-slate-200:active,
+.dark .hover\:bg-slate-50:hover,
+.dark .hover\:bg-slate-100:hover { background-color: #26344e; }
+.dark .active\:bg-red-50:active,
+.dark .active\:bg-rose-100:active { background-color: rgba(244, 63, 94, 0.2); }
+.dark .active\:bg-amber-100:active { background-color: rgba(245, 158, 11, 0.22); }
+.dark .active\:bg-emerald-50:active { background-color: rgba(16, 185, 129, 0.2); }
+
 /* lift accent label text so it reads on dark tints */
 .dark .text-emerald-700 { color: #6ee7b7; }
 .dark .text-emerald-600 { color: #34d399; }
@@ -97,6 +109,8 @@ body {
      showing an ugly slate band. The scrolling content area carries the slate
      tint itself (see <main> in Layout). */
   background: #ffffff;
+  /* No default grey/white tap flash on iOS — the active: states give feedback. */
+  -webkit-tap-highlight-color: transparent;
   -webkit-font-smoothing: antialiased;
   font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   /* Notch / home-indicator insets are handled by the header and bottom nav
