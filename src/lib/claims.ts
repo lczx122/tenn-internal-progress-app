@@ -4,6 +4,11 @@ import { CLAIM_CATEGORIES } from './units'
 export const money = (n: number) =>
   'RM ' + Number(n || 0).toLocaleString('en-MY', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 
+// Whole-ringgit (no decimals) — for tight summary tiles where the full figure
+// won't fit (e.g. the dashboard Collection panel's narrow Order/Collected tiles).
+export const money0 = (n: number) =>
+  'RM ' + Math.round(Number(n || 0)).toLocaleString('en-MY')
+
 // Total collected across a set of claims.
 export function collectedTotal(claims: Claim[]): number {
   return claims.reduce((s, c) => s + Number(c.amount || 0), 0)

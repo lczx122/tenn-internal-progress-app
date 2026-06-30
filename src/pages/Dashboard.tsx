@@ -11,7 +11,7 @@ import { getApptType, startOfDay, addDays, dayLabel, timeLabel } from '../lib/ap
 import { eventIconName } from '../lib/jobEvents'
 import { Icon } from '../components/Icon'
 import { relativeTime, formatDateTime } from '../lib/format'
-import { collectedTotal, money } from '../lib/claims'
+import { collectedTotal, money, money0 } from '../lib/claims'
 import { useAutoRefresh } from '../lib/useAutoRefresh'
 import { cacheGet, cacheSet } from '../lib/pageCache'
 import { progressStart, progressDone } from '../lib/progress'
@@ -387,18 +387,18 @@ export default function Dashboard() {
               <Empty>No order totals set yet. Add one on a unit to track collections.</Empty>
             ) : (
               <div className="space-y-3 rounded-xl bg-white p-4 shadow-sm">
-                <div className="grid grid-cols-3 gap-2 text-center">
-                  <div className="rounded-lg bg-slate-50 p-2">
+                <div className="grid grid-cols-3 gap-1.5 text-center">
+                  <div className="min-w-0 rounded-lg bg-slate-50 px-1.5 py-2">
                     <div className="text-[11px] text-slate-400">Order</div>
-                    <div className="text-sm font-semibold text-slate-800">{money(claimsSummary.order)}</div>
+                    <div className="text-[13px] font-semibold leading-tight tabular-nums text-slate-800">{money0(claimsSummary.order)}</div>
                   </div>
-                  <div className="rounded-lg bg-emerald-50 p-2">
+                  <div className="min-w-0 rounded-lg bg-emerald-50 px-1.5 py-2">
                     <div className="text-[11px] text-emerald-700/70">Collected</div>
-                    <div className="text-sm font-semibold text-emerald-700">{money(claimsSummary.collected)}</div>
+                    <div className="text-[13px] font-semibold leading-tight tabular-nums text-emerald-700">{money0(claimsSummary.collected)}</div>
                   </div>
-                  <div className="rounded-lg bg-amber-50 p-2">
+                  <div className="min-w-0 rounded-lg bg-amber-50 px-1.5 py-2">
                     <div className="text-[11px] text-amber-700/70">Outstanding</div>
-                    <div className="text-sm font-semibold text-amber-700">{money(claimsSummary.balance)}</div>
+                    <div className="text-[13px] font-semibold leading-tight tabular-nums text-amber-700">{money0(claimsSummary.balance)}</div>
                   </div>
                 </div>
                 <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100">
