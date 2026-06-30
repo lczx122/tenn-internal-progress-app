@@ -241,6 +241,10 @@
   .cab-preview{background:#f7fbff;border:1px solid var(--line);border-radius:9px;padding:11px 13px;margin:14px 0;font-size:12.5px;color:var(--muted);min-height:20px}
   .cab-preview .cab-tiers{line-height:1.7}
   .cab-preview .cab-calc{margin-top:7px;color:var(--navy);font-size:14.5px;font-family:'Archivo'}
+  .q-photo-wrap{margin:2px 0 10px}
+  .q-photo-wrap:empty{display:none}
+  .q-photo{display:block;width:100%;max-width:240px;height:150px;object-fit:cover;border:1px solid var(--line);border-radius:10px;background:#f1f5f9}
+  .doc-thumb{width:40px;height:40px;object-fit:cover;border:1px solid #ddd;border-radius:5px;vertical-align:middle;margin-right:8px}
   .cab-line{display:flex;align-items:center;gap:12px;border:1px solid var(--line);border-radius:9px;padding:10px 12px;margin-bottom:8px;background:#fff}
   .cab-line-info{flex:1;font-size:13.5px;line-height:1.45}
   .cab-line-info .muted{color:var(--muted);font-weight:400}
@@ -392,6 +396,7 @@
   html.dark .count.zero,html.dark .ct-count.zero{background:#3c4b63}
   html.dark .cab-preview{background:#16213a}
   html.dark .cab-line{background:#16213a}
+  html.dark .q-photo{background:#16213a}
   html.dark .cab-empty{color:var(--muted)}
   html.dark .doctype{background:var(--card)}
   html.dark .dt:hover:not(.active){background:#26344e}
@@ -588,7 +593,7 @@ const CATALOG = [
     id:'smarthome', name:'Smart Home',
     variants:[],
     items:[
-      {v:0,label:'Aqara Smart Home Package',sub:'Wall Switch (1/2/3 gang) ×5 · Hub M2 ×1 · Presence Multi-Sensor FP300 ×1 · Smart Door Lock A100 ×1',price:0},
+      {v:0,label:'Aqara Smart Home Package',sub:'1-Gang ×1 · 2-Gang ×2 · 3-Gang ×2 · Hub M2 ×1 · Presence Multi-Sensor FP300 ×1 · Smart Door Lock A100 ×1 · Gang switches adjustable (pay the price difference)',price:4032},
       {v:0,label:'Aqara Smart Wall Switch H1 (No Neutral, Single Rocker)',sub:'Colours: White / Grey',price:229},
       {v:0,label:'Aqara Smart Wall Switch H1 (No Neutral, Double Rocker)',sub:'Colours: White / Grey',price:269},
       {v:0,label:'Aqara Smart Wall Switch H1 (No Neutral, Triple Rocker)',sub:'Colours: White / Grey',price:409},
@@ -606,6 +611,7 @@ const CATALOG = [
     variants:[],
     items:[
       {v:0,label:'Aqara Smart Lock U200 (Standard)',sub:'Colours: Black / Silver / White',price:1399},
+      {v:0,label:'Aqara Smart Door Lock A100',sub:'Black',price:1599},
       {v:0,label:'Aqara Smart Door Lock D200i (Premium)',sub:'Facial Recognition · Gold',price:3599},
     ]
   },
@@ -722,7 +728,16 @@ const TERMS = {
    re-labels, and re-renders that one category. 1 ft = 304.8 mm. */
 const UNITS = { cab:'mm', grill:'ft', paint:'ft', alu:'ft' };
 const FT_MM = 304.8;
-function unitLabel(cat){ return UNITS[cat]; }
+// Aluminium cabinets are quoted in feet-run; show 'fr' (not 'ft') for them. The
+// internal unit key stays 'ft' so all conversions are unchanged.
+function unitLabel(cat){ const u=UNITS[cat]; return (cat==='alu' && u==='ft') ? 'fr' : u; }
+// Reference photos for cabinet & aluminium-cabinet types. Drop image files at
+// public/quote-photos/ (cab-<group>-<option>.jpg / alu-<option>.jpg) and they
+// appear automatically in the picker and on the document; missing files hide.
+function cabImgSrc(gid,oid){ return 'quote-photos/cab-'+gid+'-'+oid+'.jpg'; }
+function aluImgSrc(oid){ return 'quote-photos/alu-'+oid+'.jpg'; }
+function photoTag(src,cls){ return src?`<img class="${cls}" src="${src}" alt="" loading="lazy" onerror="this.style.display='none'">`:''; }
+function setPhoto(elId,src){ const el=document.getElementById(elId); if(el) el.innerHTML=photoTag(src,'q-photo'); }
 // cabinet canonical = mm
 function mmFromInput(v){ v=+v||0; return UNITS.cab==='ft' ? v*FT_MM : v; }
 function dispFromMM(v){ v=+v||0; return UNITS.cab==='ft' ? +(v/FT_MM).toFixed(2) : Math.round(v); }
@@ -731,8 +746,9 @@ function ftFromInput(v,cat){ v=+v||0; return UNITS[cat]==='ft' ? v : v/FT_MM; }
 function dispFromFt(v,cat){ v=+v||0; return UNITS[cat]==='ft' ? +(+v).toFixed(2) : Math.round(v*FT_MM); }
 function relabelUnits(){
   ['cab','grill','alu'].forEach(cat=>{
-    document.querySelectorAll('.ulin-'+cat).forEach(s=>{ s.textContent=UNITS[cat]; });
-    const lbl='Units: '+UNITS[cat].toUpperCase();
+    const disp=unitLabel(cat);
+    document.querySelectorAll('.ulin-'+cat).forEach(s=>{ s.textContent=disp; });
+    const lbl='Units: '+disp.toUpperCase();
     const btn=document.getElementById('unitBtn-'+cat); if(btn) btn.textContent=lbl;           // single-button cards
     document.querySelectorAll('.unitBtn-'+cat).forEach(b=>{ b.textContent=lbl; });            // multi-button (grill: iron + alu)
   });
@@ -802,8 +818,8 @@ function areaUplift(m2, tiers){
   for(const t of list){ if(m2 + 1e-9 >= +t.minM2) pct = +t.pct || 0; }
   return pct;
 }
-function cabOpt(basePrice, defL, defH){
-  return { basePrice: +basePrice || 0, defL: +defL || 1000, defH: +defH || 1000 };
+function cabOpt(basePrice, defL, defH, defD){
+  return { basePrice: +basePrice || 0, defL: +defL || 1000, defH: +defH || 1000, defD: +defD || 0 };
 }
 
 const CABINET = [
@@ -811,17 +827,18 @@ const CABINET = [
       { id:'standard', name:'TV Cabinet',              ...cabOpt(1000, 2400, 1000) },
       { id:'backdrop', name:'TV Cabinet with Backdrop', ...cabOpt(1600, 2400, 1000) },
   ]},
+  // Wardrobes default to their maximum size: length 2000, height 3000, depth 600.
   { id:'almari', name:'Wardrobe', options:[
-      { id:'standard', name:'Wardrobe',                    ...cabOpt(1800, 1800, 1000) },
-      { id:'tatami',   name:'Tatami Wardrobe',             ...cabOpt(2500, 1800, 1000) },
-      { id:'meja',     name:'Wardrobe with Table',         ...cabOpt(2200, 1800, 1000) },
-      { id:'terbuka',  name:'Wardrobe with Open Shelving', ...cabOpt(2000, 1800, 1000) },
+      { id:'standard', name:'Wardrobe',                    ...cabOpt(1800, 2000, 3000, 600) },
+      { id:'tatami',   name:'Tatami Wardrobe',             ...cabOpt(2500, 2000, 3000, 600) },
+      { id:'meja',     name:'Wardrobe with Table',         ...cabOpt(2200, 2000, 3000, 600) },
+      { id:'terbuka',  name:'Wardrobe with Open Shelving', ...cabOpt(2000, 2000, 3000, 600) },
   ]},
   { id:'dining', name:'Dining Cabinet', options:[
       { id:'standard', name:'Dining Cabinet', ...cabOpt(1200, 1200, 1000) },
   ]},
   // Fixed-price cabinet packages — no measurement; the price is flat.
-  { id:'paket', name:'Cabinet Package', options:[
+  { id:'paket', name:'PG Cabinet Package', options:[
       { id:'r2s', name:'2 Room Standard', fixed:true, basePrice:24999, defL:0, defH:0 },
       { id:'r2p', name:'2 Room Premium',  fixed:true, basePrice:29999, defL:0, defH:0 },
       { id:'r3s', name:'3 Room Standard', fixed:true, basePrice:30999, defL:0, defH:0 },
@@ -1775,11 +1792,11 @@ function buildPriceEditorHtml(){
 
   // Aluminium Cabinet — per linear foot of length
   h+=`<div class="pe-panel" data-panel="alucab"><div class="pe-noresults">No matching cabinets.</div>
-    <div class="pe-cat">${peSectionHead('Aluminium Cabinet — rate')}<p class="pe-note">Priced per linear foot (RM / ft) of cabinet length. Depth &amp; height are fixed per type.</p>`;
+    <div class="pe-cat">${peSectionHead('Aluminium Cabinet — rate')}<p class="pe-note">Priced per linear foot (RM / fr) of cabinet length. Depth &amp; height are fixed per type.</p>`;
   ALUCAB.forEach(o=>{
     const d=PRICE_DEFAULTS.alucabs[o.id]||{};
     h+=`<div class="pe-cab" data-search="${peSafe(o.name+' '+o.spec)}">${peCardHead(o.name+' · '+o.spec)}
-      <div class="pe-cab-grid">${peTextField('alucab',o.id,'name',o.name,'Name',d.name)}${peField('alucab',o.id,'rate',o.rate,'RM/ft',{money:true,def:d.rate})}</div></div>`;
+      <div class="pe-cab-grid">${peTextField('alucab',o.id,'name',o.name,'Name',d.name)}${peField('alucab',o.id,'rate',o.rate,'RM/fr',{money:true,def:d.rate})}</div></div>`;
   });
   h+='</div></div>';
 
@@ -2303,18 +2320,18 @@ function pwModeChange(){
    ============================================================ */
 const ALUCAB_CAT='Aluminium Cabinet';
 const ALUCAB = [
-  { id:'base',   name:'Base Cabinet',               spec:'Depth 22" · Height 34"', rate:750 },
-  { id:'wall25', name:'Wall Cabinet (2.5ft / 30")', spec:'Depth 13" · Height 30"', rate:400 },
-  { id:'wall3',  name:'Wall Cabinet (3ft / 36")',   spec:'Depth 13" · Height 36"', rate:500 },
-  { id:'corner', name:'Shoe Cabinet (3ft / 36")', spec:'Depth 13" · Height 36"', rate:520 },
+  { id:'base',   name:'Bottom Cabinet C/W Quartz Stone & Sink', spec:'Depth 22" · Height 34"', rate:750 },
+  { id:'wall25', name:'Top Cabinet (2.5ft / 30")', spec:'Depth 13" · Height 30"', rate:400 },
+  { id:'wall3',  name:'Top Cabinet (3ft / 36")',   spec:'Depth 13" · Height 36"', rate:500 },
+  { id:'corner', name:'Top/Bottom Shoes Cabinet',  spec:'Depth 13" · Height 36"', rate:520 },
 ];
 function alucabSel(){ return ALUCAB[+document.getElementById('alu-option').value]; }
-function alucabOptionChange(){ document.getElementById('alu-L').value=''; alucabPreview(); }
+function alucabOptionChange(){ document.getElementById('alu-L').value=''; setPhoto('alu-photo', aluImgSrc(alucabSel().id)); alucabPreview(); }
 function alucabPreview(){
   const o=alucabSel();
   const Lin=parseFloat(document.getElementById('alu-L').value)||0;
   const Lft=ftFromInput(Lin,'alu');
-  let html=`<div class="cab-tiers"><b>RM ${fmt(+o.rate||0)}</b> / ft <span style="color:#6b7280">· ${o.spec}</span></div>`;
+  let html=`<div class="cab-tiers"><b>RM ${fmt(+o.rate||0)}</b> / ${unitLabel('alu')} <span style="color:#6b7280">· ${o.spec}</span></div>`;
   if(Lin>0) html+=`<div class="cab-calc">${Lin} ${unitLabel('alu')} → <b>RM ${fmt(Lft*(+o.rate||0))}</b></div>`;
   document.getElementById('alu-preview').innerHTML=html;
 }
@@ -2348,12 +2365,13 @@ function alucabCardHtml(){
       <span class="count zero" id="cnt-alucab">0</span>
     </div>
     <div class="cat-bd">
-      <div class="cab-note">Aluminium kitchen cabinets are priced per <b>linear foot</b> of length. Pick a type and enter the length — depth &amp; height are fixed per type.</div>
-      <div style="display:flex;justify-content:flex-end;margin:-4px 0 8px"><button type="button" class="edit-prices-btn" id="unitBtn-alu" onclick="toggleUnit('alu')">Units: FT</button></div>
+      <div class="cab-note">Aluminium kitchen cabinets are priced per <b>linear foot (fr)</b> of length. Pick a type and enter the length — depth &amp; height are fixed per type.</div>
+      <div style="display:flex;justify-content:flex-end;margin:-4px 0 8px"><button type="button" class="edit-prices-btn" id="unitBtn-alu" onclick="toggleUnit('alu')">Units: FR</button></div>
       <div class="cab-grid">
         <label class="fld">Cabinet Type <select id="alu-option" onchange="alucabOptionChange()">${optOpts}</select></label>
-        <label class="fld"><span>Length (<span class="ulin-alu">ft</span>)</span> <input id="alu-L" type="number" min="0" step="0.1" oninput="alucabPreview()"></label>
+        <label class="fld"><span>Length (<span class="ulin-alu">fr</span>)</span> <input id="alu-L" type="number" min="0" step="0.1" oninput="alucabPreview()"></label>
       </div>
+      <div class="q-photo-wrap" id="alu-photo"></div>
       <div class="cab-preview" id="alu-preview"></div>
       <button class="act b-primary" style="padding:11px 16px;font-size:13px" onclick="alucabAdd()">+ Add Aluminium Cabinet to Quote</button>
       <div id="alu-lines" style="margin-top:14px"></div>
@@ -2369,6 +2387,7 @@ function renderCatalog(){
   cabGroupChange();           // populate option select for first group
   renderCabLines();
   root.insertAdjacentHTML('beforeend', alucabCardHtml());
+  setPhoto('alu-photo', aluImgSrc(alucabSel().id)); alucabPreview();
   renderAlucabLines();
   root.insertAdjacentHTML('beforeend', ironWorkCardHtml());
   grillOptionChange('iron'); renderGrillLines('iron');
@@ -2639,7 +2658,7 @@ function cabinetCardHtml(){
     </div>
     <div class="cat-bd">
       ${warn}
-      <div class="cab-note">Price = <b>area (Length × Height) × RM ${fmt(CABINET_RATE)}/m²</b>. Depth does not affect price; <b>height is at least 1 m</b>. Optional add-ons: light strip (RM ${fmt(LIGHTSTRIP_RATE)}/m) &amp; AC power supply (RM ${fmt(ACPOWER_RATE)}/pcs).</div>
+      <div class="cab-note">Price = <b>area (Length × Height) × RM ${fmt(CABINET_RATE)}/m²</b>. Depth does not affect price. Optional add-ons: light strip (RM ${fmt(LIGHTSTRIP_RATE)}/m) &amp; AC power supply (RM ${fmt(ACPOWER_RATE)}/pcs).</div>
       <div style="display:flex;justify-content:flex-end;margin:-4px 0 8px"><button type="button" class="edit-prices-btn" id="unitBtn-cab" onclick="toggleUnit('cab')">Units: MM</button></div>
       <div class="cab-grid">
         <label class="fld">Cabinet Type
@@ -2647,6 +2666,7 @@ function cabinetCardHtml(){
         <label class="fld">Design / Option
           <select id="cab-option" onchange="cabOptionChange()">${optOpts}</select></label>
       </div>
+      <div class="q-photo-wrap" id="cab-photo"></div>
       <div class="cab-grid3">
         <label class="fld"><span>Length (<span class="ulin-cab">mm</span>)</span> <input id="cab-L" type="number" min="0" step="0.01" oninput="cabPreview()"></label>
         <label class="fld"><span>Height (<span class="ulin-cab">mm</span>)</span> <input id="cab-H" type="number" min="0" step="0.01" oninput="cabPreview()"></label>
@@ -2670,12 +2690,16 @@ function cabGroupChange(){
   cabOptionChange();
 }
 function cabOptionChange(){
-  const {o}=cabSel();
+  const {g,o}=cabSel();
   const fixed=!!o.fixed;
   const L=document.getElementById('cab-L'), H=document.getElementById('cab-H'), D=document.getElementById('cab-D');
   [L,H,D].forEach(el=>{ if(el) el.disabled=fixed; });
   if(fixed){ L.value=''; H.value=''; if(D) D.value=''; }   // fixed packages ignore dimensions
-  else { L.value=dispFromMM(o.defL); H.value=dispFromMM(o.defH); }  // pre-fill defaults (in current unit)
+  else {
+    L.value=dispFromMM(o.defL); H.value=dispFromMM(o.defH);  // pre-fill defaults (in current unit)
+    if(D) D.value = o.defD>0 ? dispFromMM(o.defD) : '';      // pre-fill default depth when set (e.g. wardrobes)
+  }
+  setPhoto('cab-photo', cabImgSrc(g.id,o.id));
   cabPreview();
 }
 function cabSel(){
@@ -2705,7 +2729,7 @@ function cabPreview(){
   const Lin=parseFloat(document.getElementById('cab-L').value)||0;
   const Hin=parseFloat(document.getElementById('cab-H').value)||0;
   const Lmm=mmFromInput(Lin), Hmm=mmFromInput(Hin);
-  let html=`<div class="cab-tiers"><b>RM ${fmt(CABINET_RATE)}</b> / m² · height min 1 m${addon>0?` · light strip RM ${fmt(LIGHTSTRIP_RATE)}/m · AC power RM ${fmt(ACPOWER_RATE)}/pcs`:''}</div>`;
+  let html=`<div class="cab-tiers"><b>RM ${fmt(CABINET_RATE)}</b> / m²${addon>0?` · light strip RM ${fmt(LIGHTSTRIP_RATE)}/m · AC power RM ${fmt(ACPOWER_RATE)}/pcs`:''}</div>`;
   if(Lin>0 && Hin>0){
     const m2=cabArea(Lmm,Hmm);
     const cab=cabinetPrice(o,Lmm,Hmm);
@@ -2835,7 +2859,7 @@ function collectLines(){
   const lines=[];
   // cabinet lines first (qty 1 each; dimensions stored in sub)
   cabinetLines.forEach(l=>{
-    lines.push({cat:l.gname,wcat:wmap('cab:'+l.gid,'Mindhome'),variantName:'',label:l.oname,sub:dimStr(l),price:l.price,qty:1,amount:l.price});
+    lines.push({cat:l.gname,wcat:wmap('cab:'+l.gid,'Mindhome'),variantName:'',label:l.oname,sub:dimStr(l),price:l.price,qty:1,amount:l.price,img:cabImgSrc(l.gid,l.oid)});
   });
   grillLines.forEach(l=>{
     lines.push({cat:l.gname,wcat:wmap('grill:'+l.gid,'Iron Work'),variantName:'',label:l.oname,sub:grillDimStr(l),price:l.price,qty:1,amount:l.price});
@@ -2852,7 +2876,7 @@ function collectLines(){
     lines.push({cat:PAINT_CAT,wcat:'Painting',variantName:'',label:paintLineLabel(l),sub:paintDimStr(l),price:unit,qty:q,amount:unit*q});
   });
   alucabLines.forEach(l=>{
-    lines.push({cat:ALUCAB_CAT,wcat:wmap('alucab','Aluminium Cabinet'),variantName:'',label:l.oname,sub:alucabDimStr(l),price:l.price,qty:1,amount:l.price});
+    lines.push({cat:ALUCAB_CAT,wcat:wmap('alucab','Aluminium Cabinet'),variantName:'',label:l.oname,sub:alucabDimStr(l),price:l.price,qty:1,amount:l.price,img:aluImgSrc(l.oid)});
   });
   CATALOG.forEach(cat=>{
     cat.items.forEach((it,idx)=>{
@@ -2917,7 +2941,7 @@ function recalc(){
   const discEl=document.getElementById('t_disc');
   discEl.value=disc; discEl.disabled=true;
   discEl.closest('.adj').style.opacity=pkg?'1':'.45';
-  discEl.title=pkg?'Auto-applied Cabinet Package discount (locked)':'Select a Cabinet Package to apply a discount';
+  discEl.title=pkg?'Auto-applied PG Cabinet Package discount (locked)':'Select a PG Cabinet Package to apply a discount';
   const bal=sub-reb-dep-disc;
   document.getElementById('t_sub').textContent=fmt(sub);
   const rebLine=document.getElementById('t_rebate_line');
@@ -2952,7 +2976,7 @@ function buildDoc(){
     rowsHtml+=`<tr class="cat-row"><td colspan="4">${cname}${variantTag}</td></tr>`;
     cl.forEach(l=>{
       rowsHtml+=`<tr>
-        <td>${l.label}${l.sub?` <span style="color:#888">(${l.sub})</span>`:''}</td>
+        <td>${l.img?photoTag(l.img,'doc-thumb'):''}${l.label}${l.sub?` <span style="color:#888">(${l.sub})</span>`:''}</td>
         <td class="r">${fmt(l.price)}</td>
         <td class="c">${l.qty}</td>
         <td class="r">${fmt(l.amount)}</td>
