@@ -439,6 +439,19 @@
   html.dark #priceModal .modal-inner{background:var(--card)}
   /* the generated document always renders light-themed (paper) */
   html.dark .doc{ --ink:#1a1c22; --muted:#6b7280; --line:#e3e6ee; --card:#ffffff; --bg:#ffffff; color:#1a1c22; background:#fff; }
+  /* …but the Edit Prices modal reuses .doc, so re-apply the dark theme to it
+     (otherwise it renders on white paper with dark-on-dark inputs). */
+  html.dark #priceModal .doc{ --ink:#e7edf5; --muted:#9aa6bb; --line:#334155; --card:#1e293b; --bg:#0b1220; color:var(--ink); background:transparent; }
+  html.dark #priceModal .pe-tier-preview{background:#16213a}
+  html.dark #priceModal .pe-reset,
+  html.dark #priceModal .pe-reset-section,
+  html.dark #priceModal .pe-reset-cat,
+  html.dark #priceModal .pe-del,
+  html.dark #priceModal .pe-hide{background:#202c42}
+  html.dark #priceModal .pe-reset:hover,
+  html.dark #priceModal .pe-reset-section:hover:not(:disabled),
+  html.dark #priceModal .pe-reset-cat:hover,
+  html.dark #priceModal .pe-hide:hover{background:#26344e}
 </style>
 </head>
 <body>
