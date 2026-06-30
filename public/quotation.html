@@ -840,18 +840,18 @@ function cabOpt(basePrice, defL, defH, defD){
 
 const CABINET = [
   { id:'tv', name:'TV Cabinet', options:[
-      { id:'standard', name:'TV Cabinet',              ...cabOpt(1000, 2400, 1000, 400) },
-      { id:'backdrop', name:'TV Cabinet with Backdrop', ...cabOpt(1600, 2400, 1000, 400) },
+      { id:'standard', name:'TV Cabinet',              ...cabOpt(1000, 2400, 1000, 400), maxD:400 },
+      { id:'backdrop', name:'TV Cabinet with Backdrop', ...cabOpt(1600, 2400, 1000, 400), maxD:400 },
   ]},
   // Wardrobes default to their maximum size: length 2000, height 3000, depth 600.
   { id:'almari', name:'Wardrobe', options:[
-      { id:'standard', name:'Wardrobe',                    ...cabOpt(1800, 2000, 3000, 600) },
-      { id:'tatami',   name:'Tatami Wardrobe',             ...cabOpt(2500, 2000, 3000, 600) },
-      { id:'meja',     name:'Wardrobe with Table',         ...cabOpt(2200, 2000, 3000, 600) },
-      { id:'terbuka',  name:'Wardrobe with Open Shelving', ...cabOpt(2000, 2000, 3000, 600) },
+      { id:'standard', name:'Wardrobe',                    ...cabOpt(1800, 2000, 3000, 600), maxH:3000, maxD:600 },
+      { id:'tatami',   name:'Tatami Wardrobe',             ...cabOpt(2500, 2000, 3000, 600), maxH:3000, maxD:600 },
+      { id:'meja',     name:'Wardrobe with Table',         ...cabOpt(2200, 2000, 3000, 600), maxH:3000, maxD:600 },
+      { id:'terbuka',  name:'Wardrobe with Open Shelving', ...cabOpt(2000, 2000, 3000, 600), maxH:3000, maxD:600 },
   ]},
   { id:'dining', name:'Dining Cabinet', options:[
-      { id:'standard', name:'Dining Cabinet', ...cabOpt(1200, 1200, 1000, 400) },
+      { id:'standard', name:'Dining Cabinet', ...cabOpt(1200, 1200, 1000, 400), maxD:400 },
   ]},
   // Fixed-price cabinet packages — no measurement; the price is flat.
   { id:'paket', name:'PG Cabinet Package', options:[
@@ -2692,9 +2692,9 @@ function cabinetCardHtml(){
       </div>
       <div class="q-photo-wrap" id="cab-photo"></div>
       <div class="cab-grid3">
-        <label class="fld"><span>Length (<span class="ulin-cab">mm</span>)</span> <input id="cab-L" type="number" min="0" step="0.01" oninput="cabPreview()"></label>
-        <label class="fld"><span>Height (<span class="ulin-cab">mm</span>)</span> <input id="cab-H" type="number" min="0" step="0.01" oninput="cabPreview()"></label>
-        <label class="fld"><span>Depth (<span class="ulin-cab">mm</span>)</span> <input id="cab-D" type="number" min="0" step="0.01" placeholder="optional"></label>
+        <label class="fld"><span>Length (<span class="ulin-cab">mm</span>)</span> <input id="cab-L" type="number" min="0" step="0.01" oninput="cabPreview()" onchange="cabClampDim(this)"></label>
+        <label class="fld"><span>Height (<span class="ulin-cab">mm</span>)</span> <input id="cab-H" type="number" min="0" step="0.01" oninput="cabPreview()" onchange="cabClampDim(this)"></label>
+        <label class="fld"><span>Depth (<span class="ulin-cab">mm</span>)</span> <input id="cab-D" type="number" min="0" step="0.01" placeholder="optional" onchange="cabClampDim(this)"></label>
       </div>
       <div class="cab-grid">
         <label class="fld">Light Strip (m) <input id="cab-ls" type="number" min="0" step="0.1" value="0" oninput="cabPreview()"></label>
@@ -2723,6 +2723,7 @@ function cabOptionChange(){
     L.value=dispFromMM(o.defL); H.value=dispFromMM(o.defH);  // pre-fill defaults (in current unit)
     if(D) D.value = o.defD>0 ? dispFromMM(o.defD) : '';      // pre-fill default depth when set (e.g. wardrobes)
   }
+  cabApplyMax();   // enforce this type's L/H/D caps on the shared inputs
   setPhoto('cab-photo', cabImgSrc(g.id,o.id));
   cabPreview();
 }
@@ -2730,6 +2731,29 @@ function cabSel(){
   const gi=+document.getElementById('cab-group').value;
   const oi=+document.getElementById('cab-option').value;
   return {gi,oi,g:CABINET[gi],o:CABINET[gi].options[oi]};
+}
+// Per-type dimension caps (mm). The L/H/D fields are shared across cabinet types,
+// so the max is (re)applied whenever the type changes and the typed value is
+// clamped on blur. cabAdd clamps again so stored data can never exceed the cap.
+function cabCapDisp(o, dim){
+  const mm = dim==='L' ? o.maxL : dim==='H' ? o.maxH : o.maxD;
+  return (mm && mm>0) ? dispFromMM(mm) : null;
+}
+function cabApplyMax(){
+  const {o}=cabSel();
+  [['L','cab-L'],['H','cab-H'],['D','cab-D']].forEach(([dim,id])=>{
+    const el=document.getElementById(id); if(!el) return;
+    const cap=cabCapDisp(o,dim);
+    if(cap!=null){ el.max=cap; if((parseFloat(el.value)||0)>cap) el.value=cap; }
+    else el.removeAttribute('max');
+  });
+}
+function cabClampDim(el){
+  if(!el) return;
+  const {o}=cabSel();
+  const dim = el.id==='cab-L' ? 'L' : el.id==='cab-H' ? 'H' : 'D';
+  const cap=cabCapDisp(o,dim);
+  if(cap!=null && (parseFloat(el.value)||0)>cap){ el.value=cap; cabPreview(); }
 }
 function cabAddonInputs(){
   return {
@@ -2777,7 +2801,11 @@ function cabAdd(){
   const Din=parseFloat(document.getElementById('cab-D').value)||0;
   if(!(Lin>0)){ alert('Please enter a Length ('+unitLabel('cab')+').'); return; }
   if(!(Hin>0)){ alert('Height ('+unitLabel('cab')+') is required.'); document.getElementById('cab-H').focus(); return; }
-  const Lmm=mmFromInput(Lin), Hmm=mmFromInput(Hin), Dmm=mmFromInput(Din);
+  let Lmm=mmFromInput(Lin), Hmm=mmFromInput(Hin), Dmm=mmFromInput(Din);
+  // Hard caps: never store a dimension above this type's max.
+  if(o.maxL && Lmm>o.maxL) Lmm=o.maxL;
+  if(o.maxH && Hmm>o.maxH) Hmm=o.maxH;
+  if(o.maxD && Dmm>o.maxD) Dmm=o.maxD;
   cabinetLines.push({gid:g.id,gname:g.name,oid:o.id,oname:o.name,L:Lmm,H:Hmm,D:Dmm,ls,ac,addon,price:cabinetPrice(o,Lmm,Hmm)+addon});
   document.getElementById('cab-D').value='';
   cabOptionChange(); // reset measurements back to the option's defaults
