@@ -840,8 +840,8 @@ function cabOpt(basePrice, defL, defH, defD){
 
 const CABINET = [
   { id:'tv', name:'TV Cabinet', options:[
-      { id:'standard', name:'TV Cabinet',              ...cabOpt(1000, 2400, 1000) },
-      { id:'backdrop', name:'TV Cabinet with Backdrop', ...cabOpt(1600, 2400, 1000) },
+      { id:'standard', name:'TV Cabinet',              ...cabOpt(1000, 2400, 1000, 400) },
+      { id:'backdrop', name:'TV Cabinet with Backdrop', ...cabOpt(1600, 2400, 1000, 400) },
   ]},
   // Wardrobes default to their maximum size: length 2000, height 3000, depth 600.
   { id:'almari', name:'Wardrobe', options:[
@@ -851,7 +851,7 @@ const CABINET = [
       { id:'terbuka',  name:'Wardrobe with Open Shelving', ...cabOpt(2000, 2000, 3000, 600) },
   ]},
   { id:'dining', name:'Dining Cabinet', options:[
-      { id:'standard', name:'Dining Cabinet', ...cabOpt(1200, 1200, 1000) },
+      { id:'standard', name:'Dining Cabinet', ...cabOpt(1200, 1200, 1000, 400) },
   ]},
   // Fixed-price cabinet packages — no measurement; the price is flat.
   { id:'paket', name:'PG Cabinet Package', options:[
@@ -2346,7 +2346,8 @@ const ALUCAB = [
   { id:'base',   name:'Bottom Cabinet C/W Quartz Stone & Sink', spec:'Depth 22" · Height 34"', rate:750 },
   { id:'wall25', name:'Top Cabinet (2.5ft / 30")', spec:'Depth 13" · Height 30"', rate:400 },
   { id:'wall3',  name:'Top Cabinet (3ft / 36")',   spec:'Depth 13" · Height 36"', rate:500 },
-  { id:'corner', name:'Top/Bottom Shoes Cabinet',  spec:'Depth 13" · Height 36"', rate:520 },
+  { id:'shoetop', name:'Top Shoes Cabinet',    spec:'Depth 13" · Height 36"', rate:520 },
+  { id:'shoebot', name:'Bottom Shoes Cabinet', spec:'Depth 13" · Height 36"', rate:520 },
 ];
 function alucabSel(){ return ALUCAB[+document.getElementById('alu-option').value]; }
 function alucabOptionChange(){ document.getElementById('alu-L').value=''; setPhoto('alu-photo', aluImgSrc(alucabSel().id)); alucabPreview(); }

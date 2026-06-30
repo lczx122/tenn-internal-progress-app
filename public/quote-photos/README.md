@@ -31,4 +31,5 @@ document to a 40×40 thumbnail). Use the exact filenames below.
 | Bottom Cabinet C/W Quartz Stone & Sink | `alu-base.jpg` |
 | Top Cabinet (2.5ft / 30") | `alu-wall25.jpg` |
 | Top Cabinet (3ft / 36") | `alu-wall3.jpg` |
-| Top/Bottom Shoes Cabinet | `alu-corner.jpg` |
+| Top Shoes Cabinet | `alu-shoetop.jpg` |
+| Bottom Shoes Cabinet | `alu-shoebot.jpg` |
