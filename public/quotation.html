@@ -1305,10 +1305,12 @@ function areaTierTableHtml(tiers){
   }).join('  ·  ');
 }
 
-/* ---------- admin-editable price overlay ----------
-   Item prices and cabinet tier parameters can be overridden by an admin and
-   stored in Supabase (app_settings key='pricing'). The overlay is applied over
-   the coded defaults on load; everyone reads it, only admins can save it. */
+/* ---------- price source of truth: Supabase (app_settings key='pricing') ----------
+   Prices live in Supabase and are the authoritative source. Admins edit them in
+   the in-app Edit Prices screen, which saves the COMPLETE price set back to that
+   row; everyone reads it on load. The coded values below are only a FALL-BACK —
+   used when the DB row is missing a key (a brand-new product) or can't be loaded
+   (empty / offline). Routine price changes are made in Edit Prices, not in code. */
 let priceOverlay = { items:{}, catalog:{}, cabinets:{}, grills:{}, paints:{}, alucabs:{}, areaTiers:[], discounts:[], pg:{}, paintpkg:{} };
 let isAdminUser = false;
 let isGuestUser = false;
@@ -2007,42 +2009,6 @@ function peValidate(){
 }
 function peSetDirty(){ peDirty=true; const a=document.getElementById('peActionbar'); if(a) a.classList.add('dirty'); }
 
-// Keep the saved overlay SPARSE: drop any value that still equals the coded
-// default, so app_settings.pricing only ever stores genuine admin deviations.
-// This is what stops a stale full snapshot from masking future code changes —
-// an item the admin hasn't customised has no entry, so the code default (incl.
-// any rename/reprice shipped later) always wins. areaTiers/discounts are
-// admin-managed whole-lists and are intentionally left untouched.
-function prunePriceOverlay(ov){
-  const D=PRICE_DEFAULTS;
-  const pruneMap=(map,defs)=>{
-    if(!map||!defs) return;
-    Object.keys(map).forEach(k=>{
-      const def=defs[k], obj=map[k];
-      if(!def || typeof obj!=='object') return;            // custom/unknown key → keep
-      Object.keys(obj).forEach(f=>{ if((f in def) && peSame(obj[f],def[f])) delete obj[f]; });
-      if(Object.keys(obj).length===0) delete map[k];        // nothing left → drop entry
-    });
-  };
-  pruneMap(ov.cabinets, D.cabinets);
-  pruneMap(ov.grills,   D.grills);
-  pruneMap(ov.alucabs,  D.alucabs);
-  pruneMap(ov.pg,       D.pg);
-  pruneMap(ov.paintpkg, D.paintpkg);
-  // Catalog products: keep only custom, hidden (soft-deleted), or genuinely
-  // changed rows; built-ins identical to code are dropped (the loader re-adds
-  // them from code, so renames/repricing in code flow straight through).
-  Object.keys(ov.catalog||{}).forEach(cid=>{
-    const byId={}; ((D.catalog&&D.catalog[cid])||[]).forEach(d=>{ byId[d.id]=d; });
-    ov.catalog[cid]=(ov.catalog[cid]||[]).filter(it=>{
-      if(it.custom || it.hidden) return true;
-      const d=byId[it.id];
-      if(!d) return true;                                   // unknown built-in → keep
-      return !(peSame(it.label,d.label) && peSame(it.sub,d.sub) && peSame(it.price,d.price));
-    });
-  });
-}
-
 async function savePrices(){
   const val=peValidate();
   if(!val.ok){
@@ -2111,7 +2077,11 @@ async function savePrices(){
     let out; if(inp.dataset.text){ out=raw; } else if(f==='p3'&&raw===''){ out=null; } else { out=isNaN(v)?0:v; }
     (overlay.pg[k]=overlay.pg[k]||{})[f]=out;
   });
-  prunePriceOverlay(overlay);   // store only deviations from code defaults (keeps the overlay from masking future code changes)
+  // Save the COMPLETE price set: app_settings.pricing is the source of truth, so
+  // it holds every price (not just deviations). Code values are only a fail-safe
+  // for keys missing from the row (a brand-new product, or the DB being empty /
+  // unreachable). Manage prices here in Edit Prices — that's the one place they
+  // change; the coded defaults are not edited for routine pricing.
   const supa=getSupa();
   if(!supa){ alert('Not connected — open this inside the app to save prices.'); return; }
   const btns=[...document.querySelectorAll('.js-save-prices')]; btns.forEach(b=>{b.disabled=true;b.textContent='Saving…';});

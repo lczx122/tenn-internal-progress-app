@@ -67,8 +67,14 @@ affected screen on a phone-sized viewport.
 
 ## quotation.html gotchas
 
-- **Price overlay** is stored in Supabase `app_settings` under key `pricing`
-  and applied for everyone on load; admins edit it via the in-page "Edit Prices".
+- **Prices are DB-driven (source of truth).** The complete price set lives in
+  Supabase `app_settings` key `pricing`, applied for everyone on load; admins edit
+  it via the in-page "Edit Prices" (which saves the whole set back). The coded
+  values in `quotation.html` are only a **fall-back** for keys the DB row is
+  missing (a brand-new product) or when the row can't load (empty/offline). Change
+  routine prices in Edit Prices, **not** in code — a code price edit is masked by
+  the DB row. (Adding a *new* product in code still works: keys absent from the
+  row fall back to code, so it shows until an admin edits it.)
 - **Save serialization reads inputs straight from the DOM.** Never remove inputs
   to hide them — hide with `display`/`hidden`, or saving silently drops data.
 - **Documents:** created/updated via the `create_document` / `update_document`
