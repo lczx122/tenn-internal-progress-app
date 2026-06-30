@@ -390,15 +390,24 @@ export default function Dashboard() {
                 <div className="grid grid-cols-3 gap-1.5 text-center">
                   <div className="min-w-0 rounded-lg bg-slate-50 px-1.5 py-2">
                     <div className="text-[11px] text-slate-400">Order</div>
-                    <div className="text-[13px] font-semibold leading-tight tabular-nums text-slate-800">{money0(claimsSummary.order)}</div>
+                    <div className="text-sm font-semibold leading-tight tabular-nums text-slate-800 lg:text-[13px]">
+                      <span className="lg:hidden">{money(claimsSummary.order)}</span>
+                      <span className="hidden lg:inline">{money0(claimsSummary.order)}</span>
+                    </div>
                   </div>
                   <div className="min-w-0 rounded-lg bg-emerald-50 px-1.5 py-2">
                     <div className="text-[11px] text-emerald-700/70">Collected</div>
-                    <div className="text-[13px] font-semibold leading-tight tabular-nums text-emerald-700">{money0(claimsSummary.collected)}</div>
+                    <div className="text-sm font-semibold leading-tight tabular-nums text-emerald-700 lg:text-[13px]">
+                      <span className="lg:hidden">{money(claimsSummary.collected)}</span>
+                      <span className="hidden lg:inline">{money0(claimsSummary.collected)}</span>
+                    </div>
                   </div>
                   <div className="min-w-0 rounded-lg bg-amber-50 px-1.5 py-2">
                     <div className="text-[11px] text-amber-700/70">Outstanding</div>
-                    <div className="text-[13px] font-semibold leading-tight tabular-nums text-amber-700">{money0(claimsSummary.balance)}</div>
+                    <div className="text-sm font-semibold leading-tight tabular-nums text-amber-700 lg:text-[13px]">
+                      <span className="lg:hidden">{money(claimsSummary.balance)}</span>
+                      <span className="hidden lg:inline">{money0(claimsSummary.balance)}</span>
+                    </div>
                   </div>
                 </div>
                 <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100">
