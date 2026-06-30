@@ -2575,14 +2575,20 @@ function catClearSearch(){ const inp=document.getElementById('catSearch'); if(in
 /* ---------- Other Services — ad-hoc custom line items ----------
    A free-form section: the salesperson types a description + price and adds it
    to this quote (not saved globally). Lines group under "Other Services". */
-const customLines = []; // [{name, price, qty}]
+const customLines = []; // [{name, price, qty, category}]
+// Work categories an ad-hoc item can be tagged with (mirrors src/lib/categories.ts).
+// Lets e.g. a custom cabinet at a custom price be counted under a real trade for
+// per-trade order totals + the work card it opens, without adding it to the
+// catalog permanently. 'Other Services' is the default.
+const OTHER_CATS = ['Other Services','Mindhome','Aluminium Cabinet','Iron Work','Aluminium Work','Painting','Waterproofing','Smart Home','Smart Lock','EE'];
 function escHtml(s){ return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 function othAdd(){
   const name=(document.getElementById('oth-name').value||'').trim();
   const price=parseFloat(document.getElementById('oth-price').value)||0;
   const qty=Math.max(1, Math.floor(parseFloat(document.getElementById('oth-qty').value)||1));
+  const category=document.getElementById('oth-cat').value||'Other Services';
   if(!name){ alert('Enter a description for the service.'); document.getElementById('oth-name').focus(); return; }
-  customLines.push({name, price, qty});
+  customLines.push({name, price, qty, category});
   document.getElementById('oth-name').value=''; document.getElementById('oth-price').value=''; document.getElementById('oth-qty').value='1';
   renderOthLines(); recalc();
 }
@@ -2591,9 +2597,10 @@ function renderOthLines(){
   const box=document.getElementById('oth-lines'); if(!box) return;
   if(!customLines.length){ box.innerHTML='<div class="cab-empty">No custom items added yet.</div>'; return; }
   box.innerHTML=customLines.map((l,i)=>{
-    const q=Math.max(1,+l.qty||1), unit=+l.price||0;
+    const q=Math.max(1,+l.qty||1), unit=+l.price||0, cat=l.category||'Other Services';
+    const meta=[cat!=='Other Services'?cat:'', q>1?`${q} × RM ${fmt(unit)}`:''].filter(Boolean).join(' · ');
     return `<div class="cab-line">
-    <div class="cab-line-info"><b>${escHtml(l.name)}</b>${q>1?`<br><span class="cab-dim">${q} × RM ${fmt(unit)}</span>`:''}</div>
+    <div class="cab-line-info"><b>${escHtml(l.name)}</b>${meta?`<br><span class="cab-dim">${meta}</span>`:''}</div>
     <div class="cab-amt">RM ${fmt(unit*q)}</div>
     <button class="cab-x" title="Remove" onclick="othRemove(${i})">✕</button>
   </div>`;}).join('');
@@ -2610,6 +2617,7 @@ function othCardHtml(){
       <div class="cab-note">Add any custom product or service with your own description and price.</div>
       <div class="cab-grid">
         <label class="fld" style="grid-column:1/-1">Description <input id="oth-name" type="text" placeholder="e.g. Site cleaning"></label>
+        <label class="fld" style="grid-column:1/-1">Category <select id="oth-cat">${OTHER_CATS.map(c=>`<option value="${c}">${c}</option>`).join('')}</select></label>
         <label class="fld">Price (RM) <input id="oth-price" type="number" min="0" step="0.01" placeholder="0.00"></label>
         <label class="fld">Quantity <input id="oth-qty" type="number" min="1" step="1" value="1"></label>
       </div>
@@ -2892,7 +2900,7 @@ function computeWorkCategories(){
   if(paintLines.length) add('paint');
   if(alucabLines.length) add('alucab');
   PG_PACKAGES.forEach(P=>{ if((pgLines[P.id]||[]).length) set.add(P.cat); });
-  if(customLines.length) set.add('Other Services');
+  customLines.forEach(l=>set.add(l.category||'Other Services'));
   return [...set];
 }
 // The PIC(s) ticked in the form — assigned to the unit when an SO is created.
@@ -2944,7 +2952,7 @@ function collectLines(){
       }
     });
   });
-  customLines.forEach(l=>{ const q=Math.max(1,+l.qty||1), unit=+l.price||0; lines.push({cat:'Other Services',wcat:'Other Services',variantName:'',label:escHtml(l.name),sub:'',price:unit,qty:q,amount:unit*q}); });
+  customLines.forEach(l=>{ const q=Math.max(1,+l.qty||1), unit=+l.price||0, cat=l.category||'Other Services'; lines.push({cat,wcat:cat,variantName:'',label:escHtml(l.name),sub:'',price:unit,qty:q,amount:unit*q}); });
   return lines;
 }
 // Sum line amounts per work category (for payload.category_totals → per-trade order).
@@ -3023,6 +3031,9 @@ function buildDoc(){
   // group lines by category (cabinet groups first, then catalog categories)
   let rowsHtml='';
   const order=[...CABINET.map(gp=>gp.name), ALUCAB_CAT, 'Iron Work', 'Aluminium Work', PAINT_CAT, ...CATALOG.map(c=>c.name), 'Other Services'];
+  // Re-categorised custom items may carry a category that isn't a standard section
+  // (e.g. 'Mindhome'); append those so they still render in the document.
+  lines.forEach(l=>{ if(l.cat && !order.includes(l.cat)) order.push(l.cat); });
   const seen=new Set();
   order.forEach(cname=>{
     if(seen.has(cname)) return; seen.add(cname);
