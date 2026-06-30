@@ -96,6 +96,15 @@ export default function Dashboard() {
   // Refetch after waking from idle (realtime socket may have died).
   useAutoRefresh(load)
 
+  // Opportunistic auto-archive of units completed > 2 months ago. Runs once when
+  // an admin opens the dashboard — a backstop so it works even without the daily
+  // cron. Idempotent; the jobs realtime subscription refreshes the UI if any unit
+  // gets archived.
+  useEffect(() => {
+    if (isAdmin) supabase.rpc('archive_completed_units')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAdmin])
+
   // Active units only, each annotated with its overall progress.
   const active = useMemo(() => {
     const byJob = new Map<string, JobWork[]>()
