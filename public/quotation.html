@@ -311,6 +311,9 @@
   .modal.show{display:block}
   .modal-inner{max-width:820px;margin:0 auto}
   .modal-bar{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+  /* Pin the price editor's Save/Cancel bar to the top so it's always reachable —
+     the bottom sticky bar can slip behind the app's bottom nav on iOS. */
+  #priceModal .modal-bar{position:sticky;top:0;z-index:6;background:var(--card);padding:10px 0 12px;margin-bottom:8px}
   .modal-bar .act{flex:1 1 120px;padding:11px 12px;font-size:13.5px}
   @media(max-width:560px){
     .modal{padding:12px}
