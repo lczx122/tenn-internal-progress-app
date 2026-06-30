@@ -180,6 +180,14 @@ export function Icon({ name, className = 'inline-block h-[18px] w-[18px] align-[
           <path d="M20 13.5A8 8 0 1 1 10.5 4a6.5 6.5 0 0 0 9.5 9.5Z" />
         </svg>
       )
+    case 'lock': // private
+      return (
+        <svg {...p}>
+          <rect x="4.5" y="10.5" width="15" height="10" rx="2" />
+          <path d="M8 10.5V7.5a4 4 0 0 1 8 0v3" />
+          <path d="M12 14.5v2.5" />
+        </svg>
+      )
     case 'settings': // gear
       return (
         <svg {...p}>

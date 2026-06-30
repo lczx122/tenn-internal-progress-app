@@ -134,6 +134,7 @@ export interface Appointment {
   ends_at: string | null
   status: 'scheduled' | 'done' | 'cancelled'
   notes: string
+  is_private: boolean
   created_by: string | null
   created_by_name: string
   created_at: string

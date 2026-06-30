@@ -34,6 +34,7 @@ export default function Schedule() {
   const [selectedDay, setSelectedDay] = useState(() => startOfDay(new Date()))
   const [scope, setScope] = useState<'mine' | 'all'>('mine')
   const [showNotif, setShowNotif] = useState(false)
+  const [pins, setPins] = useState<Set<string>>(() => new Set())
   const { session } = useAuth()
   const myId = session?.user.id
   const navigate = useNavigate()
@@ -41,16 +42,34 @@ export default function Schedule() {
   async function load() {
     progressStart()
     try {
-      const { data } = await supabase
-        .from('appointments')
-        .select('*')
-        .order('starts_at', { ascending: true })
+      const [{ data }, { data: pinData }] = await Promise.all([
+        supabase.from('appointments').select('*').order('starts_at', { ascending: true }),
+        supabase.from('appointment_pins').select('appointment_id'),
+      ])
       const next = (data as Appointment[]) ?? []
       setAppts(next)
       cacheSet('schedule', next)
+      setPins(new Set((pinData ?? []).map((p: { appointment_id: string }) => p.appointment_id)))
       setLoading(false)
     } finally {
       progressDone()
+    }
+  }
+
+  // Pin / unpin for the signed-in user only (personal view). Optimistic.
+  async function togglePin(id: string) {
+    if (!myId) return
+    const pinned = pins.has(id)
+    setPins((prev) => {
+      const n = new Set(prev)
+      if (pinned) n.delete(id)
+      else n.add(id)
+      return n
+    })
+    if (pinned) {
+      await supabase.from('appointment_pins').delete().eq('user_id', myId).eq('appointment_id', id)
+    } else {
+      await supabase.from('appointment_pins').insert({ user_id: myId, appointment_id: id })
     }
   }
 
@@ -58,6 +77,7 @@ export default function Schedule() {
     load()
     const channel = realtimeChannel('schedule')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'appointments' }, () => load())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'appointment_pins' }, () => load())
       .subscribe()
     return () => {
       supabase.removeChannel(channel)
@@ -158,7 +178,13 @@ export default function Schedule() {
       {loading ? (
         <p className="py-10 text-center text-slate-400">Loading…</p>
       ) : mode === 'agenda' ? (
-        <Agenda items={filtered} showPast={showPast} onTogglePast={() => setShowPast((v) => !v)} />
+        <Agenda
+          items={filtered}
+          showPast={showPast}
+          onTogglePast={() => setShowPast((v) => !v)}
+          pins={pins}
+          onTogglePin={togglePin}
+        />
       ) : (
         <CalendarView
           items={filtered}
@@ -166,6 +192,8 @@ export default function Schedule() {
           setMonth={setMonth}
           selectedDay={selectedDay}
           setSelectedDay={setSelectedDay}
+          pins={pins}
+          onTogglePin={togglePin}
         />
       )}
     </Layout>
@@ -177,15 +205,26 @@ function Agenda({
   items,
   showPast,
   onTogglePast,
+  pins,
+  onTogglePin,
 }: {
   items: Appointment[]
   showPast: boolean
   onTogglePast: () => void
+  pins: Set<string>
+  onTogglePin: (id: string) => void
 }) {
   const today = startOfDay(new Date())
   const now = Date.now()
 
+  // Pinned tasks are pulled to the top of the user's own view, regardless of day
+  // or the past/upcoming filter. Everything else flows in its day group.
+  const pinned = items
+    .filter((a) => pins.has(a.id))
+    .sort((a, b) => +new Date(a.starts_at) - +new Date(b.starts_at))
+
   const visible = items.filter((a) => {
+    if (pins.has(a.id)) return false // shown in the Pinned section instead
     if (showPast) return true
     const day = startOfDay(new Date(a.starts_at))
     // upcoming days, plus anything overdue (past but still scheduled)
@@ -201,7 +240,25 @@ function Agenda({
           {showPast ? 'Hide past' : 'Show past & done'}
         </button>
       </div>
-      {groups.length === 0 ? (
+      {pinned.length > 0 && (
+        <div className="mb-5">
+          <h2 className="mb-2 flex items-center gap-1.5 px-1 text-sm font-semibold text-slate-700">
+            <Icon name="pin" className="h-4 w-4 text-amber-500" /> Pinned
+          </h2>
+          <ul className="space-y-2">
+            {pinned.map((a) => (
+              <ApptRow
+                key={a.id}
+                a={a}
+                overdue={a.status === 'scheduled' && new Date(a.starts_at).getTime() < now}
+                pinned
+                onTogglePin={onTogglePin}
+              />
+            ))}
+          </ul>
+        </div>
+      )}
+      {groups.length === 0 && pinned.length === 0 ? (
         <div className="rounded-xl border border-dashed border-slate-300 py-12 text-center text-slate-400">
           No appointments. Tap “+ New” to schedule one.
         </div>
@@ -212,7 +269,13 @@ function Agenda({
               <h2 className="mb-2 px-1 text-sm font-semibold text-slate-700">{dayLabel(g.date)}</h2>
               <ul className="space-y-2">
                 {g.items.map((a) => (
-                  <ApptRow key={a.id} a={a} overdue={a.status === 'scheduled' && new Date(a.starts_at).getTime() < now} />
+                  <ApptRow
+                    key={a.id}
+                    a={a}
+                    overdue={a.status === 'scheduled' && new Date(a.starts_at).getTime() < now}
+                    pinned={pins.has(a.id)}
+                    onTogglePin={onTogglePin}
+                  />
                 ))}
               </ul>
             </div>
@@ -230,12 +293,16 @@ function CalendarView({
   setMonth,
   selectedDay,
   setSelectedDay,
+  pins,
+  onTogglePin,
 }: {
   items: Appointment[]
   month: Date
   setMonth: (d: Date) => void
   selectedDay: Date
   setSelectedDay: (d: Date) => void
+  pins: Set<string>
+  onTogglePin: (id: string) => void
 }) {
   const today = startOfDay(new Date())
   const first = new Date(month.getFullYear(), month.getMonth(), 1)
@@ -323,7 +390,13 @@ function CalendarView({
       ) : (
         <ul className="space-y-2">
           {dayItems.map((a) => (
-            <ApptRow key={a.id} a={a} overdue={a.status === 'scheduled' && new Date(a.starts_at).getTime() < Date.now()} />
+            <ApptRow
+              key={a.id}
+              a={a}
+              overdue={a.status === 'scheduled' && new Date(a.starts_at).getTime() < Date.now()}
+              pinned={pins.has(a.id)}
+              onTogglePin={onTogglePin}
+            />
           ))}
         </ul>
       )}
@@ -333,7 +406,17 @@ function CalendarView({
 }
 
 // ---------- one appointment row ----------
-export function ApptRow({ a, overdue }: { a: Appointment; overdue?: boolean }) {
+export function ApptRow({
+  a,
+  overdue,
+  pinned,
+  onTogglePin,
+}: {
+  a: Appointment
+  overdue?: boolean
+  pinned?: boolean
+  onTogglePin?: (id: string) => void
+}) {
   const t = getApptType(a.type)
   const muted = a.status !== 'scheduled'
   return (
@@ -344,10 +427,15 @@ export function ApptRow({ a, overdue }: { a: Appointment; overdue?: boolean }) {
       >
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium ${t.accent}`}>
                 <Icon name={t.icon} className="h-3.5 w-3.5" /> {t.label}
               </span>
+              {a.is_private && (
+                <span className="inline-flex items-center gap-1 rounded-full border border-slate-300 bg-slate-50 px-2 py-0.5 text-[11px] font-medium text-slate-600">
+                  <Icon name="lock" className="h-3 w-3" /> Private
+                </span>
+              )}
               <span className="text-sm font-medium text-slate-700">{timeLabel(a.starts_at)}</span>
             </div>
             <p className={'mt-1 truncate font-semibold text-slate-900 ' + (a.status === 'done' ? 'line-through' : '')}>
@@ -360,6 +448,21 @@ export function ApptRow({ a, overdue }: { a: Appointment; overdue?: boolean }) {
             )}
           </div>
           <div className="flex shrink-0 flex-col items-end gap-1 max-w-[45%]">
+            {onTogglePin && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  onTogglePin(a.id)
+                }}
+                aria-label={pinned ? 'Unpin' : 'Pin to top'}
+                title={pinned ? 'Unpin' : 'Pin to top'}
+                className={'-mr-1 -mt-1 rounded-md p-1 ' + (pinned ? 'text-amber-500' : 'text-slate-300 active:text-slate-500')}
+              >
+                <Icon name="pin" className="h-4 w-4" />
+              </button>
+            )}
             {overdue && (
               <span className="rounded-full bg-rose-100 px-2 py-0.5 text-[11px] font-medium text-rose-700">Overdue</span>
             )}

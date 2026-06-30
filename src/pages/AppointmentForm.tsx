@@ -27,6 +27,9 @@ export default function AppointmentForm() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [status, setStatus] = useState<Appointment['status']>('scheduled')
+  // Owner of the appointment being edited (null for a new one). Only the owner
+  // may flip a task private, since RLS ties privacy to created_by.
+  const [ownerId, setOwnerId] = useState<string | null>(null)
 
   const [form, setForm] = useState({
     type: 'site_visit',
@@ -38,6 +41,7 @@ export default function AppointmentForm() {
     customer_name: '',
     location: '',
     notes: '',
+    is_private: false,
   })
 
   function set<K extends keyof typeof form>(k: K, v: (typeof form)[K]) {
@@ -87,6 +91,7 @@ export default function AppointmentForm() {
           const a = data as Appointment | null
           if (a) {
             setStatus(a.status)
+            setOwnerId(a.created_by)
             setForm({
               type: a.type,
               title: a.title,
@@ -97,6 +102,7 @@ export default function AppointmentForm() {
               customer_name: a.customer_name,
               location: a.location,
               notes: a.notes,
+              is_private: a.is_private ?? false,
             })
           }
           setLoading(false)
@@ -155,6 +161,7 @@ export default function AppointmentForm() {
       customer_name: form.customer_name.trim(),
       location: form.location.trim(),
       notes: form.notes.trim(),
+      is_private: form.is_private,
     }
 
     if (isEdit) {
@@ -282,6 +289,34 @@ export default function AppointmentForm() {
               {people.length === 0 && <p className="text-sm text-slate-400">No users found.</p>}
             </div>
           </div>
+          {(!isEdit || ownerId === session?.user.id) && (
+            <div>
+              <label className={labelCls}>Visibility</label>
+              <button
+                type="button"
+                onClick={() => set('is_private', !form.is_private)}
+                aria-pressed={form.is_private}
+                className={
+                  'flex w-full items-center justify-between gap-3 rounded-lg border px-3 py-2.5 text-left ' +
+                  (form.is_private
+                    ? 'border-slate-900 bg-slate-900 text-white'
+                    : 'border-slate-300 bg-white text-slate-700')
+                }
+              >
+                <span className="flex items-center gap-2 text-sm font-medium">
+                  <Icon name="lock" className="h-4 w-4" /> Private — only you can see this
+                </span>
+                <span className={'relative h-6 w-10 shrink-0 rounded-full transition ' + (form.is_private ? 'bg-emerald-400' : 'bg-slate-300')}>
+                  <span className={'absolute top-0.5 h-5 w-5 rounded-full bg-white transition-all ' + (form.is_private ? 'left-[1.125rem]' : 'left-0.5')} />
+                </span>
+              </button>
+              {form.is_private && (
+                <p className="mt-1 text-xs text-slate-500">
+                  Hidden from everyone else, including admins. Your reminders still work.
+                </p>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="space-y-4 rounded-xl bg-white p-4 shadow-sm">
@@ -371,7 +406,7 @@ export default function AppointmentForm() {
               Reopen (mark scheduled)
             </button>
           )}
-          {isAdmin && (
+          {(isAdmin || (form.is_private && ownerId === session?.user.id)) && (
             <button
               onClick={remove}
               disabled={busy}
