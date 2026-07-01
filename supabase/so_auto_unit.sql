@@ -175,6 +175,13 @@ begin
 
   v_actor := coalesce(nullif(new.prepared_by, ''), 'System');
 
+  -- Intentional detach: an SO's unit_id was cleared (e.g. consolidation moved its
+  -- items into a new combined SO). Resync the unit it left — do NOT recreate one.
+  if tg_op = 'UPDATE' and old.unit_id is not null and new.unit_id is null then
+    perform public.sync_unit_totals(old.unit_id, v_actor, -1);
+    return new;
+  end if;
+
   -- ---------------------------------------------------------------------
   --  Not linked yet: find or create the unit, then link it. The self-update
   --  below re-fires this trigger and runs the linked path (work cards + sync).
@@ -339,6 +346,36 @@ create trigger trg_so_delete_unit
   for each row
   when (old.doc_type = 'SO')
   execute function public.tg_so_delete_unit();
+
+-- ---------------------------------------------------------------------------
+--  detach_sales_orders — clear unit_id on the given SOs (without deleting them).
+--  Used when consolidating a unit's multiple SOs into one new SO: the old ones
+--  are detached (the trigger's detach guard resyncs the unit) but kept on record.
+--  Only the SO's creator or an admin may detach it.
+-- ---------------------------------------------------------------------------
+create or replace function public.detach_sales_orders(p_ids uuid[])
+returns integer
+language plpgsql
+security definer set search_path = public
+as $$
+declare
+  v_count int;
+begin
+  if auth.role() <> 'authenticated' then
+    raise exception 'Not authorised';
+  end if;
+  update public.quotations
+     set unit_id = null
+   where id = any(p_ids)
+     and doc_type = 'SO'
+     and unit_id is not null
+     and (created_by = auth.uid() or public.is_admin());
+  get diagnostics v_count = row_count;
+  return v_count;
+end;
+$$;
+
+grant execute on function public.detach_sales_orders(uuid[]) to authenticated;
 
 -- Self-heal any Sales Orders that were saved but never got a unit (e.g. an
 -- earlier trigger error). The no-op update re-fires the trigger; SOs that already

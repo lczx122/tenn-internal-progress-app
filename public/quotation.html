@@ -3122,6 +3122,8 @@ let sourceId=null;      // the quotation this SO was converted from (if any)
 let sourceNumber=null;  // …and its number, for the printed "Ref Quote" line
 let editingId=null;     // when set, Save UPDATES this existing document (edit mode)
 let viewMode=false;     // read-only view of a saved document
+let fromUnitId=null;    // building a SO for an existing unit (Convert / Consolidate)
+let detachSOIds=[];     // SOs to detach from the unit after saving the consolidated SO
 
 function docName(t){return (t||docType)==='SO'?'Sales Order':'Quotation';}
 
@@ -3304,7 +3306,11 @@ async function saveQuote(){
       if(error) throw error;
       committedNo=data.number; savedId=data.id;
       setQnoStatus('✓ Saved to shared register');
-      if(docType==='SO') showUnitOutcome(supa, savedId);
+      if(docType==='SO'){
+        // Consolidation: the new SO is now attached to the unit; detach (keep) the old ones.
+        if(detachSOIds.length){ try{ await supa.rpc('detach_sales_orders',{p_ids:detachSOIds}); }catch(e){} detachSOIds=[]; }
+        showUnitOutcome(supa, savedId);
+      }
     }else{
       const ym=yymm(); const m=loadJSON(SK_LOCALSEQ); m[docType]=m[docType]||{};
       const seq=(m[docType][ym]||0)+1; m[docType][ym]=seq; saveJSON(SK_LOCALSEQ,m);
@@ -3414,6 +3420,63 @@ async function loadDocument(id, asType, mode){
       else
         setQnoStatus('Converting from '+data.number+' — preview, then Save Sales Order');
     }
+  }catch(e){ refreshPendingNumber(); }
+}
+
+/* Build a new Sales Order for an existing unit (from the unit page):
+     • unit has NO SO   → reconstruct one line per trade from its order amounts.
+     • unit has SO(s)   → merge every SO's line items into one; on Save the new SO
+                          attaches to the unit and the old ones are detached (kept). */
+function clearAllLines(){
+  for(const k in state) delete state[k];
+  cabinetLines.length=0; grillLines.length=0; customLines.length=0; paintLines.length=0; alucabLines.length=0;
+  PG_PACKAGES.forEach(P=>{ if(pgLines[P.id]) pgLines[P.id].length=0; });
+}
+function mergePayloadLines(p){
+  if(!p) return;
+  if(p.selections) for(const k in p.selections){ state[k]=(+state[k]||0)+(+p.selections[k]||0); }
+  if(p.variants) Object.assign(activeVariant,p.variants);
+  const push=(arr,dst)=>{ if(Array.isArray(arr)) arr.forEach(l=>dst.push(Object.assign({},l))); };
+  push(p.cabinets,cabinetLines); push(p.custom,customLines); push(p.paints,paintLines); push(p.alucabs,alucabLines);
+  if(Array.isArray(p.grills)) p.grills.forEach(l=>{ const c=Object.assign({},l); if(!(p.ver>=2)&&c.unit==='sqft'){ c.W=(+c.W||0)/12; c.H=(+c.H||0)/12; } grillLines.push(c); });
+  if(p.pg){
+    if(Array.isArray(p.pg.lines)){ p.pg.lines.forEach(l=>{ if(pgLines.iron) pgLines.iron.push(Object.assign({},l)); }); }
+    else { const lns=p.pg.lines||{}; PG_PACKAGES.forEach(P=>{ const a=lns[P.id]; if(Array.isArray(a)) a.forEach(l=>pgLines[P.id].push(Object.assign({},l))); }); }
+  }
+}
+function reconstructFromOrder(job){
+  const obc=(job&&job.order_by_category)||{}; let any=false;
+  Object.keys(obc).forEach(cat=>{ const amt=+obc[cat]||0; if(amt>0){ customLines.push({name:cat, price:amt, qty:1, category:cat}); any=true; } });
+  if(!any){ const tot=+((job&&job.order_total)||0); if(tot>0) customLines.push({name:'Order total', price:tot, qty:1, category:'Other Services'}); }
+}
+async function loadFromUnit(jobId){
+  const supa=getSupa(); if(!supa||!jobId){ refreshPendingNumber(); return; }
+  applyDocTypeUI('SO');
+  try{
+    await ready(supa);
+    const {data:job}=await supa.from('jobs').select('*').eq('id',jobId).single();
+    if(!job){ refreshPendingNumber(); return; }
+    fromUnitId=jobId; detachSOIds=[];
+    setVal('c_name',job.customer_name); setVal('c_phone',job.phone);
+    setVal('c_unit',job.unit_code); setVal('c_project',job.project);
+    const pics=Array.isArray(job.pics)&&job.pics.length?job.pics:(job.pic?[job.pic]:[]);
+    document.querySelectorAll('#c_pics .pic-chk').forEach(c=>{ c.checked=pics.includes(c.value); });
+    syncPicChips();
+    clearAllLines();
+    const {data:sos}=await supa.from('quotations').select('*').eq('unit_id',jobId).eq('doc_type','SO').order('created_at',{ascending:true});
+    if(sos && sos.length){
+      sos.forEach(so=>mergePayloadLines(so.payload||{}));
+      detachSOIds=sos.map(s=>s.id);
+      setQnoStatus('Consolidating '+sos.length+' Sales Order'+(sos.length>1?'s':'')+' — review, then Save (old ones are detached, not deleted)');
+    } else {
+      reconstructFromOrder(job);
+      setQnoStatus('New Sales Order for '+((job.unit_code||'').trim()||'this unit')+' — built from its order amounts; review, then Save');
+    }
+    sourceId=null; sourceNumber=null; committedNo=null; editingId=null;
+    UNITS.cab='mm'; UNITS.grill='ft'; UNITS.paint='ft'; UNITS.alu='ft'; relabelUnits();
+    applyDocTypeUI('SO');
+    renderCatalog(); recalc(); updateConvertBtn();
+    await refreshPendingNumber();
   }catch(e){ refreshPendingNumber(); }
 }
 function setVal(id,v){const el=document.getElementById(id); if(el) el.value=v||'';}
@@ -3643,8 +3706,9 @@ async function newQuote(){
   const fromId=params.get('from');
   const editId=params.get('edit');
   const viewId=params.get('view');
+  const unitId=params.get('unit');
   const asType=(params.get('type')||'QT').toUpperCase()==='SO'?'SO':'QT';
-  if(asType==='SO' && !fromId && !editId && !viewId) applyDocTypeUI('SO');
+  if(asType==='SO' && !fromId && !editId && !viewId && !unitId) applyDocTypeUI('SO');
 
   (async ()=>{
     isGuestUser = getGuest();      // gate save/edit before any document loads
@@ -3655,6 +3719,7 @@ async function newQuote(){
     if(viewId) await loadDocument(viewId, null, 'view');
     else if(editId) await loadDocument(editId, null, 'edit');
     else if(fromId) await loadDocument(fromId, asType, 'convert');
+    else if(unitId) await loadFromUnit(unitId);
     else await refreshPendingNumber();
     // Reveal the price editor for admins only (never in read-only view).
     isAdminUser = await checkAdmin();

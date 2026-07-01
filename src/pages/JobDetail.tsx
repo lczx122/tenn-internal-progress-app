@@ -25,6 +25,7 @@ export default function JobDetail() {
   const [events, setEvents] = useState<JobEvent[]>([])
   const [appts, setAppts] = useState<Appointment[]>([])
   const [claims, setClaims] = useState<Claim[]>([])
+  const [soCount, setSoCount] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)
   const [note, setNote] = useState('')
   const [busy, setBusy] = useState(false)
@@ -32,18 +33,20 @@ export default function JobDetail() {
 
   const loadAll = useCallback(async () => {
     if (!id) return
-    const [{ data: j }, { data: wk }, { data: ev }, { data: ap }, { data: cl }] = await Promise.all([
+    const [{ data: j }, { data: wk }, { data: ev }, { data: ap }, { data: cl }, { count: sc }] = await Promise.all([
       supabase.from('jobs').select('*').eq('id', id).single(),
       supabase.from('job_works').select('*').eq('job_id', id).order('created_at'),
       supabase.from('job_events').select('*').eq('job_id', id).order('created_at', { ascending: false }),
       supabase.from('appointments').select('*').eq('job_id', id).order('starts_at'),
       supabase.from('claims').select('*').eq('job_id', id).order('created_at'),
+      supabase.from('quotations').select('id', { count: 'exact', head: true }).eq('unit_id', id).eq('doc_type', 'SO'),
     ])
     setJob((j as Job) ?? null)
     setWorks((wk as JobWork[]) ?? [])
     setEvents((ev as JobEvent[]) ?? [])
     setAppts((ap as Appointment[]) ?? [])
     setClaims((cl as Claim[]) ?? [])
+    setSoCount(sc ?? 0)
     setLoading(false)
   }, [id])
 
@@ -55,6 +58,7 @@ export default function JobDetail() {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'job_events', filter: `job_id=eq.${id}` }, () => loadAll())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'appointments', filter: `job_id=eq.${id}` }, () => loadAll())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'claims', filter: `job_id=eq.${id}` }, () => loadAll())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'quotations', filter: `unit_id=eq.${id}` }, () => loadAll())
       .subscribe()
     return () => {
       supabase.removeChannel(channel)
@@ -230,6 +234,16 @@ export default function JobDetail() {
             <div className="font-medium text-slate-700">{formatDate(job.target_date)}</div>
           </div>
         </div>
+
+        {soCount != null && !job.is_archived && (soCount === 0 || (soCount >= 2 && isAdmin)) && (
+          <Link
+            to={`/quote?unit=${job.id}&type=SO`}
+            className="mt-3 flex items-center justify-center gap-1.5 rounded-lg border border-slate-300 py-2.5 text-sm font-medium text-slate-700 active:bg-slate-100"
+          >
+            <Icon name="receipt" className="h-4 w-4" />
+            {soCount === 0 ? 'Convert to Sales Order' : `Consolidate ${soCount} Sales Orders into one`}
+          </Link>
+        )}
       </section>
 
       {/* Customer claims */}
