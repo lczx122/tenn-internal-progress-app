@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { realtimeChannel } from '../lib/realtime'
 import type { Claim, Job } from '../lib/types'
@@ -8,6 +8,7 @@ import { money } from '../lib/claims'
 import { formatDate } from '../lib/format'
 import { useAutoRefresh } from '../lib/useAutoRefresh'
 import { progressStart, progressDone } from '../lib/progress'
+import { canShareFiles, shareElementAsPdf } from '../lib/sharePdf'
 
 const ALL = '__all__'
 
@@ -25,6 +26,17 @@ export default function Reports() {
   const [cutoff, setCutoff] = useState<string>(() => new Date().toISOString().slice(0, 10))
   const [outstandingOnly, setOutstandingOnly] = useState(false)
   const [includeArchived, setIncludeArchived] = useState(false)
+  const [sharing, setSharing] = useState(false)
+  const reportRef = useRef<HTMLDivElement>(null)
+
+  // Mobile → share the report as a PDF (native share sheet); tablet/desktop → print.
+  const [isMobile, setIsMobile] = useState(() => window.matchMedia('(max-width: 767px)').matches)
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 767px)')
+    const on = () => setIsMobile(mq.matches)
+    mq.addEventListener('change', on)
+    return () => mq.removeEventListener('change', on)
+  }, [])
 
   async function load() {
     progressStart()
@@ -125,6 +137,25 @@ export default function Reports() {
     URL.revokeObjectURL(url)
   }
 
+  const useShare = isMobile && canShareFiles()
+  async function shareOrPrint() {
+    if (!useShare || !reportRef.current) {
+      window.print()
+      return
+    }
+    setSharing(true)
+    try {
+      await shareElementAsPdf(reportRef.current, `${title.replace(/[^\w]+/g, '_')}.pdf`, 'l', {
+        title,
+        text: 'Balance report — Tenn Renovation',
+      })
+    } catch {
+      window.print()
+    } finally {
+      setSharing(false)
+    }
+  }
+
   const field =
     'rounded-lg border border-slate-300 bg-white px-2 py-2 text-sm outline-none focus:border-slate-900'
 
@@ -167,15 +198,19 @@ export default function Reports() {
             <button onClick={downloadCsv} className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 active:bg-slate-100">
               CSV
             </button>
-            <button onClick={() => window.print()} className="rounded-lg bg-slate-900 px-3 py-2 text-sm font-medium text-white active:bg-slate-700">
-              Print / PDF
+            <button
+              onClick={shareOrPrint}
+              disabled={sharing}
+              className="rounded-lg bg-slate-900 px-3 py-2 text-sm font-medium text-white active:bg-slate-700 disabled:opacity-60"
+            >
+              {sharing ? 'Preparing…' : useShare ? 'Share PDF' : 'Print / PDF'}
             </button>
           </div>
         </div>
       </div>
 
       {/* The report itself — the only thing that prints */}
-      <div className="report-print">
+      <div ref={reportRef} className="report-print">
         <h1 className="mb-3 text-sm font-bold uppercase tracking-wide text-slate-900">{title}</h1>
         {loading ? (
           <p className="py-10 text-center text-slate-400">Loading…</p>
@@ -214,7 +249,7 @@ export default function Reports() {
                     <td className="border border-slate-300 px-2 py-1" />
                   </tr>
                 ))}
-                <tr className="bg-slate-100 font-semibold text-slate-900">
+                <tr className="report-total bg-slate-100 font-semibold text-slate-900">
                   <td className="border border-slate-300 px-2 py-1.5" colSpan={4}>
                     TOTAL · {rows.length} unit{rows.length === 1 ? '' : 's'}
                   </td>

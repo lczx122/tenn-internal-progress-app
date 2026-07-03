@@ -118,21 +118,23 @@ body {
      it), so we don't pad the body itself. */
 }
 
-/* ---- Printable reports (src/pages/Reports.tsx) --------------------------
-   Print only the .report-print block; hide the app chrome and controls. */
+/* ---- Printable / shareable reports (src/pages/Reports.tsx) --------------
+   .pdf-light forces a light theme on the off-screen clone used for the shared
+   PDF (so it's legible even when the app is in dark mode). The print block does
+   the same for the on-screen report and hides the app chrome. */
+.pdf-light, .pdf-light * { color: #111 !important; background-color: transparent !important; border-color: #999 !important; }
+.pdf-light { background: #fff !important; }
+.pdf-light thead tr, .pdf-light .report-total { background: #eef1f5 !important; }
+.pdf-light .overflow-x-auto { overflow: visible !important; }
+
 @media print {
+  .report-print .overflow-x-auto { overflow: visible !important; }
   body * { visibility: hidden; }
   .report-print, .report-print * { visibility: visible; }
-  .report-print {
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 100%;
-    padding: 0;
-    color: #000;
-  }
-  .report-print .report-table th,
-  .report-print .report-table td { border: 1px solid #999 !important; }
+  .report-print { position: absolute; left: 0; top: 0; width: 100%; padding: 0; }
+  .report-print, .report-print * { color: #111 !important; background-color: transparent !important; border-color: #999 !important; }
+  .report-print { background: #fff !important; }
+  .report-print thead tr, .report-print .report-total { background: #eef1f5 !important; }
   .no-print { display: none !important; }
   @page { size: A4 landscape; margin: 10mm; }
 }
