@@ -166,6 +166,15 @@ export default function Claims() {
     <Layout title="Collection" bottomNav wide onRefresh={load}>
       <FinanceToggle current="collection" />
 
+      <div className="mb-3 flex justify-end">
+        <button
+          onClick={() => navigate('/reports')}
+          className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 active:bg-slate-100"
+        >
+          Balance report ›
+        </button>
+      </div>
+
       {staffPic && (
         <div className="mb-3 flex gap-2">
           {(['mine', 'all'] as const).map((s) => (

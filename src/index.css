@@ -117,3 +117,22 @@ body {
      (they need to sit inside the safe area while their backgrounds bleed into
      it), so we don't pad the body itself. */
 }
+
+/* ---- Printable reports (src/pages/Reports.tsx) --------------------------
+   Print only the .report-print block; hide the app chrome and controls. */
+@media print {
+  body * { visibility: hidden; }
+  .report-print, .report-print * { visibility: visible; }
+  .report-print {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    padding: 0;
+    color: #000;
+  }
+  .report-print .report-table th,
+  .report-print .report-table td { border: 1px solid #999 !important; }
+  .no-print { display: none !important; }
+  @page { size: A4 landscape; margin: 10mm; }
+}
