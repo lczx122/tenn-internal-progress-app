@@ -202,28 +202,21 @@ begin
       v_pics := array[new.prepared_by];
     end if;
 
-    -- Reuse a matching unit; otherwise create one. Two tiers:
-    --   1. codes identical ignoring separators ("D-07-03" == "D0703"). This tier
-    --      ALSO matches an ARCHIVED unit (active preferred) so re-adding a SO to a
-    --      unit that was auto-archived reuses + unarchives it instead of forking.
-    --   2. an ACTIVE code that BEGINS with this exact short code at a word
-    --      boundary, for units stored with the full address ("D-07-03, Ambience…").
-    --      Archived units are excluded here to avoid greedy mis-matches.
+    -- Reuse a unit ONLY on an EXACT code match — no fuzzy / prefix matching, so a
+    -- typed "C-03A-13" can never attach to "B-03-13". A unit matches when, ignoring
+    -- separators (so "D-07-03" == "D0703"), the typed code equals either:
+    --   • the unit's whole code, or
+    --   • the unit's code PART — the text before the first comma/space — for units
+    --     stored with a full address ("D-07-03, Ambience Pulau Gadong").
+    -- Active units are preferred; an archived exact match is still reused (so
+    -- re-adding a SO to an auto-archived unit revives it instead of forking).
     if v_unit_norm <> '' then
       select id into v_job from public.jobs
         where lower(regexp_replace(coalesce(unit_code,''), '[^a-z0-9]', '', 'g')) = v_unit_norm
+           or lower(regexp_replace(regexp_replace(coalesce(unit_code,''), '[ ,].*$', ''),
+                                   '[^a-z0-9]', '', 'g')) = v_unit_norm
         order by is_archived asc, created_at desc
         limit 1;
-
-      if v_job is null and length(trim(coalesce(new.unit,''))) >= 3 then
-        select id into v_job from public.jobs
-          where is_archived = false
-            and lower(coalesce(unit_code,'')) like lower(trim(new.unit)) || '%'
-            and coalesce(substring(lower(coalesce(unit_code,''))
-                         from length(trim(new.unit)) + 1 for 1), '') !~ '[a-z0-9]'
-          order by created_at desc
-          limit 1;
-      end if;
     end if;
 
     if v_job is null then
