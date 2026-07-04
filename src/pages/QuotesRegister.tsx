@@ -80,6 +80,7 @@ export default function QuotesRegister() {
         (r) =>
           !q ||
           r.number.toLowerCase().includes(q) ||
+          (r.unit || '').toLowerCase().includes(q) ||
           r.customer_name.toLowerCase().includes(q) ||
           r.prepared_by.toLowerCase().includes(q) ||
           r.categories.toLowerCase().includes(q),
@@ -153,7 +154,10 @@ export default function QuotesRegister() {
                         </span>
                         <span className="font-mono text-sm font-semibold text-slate-900">{r.number}</span>
                       </div>
-                      <p className="mt-1 truncate font-medium text-slate-800">{r.customer_name || '—'}</p>
+                      <p className="mt-1 truncate font-medium text-slate-800">{r.unit || r.customer_name || '—'}</p>
+                      {r.unit && r.customer_name && (
+                        <p className="truncate text-xs text-slate-500">{r.customer_name}</p>
+                      )}
                     </div>
                     <span className="shrink-0 font-semibold text-slate-900">{money(Number(r.total))}</span>
                   </div>
