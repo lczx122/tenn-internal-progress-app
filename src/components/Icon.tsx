@@ -180,6 +180,15 @@ export function Icon({ name, className = 'inline-block h-[18px] w-[18px] align-[
           <path d="M20 13.5A8 8 0 1 1 10.5 4a6.5 6.5 0 0 0 9.5 9.5Z" />
         </svg>
       )
+    case 'truck': // supplier / delivery
+      return (
+        <svg {...p}>
+          <path d="M3 6.5h11v9H3z" />
+          <path d="M14 9.5h3.5L20 12.5v3h-6" />
+          <circle cx="7" cy="17.5" r="1.6" />
+          <circle cx="16.5" cy="17.5" r="1.6" />
+        </svg>
+      )
     case 'lock': // private
       return (
         <svg {...p}>

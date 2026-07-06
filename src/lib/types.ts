@@ -59,6 +59,21 @@ export interface JobWork {
   updated_at: string
 }
 
+// A supplier fulfilling a unit's materials/products (boss-only tracker).
+export interface UnitSupplier {
+  id: string
+  job_id: string
+  supplier: string
+  item: string
+  stage: string // supplierStages.ts key
+  cost: number
+  expected_date: string | null
+  notes: string
+  created_by: string | null
+  created_at: string
+  updated_at: string
+}
+
 export type JobEventType = 'note' | 'stage' | 'key' | 'created'
 
 export interface JobEvent {

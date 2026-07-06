@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { realtimeChannel } from '../lib/realtime'
 import { useAuth } from '../contexts/AuthContext'
-import type { Appointment, Claim, Job, JobEvent, JobWork } from '../lib/types'
+import type { Appointment, Claim, Job, JobEvent, JobWork, UnitSupplier } from '../lib/types'
 import { STAGES, getStage } from '../lib/stages'
 import { CATEGORIES, getCategory } from '../lib/categories'
 import { getApptType } from '../lib/appointments'
@@ -12,12 +12,13 @@ import { Icon } from '../components/Icon'
 import { Layout } from '../components/Layout'
 import { StageBar } from '../components/StageBar'
 import { ClaimsSection } from '../components/ClaimsSection'
+import { SupplierSection } from '../components/SupplierSection'
 import { formatDate, formatDateTime } from '../lib/format'
 import { useAutoRefresh } from '../lib/useAutoRefresh'
 
 export default function JobDetail() {
   const { id } = useParams<{ id: string }>()
-  const { displayName, session, isAdmin } = useAuth()
+  const { displayName, session, isAdmin, isBoss } = useAuth()
   const navigate = useNavigate()
 
   const [job, setJob] = useState<Job | null>(null)
@@ -26,6 +27,7 @@ export default function JobDetail() {
   const [appts, setAppts] = useState<Appointment[]>([])
   const [claims, setClaims] = useState<Claim[]>([])
   const [soCount, setSoCount] = useState<number | null>(null)
+  const [suppliers, setSuppliers] = useState<UnitSupplier[]>([])
   const [loading, setLoading] = useState(true)
   const [note, setNote] = useState('')
   const [busy, setBusy] = useState(false)
@@ -33,13 +35,15 @@ export default function JobDetail() {
 
   const loadAll = useCallback(async () => {
     if (!id) return
-    const [{ data: j }, { data: wk }, { data: ev }, { data: ap }, { data: cl }, { count: sc }] = await Promise.all([
+    const [{ data: j }, { data: wk }, { data: ev }, { data: ap }, { data: cl }, { count: sc }, { data: sup }] = await Promise.all([
       supabase.from('jobs').select('*').eq('id', id).single(),
       supabase.from('job_works').select('*').eq('job_id', id).order('created_at'),
       supabase.from('job_events').select('*').eq('job_id', id).order('created_at', { ascending: false }),
       supabase.from('appointments').select('*').eq('job_id', id).order('starts_at'),
       supabase.from('claims').select('*').eq('job_id', id).order('created_at'),
       supabase.from('quotations').select('id', { count: 'exact', head: true }).eq('unit_id', id).eq('doc_type', 'SO'),
+      // Boss-only (RLS returns nothing for non-boss).
+      supabase.from('unit_suppliers').select('*').eq('job_id', id).order('created_at'),
     ])
     setJob((j as Job) ?? null)
     setWorks((wk as JobWork[]) ?? [])
@@ -47,6 +51,7 @@ export default function JobDetail() {
     setAppts((ap as Appointment[]) ?? [])
     setClaims((cl as Claim[]) ?? [])
     setSoCount(sc ?? 0)
+    setSuppliers((sup as UnitSupplier[]) ?? [])
     setLoading(false)
   }, [id])
 
@@ -59,6 +64,7 @@ export default function JobDetail() {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'appointments', filter: `job_id=eq.${id}` }, () => loadAll())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'claims', filter: `job_id=eq.${id}` }, () => loadAll())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'quotations', filter: `unit_id=eq.${id}` }, () => loadAll())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'unit_suppliers', filter: `job_id=eq.${id}` }, () => loadAll())
       .subscribe()
     return () => {
       supabase.removeChannel(channel)
@@ -340,6 +346,11 @@ export default function JobDetail() {
           </div>
         )}
       </section>
+
+      {/* Supplier progress — boss only */}
+      {isBoss && job && (
+        <SupplierSection job={job} suppliers={suppliers} session={session} onChange={loadAll} />
+      )}
 
       {/* Add note */}
       <section className="mt-4 rounded-xl bg-white p-4 shadow-sm">
