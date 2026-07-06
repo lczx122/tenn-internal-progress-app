@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
 import type { Job, UnitSupplier } from '../lib/types'
 import { SUPPLIER_STAGES, getSupplierStage, supplierPercent } from '../lib/supplierStages'
+import { CATEGORIES, getCategory } from '../lib/categories'
 import { PercentBar } from './StageBar'
 import { Icon } from './Icon'
 import { money } from '../lib/claims'
@@ -11,8 +12,9 @@ import { formatDate } from '../lib/format'
 const inp = 'w-full rounded-lg border border-slate-300 px-3 py-2 text-base outline-none focus:border-slate-900'
 
 // Boss-only per-unit tracker of the suppliers fulfilling a unit's materials, each
-// with a fulfilment status, cost and expected date. Mirrors ClaimsSection: parent
-// owns the `suppliers` array and refetches via onChange after every write.
+// tagged to a trade and with a fulfilment status, cost and expected date. Supplier
+// names come from a reusable master list (public.suppliers) that autocompletes
+// across units. Mirrors ClaimsSection: parent owns `suppliers`, refetch via onChange.
 export function SupplierSection({
   job,
   suppliers,
@@ -26,41 +28,72 @@ export function SupplierSection({
 }) {
   const [busy, setBusy] = useState(false)
   const [adding, setAdding] = useState(false)
-  const [form, setForm] = useState({ supplier: '', item: '', stage: 'to_order', cost: '', expected_date: '', notes: '' })
+  const [supplierNames, setSupplierNames] = useState<string[]>([])
+  const [form, setForm] = useState({
+    supplier: '',
+    item: '',
+    category: CATEGORIES[0].key,
+    stage: 'to_order',
+    cost: '',
+    expected_date: '',
+    notes: '',
+  })
   const set = <K extends keyof typeof form>(k: K, v: string) => setForm((f) => ({ ...f, [k]: v }))
+
+  async function loadNames() {
+    const { data } = await supabase.from('suppliers').select('name').order('name')
+    setSupplierNames(((data as { name: string }[]) ?? []).map((r) => r.name))
+  }
+  useEffect(() => {
+    loadNames()
+  }, [])
 
   const total = suppliers.reduce((s, x) => s + Number(x.cost || 0), 0)
   const pct = supplierPercent(suppliers.map((s) => s.stage))
 
+  // Group the entries by trade, ordered by CATEGORIES; unknown/untagged last.
+  const groups = useMemo(() => {
+    const byCat = new Map<string, UnitSupplier[]>()
+    for (const s of suppliers) {
+      const k = s.category || ''
+      if (!byCat.has(k)) byCat.set(k, [])
+      byCat.get(k)!.push(s)
+    }
+    const order: string[] = []
+    for (const c of CATEGORIES) if (byCat.has(c.key)) order.push(c.key)
+    for (const k of byCat.keys()) if (!order.includes(k)) order.push(k)
+    return order.map((cat) => ({ cat, rows: byCat.get(cat)! }))
+  }, [suppliers])
+
   async function addRow() {
     if (!form.supplier.trim()) return
+    const name = form.supplier.trim()
     setBusy(true)
     await supabase.from('unit_suppliers').insert({
       job_id: job.id,
-      supplier: form.supplier.trim(),
+      supplier: name,
       item: form.item.trim(),
+      category: form.category,
       stage: form.stage,
       cost: Number(form.cost) || 0,
       expected_date: form.expected_date || null,
       notes: form.notes.trim(),
       created_by: session?.user.id ?? null,
     })
-    setForm({ supplier: '', item: '', stage: 'to_order', cost: '', expected_date: '', notes: '' })
+    // Save the name to the reusable master list (no-op if it already exists).
+    await supabase
+      .from('suppliers')
+      .upsert({ name, created_by: session?.user.id ?? null }, { onConflict: 'name', ignoreDuplicates: true })
+    setForm({ supplier: '', item: '', category: form.category, stage: 'to_order', cost: '', expected_date: '', notes: '' })
     setAdding(false)
     setBusy(false)
+    await loadNames()
     await onChange()
   }
 
-  async function setStage(s: UnitSupplier, stage: string) {
+  async function patch(s: UnitSupplier, fields: Partial<UnitSupplier>) {
     setBusy(true)
-    await supabase.from('unit_suppliers').update({ stage }).eq('id', s.id)
-    setBusy(false)
-    await onChange()
-  }
-
-  async function saveNotes(s: UnitSupplier, notes: string) {
-    setBusy(true)
-    await supabase.from('unit_suppliers').update({ notes }).eq('id', s.id)
+    await supabase.from('unit_suppliers').update(fields).eq('id', s.id)
     setBusy(false)
     await onChange()
   }
@@ -88,6 +121,13 @@ export function SupplierSection({
         </button>
       </div>
 
+      {/* Shared autocomplete of reusable supplier names (across all units). */}
+      <datalist id="supplierList">
+        {supplierNames.map((n) => (
+          <option key={n} value={n} />
+        ))}
+      </datalist>
+
       {suppliers.length > 0 && (
         <div className="mb-3 space-y-2">
           <PercentBar percent={pct} label={`Overall · ${suppliers.length} supplier${suppliers.length === 1 ? '' : 's'}`} />
@@ -100,8 +140,18 @@ export function SupplierSection({
 
       {adding && (
         <div className="mb-3 space-y-2 rounded-lg border border-slate-200 p-3">
-          <input className={inp} placeholder="Supplier name" value={form.supplier} onChange={(e) => set('supplier', e.target.value)} />
+          <input list="supplierList" className={inp} placeholder="Supplier name" value={form.supplier} onChange={(e) => set('supplier', e.target.value)} />
           <input className={inp} placeholder="Item / what they supply" value={form.item} onChange={(e) => set('item', e.target.value)} />
+          <label className="block text-xs text-slate-500">
+            Trade
+            <select className={inp} value={form.category} onChange={(e) => set('category', e.target.value)}>
+              {CATEGORIES.map((c) => (
+                <option key={c.key} value={c.key}>
+                  {c.label}
+                </option>
+              ))}
+            </select>
+          </label>
           <div className="grid grid-cols-2 gap-2">
             <select className={inp} value={form.stage} onChange={(e) => set('stage', e.target.value)}>
               {SUPPLIER_STAGES.map((st) => (
@@ -130,11 +180,35 @@ export function SupplierSection({
       {suppliers.length === 0 && !adding ? (
         <p className="py-6 text-center text-sm text-slate-400">No suppliers tracked yet.</p>
       ) : (
-        <ul className="space-y-2">
-          {suppliers.map((s) => (
-            <SupplierRow key={s.id} s={s} busy={busy} onStage={(st) => setStage(s, st)} onSaveNotes={(n) => saveNotes(s, n)} onDelete={() => remove(s)} />
-          ))}
-        </ul>
+        <div className="space-y-4">
+          {groups.map(({ cat, rows }) => {
+            const c = getCategory(cat)
+            const sub = rows.reduce((n, r) => n + Number(r.cost || 0), 0)
+            return (
+              <div key={cat || 'untagged'}>
+                <div className="mb-1.5 flex items-center justify-between">
+                  <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium ${c.accent}`}>
+                    {cat ? c.label : 'Untagged'}
+                  </span>
+                  {sub > 0 && <span className="text-xs tabular-nums text-slate-400">{money(sub)}</span>}
+                </div>
+                <ul className="space-y-2">
+                  {rows.map((s) => (
+                    <SupplierRow
+                      key={s.id}
+                      s={s}
+                      busy={busy}
+                      onStage={(stage) => patch(s, { stage })}
+                      onCategory={(category) => patch(s, { category })}
+                      onSaveNotes={(notes) => patch(s, { notes })}
+                      onDelete={() => remove(s)}
+                    />
+                  ))}
+                </ul>
+              </div>
+            )
+          })}
+        </div>
       )}
     </section>
   )
@@ -144,12 +218,14 @@ function SupplierRow({
   s,
   busy,
   onStage,
+  onCategory,
   onSaveNotes,
   onDelete,
 }: {
   s: UnitSupplier
   busy: boolean
   onStage: (stage: string) => void
+  onCategory: (category: string) => void
   onSaveNotes: (notes: string) => void
   onDelete: () => void
 }) {
@@ -217,10 +293,24 @@ function SupplierRow({
           </div>
         </div>
       ) : (
-        <div className="mt-2 flex items-start justify-between gap-2">
-          <button onClick={() => setEditing(true)} className="min-w-0 flex-1 text-left text-xs text-slate-500">
+        <div className="mt-2 flex items-center justify-between gap-2">
+          <button onClick={() => setEditing(true)} className="min-w-0 flex-1 truncate text-left text-xs text-slate-500">
             {s.notes ? s.notes : <span className="text-slate-400">+ Add notes</span>}
           </button>
+          <select
+            value={s.category || ''}
+            disabled={busy}
+            onChange={(e) => onCategory(e.target.value)}
+            title="Move to trade"
+            className="shrink-0 rounded-lg border border-slate-300 px-1.5 py-1 text-[11px] text-slate-600"
+          >
+            <option value="">Untagged</option>
+            {CATEGORIES.map((c) => (
+              <option key={c.key} value={c.key}>
+                {c.label}
+              </option>
+            ))}
+          </select>
           <button onClick={onDelete} className="shrink-0 text-xs font-medium text-red-600 active:text-red-700">
             Remove
           </button>

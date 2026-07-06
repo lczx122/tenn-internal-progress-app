@@ -65,6 +65,7 @@ export interface UnitSupplier {
   job_id: string
   supplier: string
   item: string
+  category: string // work trade this entry is filed under (see categories.ts)
   stage: string // supplierStages.ts key
   cost: number
   expected_date: string | null
@@ -72,6 +73,14 @@ export interface UnitSupplier {
   created_by: string | null
   created_at: string
   updated_at: string
+}
+
+// A reusable supplier name (boss-only master list) — autocompletes across units.
+export interface Supplier {
+  id: string
+  name: string
+  created_by: string | null
+  created_at: string
 }
 
 export type JobEventType = 'note' | 'stage' | 'key' | 'created'
