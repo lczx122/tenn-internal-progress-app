@@ -176,6 +176,17 @@ export default function AdminSettings() {
               </span>
               <span className="text-slate-300">›</span>
             </Link>
+            {isBoss && (
+              <Link
+                to="/suppliers"
+                className="flex items-center justify-between rounded-xl bg-white p-3.5 shadow-sm active:bg-slate-50"
+              >
+                <span className="flex items-center gap-2 text-sm font-medium text-slate-700">
+                  <Icon name="truck" className="h-4 w-4 text-slate-500" /> Manage suppliers
+                </span>
+                <span className="text-slate-300">›</span>
+              </Link>
+            )}
           </div>
         </section>
       )}

@@ -16,6 +16,7 @@ import ProjectsAdmin from './pages/ProjectsAdmin'
 import AdminSettings from './pages/AdminSettings'
 import Claims from './pages/Claims'
 import Reports from './pages/Reports'
+import SuppliersAdmin from './pages/SuppliersAdmin'
 import CostingList from './pages/CostingList'
 import CostingForm from './pages/CostingForm'
 import SetupNotice from './pages/SetupNotice'
@@ -67,6 +68,7 @@ export default function App() {
       <Route path="/appointment/:id" element={<AppointmentForm />} />
       <Route path="/staff" element={<StaffAdmin />} />
       <Route path="/projects" element={<ProjectsAdmin />} />
+      <Route path="/suppliers" element={<SuppliersAdmin />} />
       <Route path="/settings" element={<AdminSettings />} />
       <Route path="/costing" element={<CostingList />} />
       <Route path="/costing/new" element={<CostingForm />} />

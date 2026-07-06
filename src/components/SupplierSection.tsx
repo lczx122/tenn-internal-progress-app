@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import type { Session } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
 import type { Job, UnitSupplier } from '../lib/types'
@@ -113,12 +114,17 @@ export function SupplierSection({
           <Icon name="truck" className="h-4 w-4 text-slate-400" /> Supplier progress
           <span className="rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-700">BOSS</span>
         </h2>
-        <button
-          onClick={() => setAdding((v) => !v)}
-          className="rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-medium text-white active:bg-slate-700"
-        >
-          {adding ? 'Close' : '+ Supplier'}
-        </button>
+        <div className="flex items-center gap-3">
+          <Link to="/suppliers" className="text-xs font-medium text-slate-500 underline">
+            Manage
+          </Link>
+          <button
+            onClick={() => setAdding((v) => !v)}
+            className="rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-medium text-white active:bg-slate-700"
+          >
+            {adding ? 'Close' : '+ Supplier'}
+          </button>
+        </div>
       </div>
 
       {/* Shared autocomplete of reusable supplier names (across all units). */}
