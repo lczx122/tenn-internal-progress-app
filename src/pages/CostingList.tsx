@@ -11,6 +11,7 @@ import { overallPercent } from '../lib/stages'
 import { useAutoRefresh } from '../lib/useAutoRefresh'
 import { cacheGet, cacheSet } from '../lib/pageCache'
 import { progressStart, progressDone } from '../lib/progress'
+import { usePersistedState, oneOf } from '../lib/usePersistedState'
 import {
   calcCosting,
   categoryLabel,
@@ -50,11 +51,14 @@ export default function CostingList() {
   const [syncing, setSyncing] = useState(false)
   const [syncMsg, setSyncMsg] = useState('')
   const [query, setQuery] = useState('')
-  const [catFilter, setCatFilter] = useState('')
-  const [view, setView] = useState<View>(() =>
+  const [catFilter, setCatFilter] = usePersistedState('tenn_costing_cat', '')
+  // Viewport-derived default; an explicit list/sheet choice sticks across reloads.
+  const [view, setView] = usePersistedState<View>(
+    'tenn_costing_view',
     typeof window !== 'undefined' && window.innerWidth >= 1024 ? 'sheet' : 'list',
+    { validate: oneOf('list', 'sheet') },
   )
-  const [sheetCat, setSheetCat] = useState<string>('')
+  const [sheetCat, setSheetCat] = usePersistedState<string>('tenn_costing_sheetcat', '')
   const navigate = useNavigate()
 
   const rowsRef = useRef<Costing[]>([])

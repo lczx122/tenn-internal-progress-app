@@ -9,6 +9,7 @@ import { formatDate } from '../lib/format'
 import { useAutoRefresh } from '../lib/useAutoRefresh'
 import { progressStart, progressDone } from '../lib/progress'
 import { canShareFiles, shareElementAsPdf } from '../lib/sharePdf'
+import { usePersistedState } from '../lib/usePersistedState'
 
 const ALL = '__all__'
 
@@ -21,11 +22,11 @@ export default function Reports() {
   const [soByUnit, setSoByUnit] = useState<Map<string, string>>(new Map())
   const [loading, setLoading] = useState(true)
 
-  const [cat, setCat] = useState<string>('Iron Work')
-  const [project, setProject] = useState('')
+  const [cat, setCat] = usePersistedState<string>('tenn_reports_cat', 'Iron Work')
+  const [project, setProject] = usePersistedState('tenn_reports_project', '')
   const [cutoff, setCutoff] = useState<string>(() => new Date().toISOString().slice(0, 10))
-  const [outstandingOnly, setOutstandingOnly] = useState(false)
-  const [includeArchived, setIncludeArchived] = useState(false)
+  const [outstandingOnly, setOutstandingOnly] = usePersistedState('tenn_reports_outstanding', false)
+  const [includeArchived, setIncludeArchived] = usePersistedState('tenn_reports_archived', false)
   const [sharing, setSharing] = useState(false)
   const reportRef = useRef<HTMLDivElement>(null)
 

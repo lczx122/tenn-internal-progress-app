@@ -9,6 +9,7 @@ import { relativeTime } from '../lib/format'
 import { useAutoRefresh } from '../lib/useAutoRefresh'
 import { cacheGet, cacheSet } from '../lib/pageCache'
 import { progressStart, progressDone } from '../lib/progress'
+import { usePersistedState, oneOf } from '../lib/usePersistedState'
 
 const money = (n: number) =>
   'RM ' + n.toLocaleString('en-MY', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
@@ -26,7 +27,9 @@ export default function QuotesRegister() {
   const [rows, setRows] = useState<Quotation[]>(c0 ?? [])
   const [loading, setLoading] = useState(!c0)
   const [query, setQuery] = useState('')
-  const [filter, setFilter] = useState<Filter>('all')
+  const [filter, setFilter] = usePersistedState<Filter>('tenn_quotes_filter', 'all', {
+    validate: oneOf('all', 'QT', 'SO'),
+  })
   const { isAdmin, session } = useAuth()
   const userId = session?.user?.id ?? null
   const navigate = useNavigate()

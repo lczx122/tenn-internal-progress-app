@@ -6,6 +6,7 @@ import type { Job, Project } from '../lib/types'
 import { Layout } from '../components/Layout'
 import { STAFF_PICS } from '../lib/units'
 import { useAutoRefresh } from '../lib/useAutoRefresh'
+import { usePersistedState } from '../lib/usePersistedState'
 
 // The columns the bulk grid can edit. Richer fields (house types, owner,
 // key-holder structure) stay on the per-unit form; the grid covers the
@@ -20,7 +21,7 @@ export default function UnitsBulk() {
   const [jobs, setJobs] = useState<Job[]>([])
   const [projects, setProjects] = useState<string[]>([])
   const [drafts, setDrafts] = useState<Record<string, Draft>>({})
-  const [showArchived, setShowArchived] = useState(false)
+  const [showArchived, setShowArchived] = usePersistedState('tenn_unitsbulk_archived', false)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [msg, setMsg] = useState<string | null>(null)

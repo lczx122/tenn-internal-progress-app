@@ -47,12 +47,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => sub.subscription.unsubscribe()
   }, [])
 
-  // Load the display name + role from the profiles table when the user changes.
+  // Load the display name + role from the profiles table when the USER changes.
+  // Keyed on the user id, not the session object: supabase-js emits a fresh
+  // Session on every return to the app (visibility-triggered token refresh),
+  // and resetting roleReady for those would unmount the whole app via the
+  // App.tsx loading gate — wiping forms, filters and scroll mid-use.
+  const userId = session?.user?.id ?? null
+  const userEmail = session?.user?.email
   useEffect(() => {
     const w = typeof window !== 'undefined'
       ? (window as { tennIsAdmin?: boolean; tennIsGuest?: boolean })
       : null
-    if (!session) {
+    if (!userId) {
       setDisplayName('')
       setStaffPic('')
       setIsAdmin(false)
@@ -67,12 +73,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     supabase
       .from('profiles')
       .select('*')
-      .eq('id', session.user.id)
+      .eq('id', userId)
       .single()
       .then(({ data }) => {
         if (!active) return
         setDisplayName(
-          data?.full_name ?? session.user.email?.split('@')[0] ?? 'Team member'
+          data?.full_name ?? userEmail?.split('@')[0] ?? 'Team member'
         )
         setStaffPic((data as { staff_pic?: string } | null)?.staff_pic ?? '')
         const boss = data?.role === 'boss'
@@ -87,7 +93,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => {
       active = false
     }
-  }, [session])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId])
 
   async function signIn(email: string, password: string) {
     const { error } = await supabase.auth.signInWithPassword({

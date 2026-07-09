@@ -12,6 +12,7 @@ import { useAutoRefresh } from '../lib/useAutoRefresh'
 import { FinanceToggle } from '../components/FinanceToggle'
 import { cacheGet, cacheSet } from '../lib/pageCache'
 import { progressStart, progressDone } from '../lib/progress'
+import { usePersistedState, oneOf } from '../lib/usePersistedState'
 
 export default function Claims() {
   const c0 = cacheGet<{ jobs: Job[]; claims: Claim[] }>('collection')
@@ -19,8 +20,10 @@ export default function Claims() {
   const [claims, setClaims] = useState<Claim[]>(c0?.claims ?? [])
   const [loading, setLoading] = useState(!c0)
   const [query, setQuery] = useState('')
-  const [project, setProject] = useState('')
-  const [scope, setScope] = useState<'mine' | 'all' | null>(null)
+  const [project, setProject] = usePersistedState('tenn_claims_project', '')
+  const [scope, setScope] = usePersistedState<'mine' | 'all' | null>('tenn_claims_scope', null, {
+    validate: oneOf('mine', 'all'),
+  })
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
   const { isAdmin, staffPic } = useAuth()
   // Default to the signed-in staffer's own collection (if their PIC is set);

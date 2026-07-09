@@ -10,6 +10,7 @@ import { NotificationSettings } from '../components/NotificationSettings'
 import { useAutoRefresh } from '../lib/useAutoRefresh'
 import { cacheGet, cacheSet } from '../lib/pageCache'
 import { progressStart, progressDone } from '../lib/progress'
+import { usePersistedState, oneOf } from '../lib/usePersistedState'
 import {
   APPT_TYPES,
   getApptType,
@@ -26,13 +27,17 @@ export default function Schedule() {
   const c0 = cacheGet<Appointment[]>('schedule')
   const [appts, setAppts] = useState<Appointment[]>(c0 ?? [])
   const [loading, setLoading] = useState(!c0)
-  const [mode, setMode] = useState<Mode>('agenda')
+  const [mode, setMode] = usePersistedState<Mode>('tenn_schedule_mode', 'agenda', {
+    validate: oneOf('agenda', 'calendar'),
+  })
   const [query, setQuery] = useState('')
-  const [typeFilter, setTypeFilter] = useState('')
-  const [showPast, setShowPast] = useState(false)
+  const [typeFilter, setTypeFilter] = usePersistedState('tenn_schedule_type', '')
+  const [showPast, setShowPast] = usePersistedState('tenn_schedule_showpast', false)
   const [month, setMonth] = useState(() => startOfDay(new Date()))
   const [selectedDay, setSelectedDay] = useState(() => startOfDay(new Date()))
-  const [scope, setScope] = useState<'mine' | 'all'>('mine')
+  const [scope, setScope] = usePersistedState<'mine' | 'all'>('tenn_schedule_scope', 'mine', {
+    validate: oneOf('mine', 'all'),
+  })
   const [showNotif, setShowNotif] = useState(false)
   const [pins, setPins] = useState<Set<string>>(() => new Set())
   const { session } = useAuth()

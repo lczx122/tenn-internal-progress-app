@@ -13,6 +13,7 @@ import { relativeTime } from '../lib/format'
 import { useAutoRefresh } from '../lib/useAutoRefresh'
 import { cacheGet, cacheSet } from '../lib/pageCache'
 import { progressStart, progressDone } from '../lib/progress'
+import { usePersistedState, oneOf } from '../lib/usePersistedState'
 
 function loadSet(key: string): Set<string> {
   try {
@@ -41,15 +42,29 @@ export default function JobsList() {
   // /units?stage=installing, /units?cat=Painting, or /units?q=Ahmad).
   const [searchParams] = useSearchParams()
   const [query, setQuery] = useState(searchParams.get('q') ?? '')
-  const [projectFilter, setProjectFilter] = useState(searchParams.get('project') ?? '')
-  const [catFilter, setCatFilter] = useState(searchParams.get('cat') ?? '')
-  const [stageFilter, setStageFilter] = useState(searchParams.get('stage') ?? '')
-  const [showArchived, setShowArchived] = useState(false)
-  const [sortBy, setSortBy] = useState<'updated' | 'name' | 'progress'>('updated')
+  // Dropdown filters persist across reloads; a URL param (dashboard deep-link)
+  // overrides just that filter for the visit without overwriting the saved one.
+  const [projectFilter, setProjectFilter] = usePersistedState('tenn_units_project', '', {
+    override: searchParams.get('project'),
+  })
+  const [catFilter, setCatFilter] = usePersistedState('tenn_units_cat', '', {
+    override: searchParams.get('cat'),
+  })
+  const [stageFilter, setStageFilter] = usePersistedState('tenn_units_stage', '', {
+    override: searchParams.get('stage'),
+  })
+  const [showArchived, setShowArchived] = usePersistedState('tenn_units_archived', false)
+  const [sortBy, setSortBy] = usePersistedState<'updated' | 'name' | 'progress'>(
+    'tenn_units_sort',
+    'updated',
+    { validate: oneOf('updated', 'name', 'progress') },
+  )
   const [collapsed, setCollapsed] = useState<Set<string>>(() => loadSet('tenn_collapsed_projects'))
   const [pinned, setPinned] = useState<Set<string>>(() => loadSet('tenn_pinned_projects'))
   // null = use the role default (staff with a PIC start on "mine"; admins on "all").
-  const [scope, setScope] = useState<'mine' | 'all' | null>(null)
+  const [scope, setScope] = usePersistedState<'mine' | 'all' | null>('tenn_units_scope', null, {
+    validate: oneOf('mine', 'all'),
+  })
   const { isAdmin, staffPic } = useAuth()
   const effectiveScope: 'mine' | 'all' = scope ?? (!isAdmin && staffPic ? 'mine' : 'all')
 

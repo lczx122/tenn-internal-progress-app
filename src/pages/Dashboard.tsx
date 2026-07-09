@@ -15,6 +15,7 @@ import { collectedTotal, money, money0 } from '../lib/claims'
 import { useAutoRefresh } from '../lib/useAutoRefresh'
 import { cacheGet, cacheSet } from '../lib/pageCache'
 import { progressStart, progressDone } from '../lib/progress'
+import { usePersistedState, oneOf } from '../lib/usePersistedState'
 
 type DashCache = {
   jobs: Job[]
@@ -45,7 +46,9 @@ export default function Dashboard() {
   const [appts, setAppts] = useState<Appointment[]>(c0?.appts ?? [])
   const [claims, setClaims] = useState<Claim[]>(c0?.claims ?? [])
   const [loading, setLoading] = useState(!c0)
-  const [scope, setScope] = useState<'mine' | 'all' | null>(null)
+  const [scope, setScope] = usePersistedState<'mine' | 'all' | null>('tenn_dash_scope', null, {
+    validate: oneOf('mine', 'all'),
+  })
   const { session, isAdmin, staffPic } = useAuth()
   const myId = session?.user.id
   const effectiveScope: 'mine' | 'all' = scope ?? (!isAdmin && staffPic ? 'mine' : 'all')

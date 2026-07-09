@@ -3014,6 +3014,7 @@ function recalc(){
   if(rebLine){ rebLine.hidden=discounts.length===0; document.getElementById('t_rebate').textContent=fmt(reb); }
   document.getElementById('t_bal').textContent='RM '+fmt(bal);
   syncTileCounts();
+  scheduleDraft();   // every line/deposit change re-snapshots the draft
 }
 document.getElementById('t_dep').addEventListener('input',recalc);
 document.getElementById('t_disc').addEventListener('input',recalc);
@@ -3133,6 +3134,53 @@ function loadJSON(k){try{return JSON.parse(localStorage.getItem(k))||{}}catch(e)
 function saveJSON(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
 function saveStaff(){saveJSON(SK_STAFF,{name:document.getElementById('c_pic').value});}
 
+/* ---------- draft autosave ----------
+   The form continuously snapshots itself to this device so an OS-killed tab
+   (iOS discards backgrounded PWAs under memory pressure) doesn't lose a
+   half-built document. Per-device, not per-user — staff phones are single-user. */
+const SK_DRAFT='tenn_quote_draft';
+const DRAFT_TTL=24*60*60*1000;   // a draft older than a day is stale — discard
+let draftReady=false;            // no autosaving until boot decides what's on screen
+let draftTimer=null;
+function clearDraft(){ try{ localStorage.removeItem(SK_DRAFT); }catch(e){} }
+function saveDraft(){
+  if(!draftReady||viewMode) return;
+  try{
+    const p=buildPayload();
+    if(!p.lines.length && !p.customer.name && !p.remarks){ clearDraft(); return; }
+    saveJSON(SK_DRAFT,{payload:p,docType,editingId,savedId,sourceId,sourceNumber,committedNo,fromUnitId,detachSOIds,savedAt:Date.now()});
+  }catch(e){}
+}
+function scheduleDraft(){ if(!draftReady) return; if(draftTimer) clearTimeout(draftTimer); draftTimer=setTimeout(saveDraft,800); }
+
+/* Restore an unsaved draft on a bare open (no deep-link params). */
+function tryRestoreDraft(){
+  try{
+    const d=loadJSON(SK_DRAFT);
+    if(!d||!d.payload||!d.savedAt) return false;
+    if(Date.now()-d.savedAt>DRAFT_TTL){ clearDraft(); return false; }
+    restorePayload(d.payload);
+    applyDocTypeUI(d.docType==='SO'?'SO':'QT');
+    editingId=d.editingId||null; savedId=d.savedId||null;
+    sourceId=d.sourceId||null; sourceNumber=d.sourceNumber||null;
+    committedNo=d.committedNo||null;
+    fromUnitId=d.fromUnitId||null; detachSOIds=Array.isArray(d.detachSOIds)?d.detachSOIds:[];
+    renderCatalog(); recalc(); updateConvertBtn();
+    if(editingId){
+      document.getElementById('c_qno').value=committedNo||'';
+      if(!isGuestUser) document.getElementById('saveBtn').style.display='';
+      setQnoStatus('Draft restored — editing '+(committedNo||'')+'; Save to update');
+    }else if(committedNo){
+      document.getElementById('c_qno').value=committedNo;
+      setQnoStatus('Draft restored — already saved as '+committedNo);
+    }else{
+      refreshPendingNumber();   // async, fire-and-forget
+      setQnoStatus('Draft restored — Save '+docName().toLowerCase()+' to keep it');
+    }
+    return true;
+  }catch(e){ return false; }
+}
+
 function pad2(n){return String(n).padStart(2,'0');}
 function pad3(n){return String(n).padStart(3,'0');}
 function yymm(){const d=new Date();return String(d.getFullYear()).slice(2)+pad2(d.getMonth()+1);}
@@ -3238,23 +3286,17 @@ function flashSaved(msg){
   });
 }
 
-/* Reserve the next number and store the document in the shared register. */
-async function saveQuote(){
-  // In edit mode every Save re-updates the same document; otherwise a committed
-  // document is already saved and the button just re-confirms.
-  if(committedNo && !editingId){ flashSaved('Saved ✓ — '+committedNo); return; }
-  const lines=collectLines();
-  if(!lines.length){ alert('Add at least one item before saving.'); return; }
+/* Snapshot the whole form as the save/draft payload (also what drafts store). */
+function buildPayload(){
   const g=id=>(document.getElementById(id).value||'').trim();
-  if(!g('c_name')){ alert('Enter the customer name before saving.'); document.getElementById('c_name').focus(); return; }
+  const lines=collectLines();
   const sub=lines.reduce((s,l)=>s+l.amount,0);
   const discounts=selectedDiscounts().map(d=>({id:d.id,label:d.label,amount:+d.amount||0}));
   const reb=discounts.reduce((s,d)=>s+d.amount,0);
   const dep=parseFloat(document.getElementById('t_dep').value)||0;
   const disc=parseFloat(document.getElementById('t_disc').value)||0;
   const bal=sub-reb-dep-disc;
-  const cats=[...new Set(lines.map(l=>l.cat))].join(', ');
-  const payload={
+  return {
     doc_type:docType,
     project:g('c_project'),
     customer:{name:g('c_name'),ic:g('c_ic'),unit:g('c_unit'),phone:g('c_phone'),email:g('c_email')},
@@ -3278,6 +3320,19 @@ async function saveQuote(){
     units:{cab:UNITS.cab,grill:UNITS.grill,paint:UNITS.paint,alu:UNITS.alu}, ver:2,
     lines, totals:{sub,rebates:reb,deposit:dep,discount:disc,balance:bal}
   };
+}
+
+/* Reserve the next number and store the document in the shared register. */
+async function saveQuote(){
+  // In edit mode every Save re-updates the same document; otherwise a committed
+  // document is already saved and the button just re-confirms.
+  if(committedNo && !editingId){ flashSaved('Saved ✓ — '+committedNo); return; }
+  const payload=buildPayload();
+  if(!payload.lines.length){ alert('Add at least one item before saving.'); return; }
+  const g=id=>(document.getElementById(id).value||'').trim();
+  if(!g('c_name')){ alert('Enter the customer name before saving.'); document.getElementById('c_name').focus(); return; }
+  const bal=payload.totals.balance;
+  const cats=[...new Set(payload.lines.map(l=>l.cat))].join(', ');
   const supa=getSupa();
   setSaving(true);
   try{
@@ -3295,6 +3350,7 @@ async function saveQuote(){
       if(document.getElementById('modal').classList.contains('show')){
         document.getElementById('docBody').innerHTML=buildDoc(); prepareSharePdf();
       }
+      clearDraft();
       flashSaved('Updated ✓ — '+committedNo);
       return;
     }
@@ -3325,6 +3381,7 @@ async function saveQuote(){
     if(document.getElementById('modal').classList.contains('show')){
       document.getElementById('docBody').innerHTML=buildDoc(); prepareSharePdf();
     }
+    clearDraft();
     flashSaved('Saved ✓ — '+committedNo);
   }catch(e){
     setQnoStatus('Not saved');
@@ -3332,19 +3389,11 @@ async function saveQuote(){
   }finally{ setSaving(false); }
 }
 
-/* Open a saved document from the register. Three modes:
-     'convert' — restore items, switch to SO, link source (Convert to SO)
-     'edit'    — restore items, keep the same number; Save UPDATES the row
-     'view'    — restore items read-only and show the formatted document      */
-async function loadDocument(id, asType, mode){
-  mode = mode || 'convert';
-  const supa=getSupa(); if(!supa||!id) return;
-  try{
-    await ready(supa);
-    const {data,error}=await supa.from('quotations').select('*').eq('id',id).single();
-    if(error||!data){ refreshPendingNumber(); return; }
-    const p=data.payload||{};
-    const c=p.customer||{};
+/* Restore every form field, line array and setting from a stored payload
+   (a saved document's or a draft's). Callers re-render (renderCatalog/recalc). */
+function restorePayload(p){
+  p=p||{};
+  const c=p.customer||{};
     setVal('c_name',c.name); setVal('c_ic',c.ic); setVal('c_unit',c.unit);
     setVal('c_phone',c.phone); setVal('c_email',c.email); setVal('c_remarks',p.remarks);
     setVal('c_project',p.project); if(p.date) setVal('c_date',p.date);
@@ -3394,6 +3443,21 @@ async function loadDocument(id, asType, mode){
       document.getElementById('t_dep').value=p.totals.deposit||0;
       document.getElementById('t_disc').value=p.totals.discount||0;
     }
+}
+
+/* Open a saved document from the register. Three modes:
+     'convert' — restore items, switch to SO, link source (Convert to SO)
+     'edit'    — restore items, keep the same number; Save UPDATES the row
+     'view'    — restore items read-only and show the formatted document      */
+async function loadDocument(id, asType, mode){
+  mode = mode || 'convert';
+  const supa=getSupa(); if(!supa||!id) return;
+  try{
+    await ready(supa);
+    const {data,error}=await supa.from('quotations').select('*').eq('id',id).single();
+    if(error||!data){ refreshPendingNumber(); return; }
+    const p=data.payload||{};
+    restorePayload(p);
 
     if(mode==='edit'){
       editingId=id; savedId=data.id; sourceId=null; sourceNumber=null; committedNo=data.number;
@@ -3652,6 +3716,7 @@ async function newQuote(){
   document.getElementById('t_disc').value=0;
   document.getElementById('c_date').value=new Date().toISOString().slice(0,10);
   committedNo=null; pendingNo=null; savedId=null; sourceId=null; sourceNumber=null; editingId=null;
+  clearDraft();
   setQnoStatus('');
   document.getElementById('saveBtn').style.display='none';
   updateConvertBtn();
@@ -3689,6 +3754,18 @@ async function newQuote(){
     }
   })();
 
+  // Draft autosave triggers. Customer fields don't go through recalc(), so a
+  // document-level listener catches them (the pinned field editor re-dispatches
+  // input/change on the real field when committing). Flush immediately when the
+  // app is backgrounded or the page is being torn down.
+  const draftSkip=t=>t&&(t.id==='fedInput'||t.id==='fedArea'||(t.closest&&t.closest('#priceModal')));
+  document.addEventListener('input',e=>{ if(!draftSkip(e.target)) scheduleDraft(); });
+  document.addEventListener('change',e=>{ if(!draftSkip(e.target)) scheduleDraft(); });
+  document.addEventListener('visibilitychange',()=>{
+    if(document.visibilityState==='hidden'){ if(draftTimer){clearTimeout(draftTimer);draftTimer=null;} saveDraft(); }
+  });
+  window.addEventListener('pagehide',()=>{ saveDraft(); });
+
   document.getElementById('c_date').value=new Date().toISOString().slice(0,10);
   const staff=loadJSON(SK_STAFF);
   if(staff.name) document.getElementById('c_pic').value=staff.name;
@@ -3722,7 +3799,10 @@ async function newQuote(){
     else if(editId) await loadDocument(editId, null, 'edit');
     else if(fromId) await loadDocument(fromId, asType, 'convert');
     else if(unitId) await loadFromUnit(unitId);
-    else await refreshPendingNumber();
+    else if(!tryRestoreDraft()) await refreshPendingNumber();
+    // Only autosave once boot has decided what's on screen — a scheduled save
+    // from the initial empty render would wipe the very draft being restored.
+    draftReady=true;
     // Reveal the price editor for admins only (never in read-only view).
     isAdminUser = await checkAdmin();
     if(isAdminUser && !viewMode) document.getElementById('editPricesBtn').style.display='';
