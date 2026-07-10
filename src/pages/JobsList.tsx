@@ -65,7 +65,7 @@ export default function JobsList() {
   const [scope, setScope] = usePersistedState<'mine' | 'all' | null>('tenn_units_scope', null, {
     validate: oneOf('mine', 'all'),
   })
-  const { isAdmin, staffPic } = useAuth()
+  const { isAdmin, staffPic, isLucas } = useAuth()
   const effectiveScope: 'mine' | 'all' = scope ?? (!isAdmin && staffPic ? 'mine' : 'all')
 
   function toggleIn(
@@ -203,6 +203,15 @@ export default function JobsList() {
           placeholder="Search unit, address, category, key holder…"
           className="flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-slate-900"
         />
+        {isLucas && (
+          <Link
+            to="/game"
+            title="Game mode"
+            className="flex shrink-0 items-center rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm active:bg-slate-50"
+          >
+            🎮
+          </Link>
+        )}
         <Link
           to="/quote"
           title="New quotation"

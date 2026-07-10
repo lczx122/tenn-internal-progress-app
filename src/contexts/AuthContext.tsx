@@ -15,6 +15,7 @@ interface AuthState {
   isAdmin: boolean
   isBoss: boolean
   isGuest: boolean
+  isLucas: boolean
   roleReady: boolean
   loading: boolean
   signIn: (email: string, password: string) => Promise<{ error: string | null }>
@@ -30,6 +31,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isAdmin, setIsAdmin] = useState(false)
   const [isBoss, setIsBoss] = useState(false)
   const [isGuest, setIsGuest] = useState(false)
+  const [isLucas, setIsLucas] = useState(false)
   // Whether the profile role has been resolved — lets App avoid briefly
   // showing internal pages to a guest before the role loads.
   const [roleReady, setRoleReady] = useState(false)
@@ -64,6 +66,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setIsAdmin(false)
       setIsBoss(false)
       setIsGuest(false)
+      setIsLucas(false)
       setRoleReady(true)
       if (w) { w.tennIsAdmin = false; w.tennIsGuest = false }
       return
@@ -81,12 +84,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           data?.full_name ?? userEmail?.split('@')[0] ?? 'Team member'
         )
         setStaffPic((data as { staff_pic?: string } | null)?.staff_pic ?? '')
-        const boss = data?.role === 'boss'
+        const lucas = data?.role === 'lucas' // Lucas' personal role: boss + game GUI
+        const boss = data?.role === 'boss' || lucas
         const admin = data?.role === 'admin' || boss // boss inherits admin powers
         const guest = data?.role === 'guest'
         setIsAdmin(admin)
         setIsBoss(boss)
         setIsGuest(guest)
+        setIsLucas(lucas)
         setRoleReady(true)
         if (w) { w.tennIsAdmin = admin; w.tennIsGuest = guest }
       })
@@ -110,7 +115,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ session, displayName, staffPic, isAdmin, isBoss, isGuest, roleReady, loading, signIn, signOut }}
+      value={{ session, displayName, staffPic, isAdmin, isBoss, isGuest, isLucas, roleReady, loading, signIn, signOut }}
     >
       {children}
     </AuthContext.Provider>

@@ -19,6 +19,7 @@ import Reports from './pages/Reports'
 import SuppliersAdmin from './pages/SuppliersAdmin'
 import CostingList from './pages/CostingList'
 import CostingForm from './pages/CostingForm'
+import GameView from './pages/GameView'
 import SetupNotice from './pages/SetupNotice'
 
 export default function App() {
@@ -70,6 +71,7 @@ export default function App() {
       <Route path="/projects" element={<ProjectsAdmin />} />
       <Route path="/suppliers" element={<SuppliersAdmin />} />
       <Route path="/settings" element={<AdminSettings />} />
+      <Route path="/game" element={<GameView />} />
       <Route path="/costing" element={<CostingList />} />
       <Route path="/costing/new" element={<CostingForm />} />
       <Route path="/costing/:id" element={<CostingForm />} />

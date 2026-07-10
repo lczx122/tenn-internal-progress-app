@@ -95,7 +95,8 @@ export interface JobEvent {
   created_at: string
 }
 
-export type Role = 'admin' | 'staff' | 'boss' | 'guest'
+// 'lucas' = the boss's personal role: full boss privileges + the game-ified GUI.
+export type Role = 'admin' | 'staff' | 'boss' | 'guest' | 'lucas'
 
 export interface Profile {
   id: string

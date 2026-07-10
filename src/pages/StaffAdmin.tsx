@@ -13,6 +13,7 @@ const ROLE_STYLE: Record<Role, string> = {
   admin: 'bg-emerald-100 text-emerald-700',
   staff: 'bg-slate-100 text-slate-600',
   guest: 'bg-sky-100 text-sky-700',
+  lucas: 'bg-violet-100 text-violet-700',
 }
 
 export default function StaffAdmin() {
@@ -149,8 +150,9 @@ export default function StaffAdmin() {
                   <option value="guest">Guest (quote only)</option>
                   <option value="staff">Staff</option>
                   <option value="admin">Admin</option>
-                  {/* Only a boss can assign the boss role (DB-enforced too) */}
+                  {/* Only a boss can assign the boss/lucas roles (DB-enforced too) */}
                   {(isBoss || p.role === 'boss') && <option value="boss">Boss</option>}
+                  {(isBoss || p.role === 'lucas') && <option value="lucas">Lucas (boss + game)</option>}
                 </select>
               </li>
             )

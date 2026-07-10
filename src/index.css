@@ -138,3 +138,44 @@ body {
   .no-print { display: none !important; }
   @page { size: A4 landscape; margin: 10mm; }
 }
+
+/* ---- Game mode (src/pages/GameView.tsx — Lucas' skin) ---- */
+.gv-glow {
+  animation: gv-glow 2.2s ease-in-out infinite;
+}
+@keyframes gv-glow {
+  0%, 100% { box-shadow: 0 0 6px 1px rgba(250, 204, 21, 0.3); }
+  50% { box-shadow: 0 0 18px 4px rgba(250, 204, 21, 0.55); }
+}
+.gv-shine {
+  position: relative;
+  overflow: hidden;
+}
+.gv-shine::after {
+  content: '';
+  position: absolute;
+  top: -150%;
+  left: -60%;
+  width: 50%;
+  height: 400%;
+  transform: rotate(25deg);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.25), transparent);
+  animation: gv-shine 3s linear infinite;
+}
+@keyframes gv-shine {
+  from { left: -60%; }
+  to { left: 160%; }
+}
+.gv-shelf {
+  height: 10px;
+  border-radius: 3px;
+  background: linear-gradient(180deg, #7c5a33, #4e3a22);
+  box-shadow: 0 5px 10px rgba(0, 0, 0, 0.5);
+}
+.gv-pop {
+  animation: gv-pop 0.18s ease-out;
+}
+@keyframes gv-pop {
+  from { transform: scale(0.94); opacity: 0.5; }
+  to { transform: scale(1); opacity: 1; }
+}
