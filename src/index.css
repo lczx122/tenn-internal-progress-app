@@ -139,13 +139,64 @@ body {
   @page { size: A4 landscape; margin: 10mm; }
 }
 
-/* ---- Game mode (src/pages/GameView.tsx — Lucas' skin) ---- */
+/* ---- Game mode (src/pages/GameView.tsx — Lucas' old-school JRPG skin) ----
+   Light-mode only: parchment panels, chunky ink borders, wooden bookcases. */
+.gv-pixel {
+  font-family: 'Press Start 2P', 'Courier New', monospace;
+  line-height: 1.4;
+  letter-spacing: 0.02em;
+}
+/* chunky retro panel + button */
+.gv-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #fff8e6;
+  border: 3px solid #3b2a18;
+  box-shadow: 3px 3px 0 rgba(59, 42, 24, 0.35);
+  color: #3b2a18;
+}
+.gv-btn:active {
+  transform: translate(3px, 3px);
+  box-shadow: none;
+}
+/* unit card standing on the shelf */
+.gv-card {
+  height: 136px;
+  padding: 10px;
+  background: #fff8e6;
+  box-shadow: 3px 3px 0 rgba(59, 42, 24, 0.3);
+}
+.gv-card:active {
+  transform: translate(2px, 2px);
+  box-shadow: none;
+}
+/* character-sheet window */
+.gv-sheet {
+  background: #fff8e6;
+  box-shadow: 6px 6px 0 rgba(59, 42, 24, 0.35);
+}
+/* segmented HP/XP bar */
+.gv-bar {
+  position: relative;
+  border: 2px solid #3b2a18;
+  background: #e8d9b0;
+  overflow: hidden;
+}
+.gv-bar::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(90deg, transparent 0 6px, rgba(59, 42, 24, 0.14) 6px 8px);
+}
+/* legendary pulse (soft gold, light-mode friendly) */
 .gv-glow {
   animation: gv-glow 2.2s ease-in-out infinite;
 }
 @keyframes gv-glow {
-  0%, 100% { box-shadow: 0 0 6px 1px rgba(250, 204, 21, 0.3); }
-  50% { box-shadow: 0 0 18px 4px rgba(250, 204, 21, 0.55); }
+  0%, 100% { box-shadow: 3px 3px 0 rgba(59, 42, 24, 0.3), 0 0 4px 1px rgba(201, 146, 14, 0.35); }
+  50% { box-shadow: 3px 3px 0 rgba(59, 42, 24, 0.3), 0 0 14px 4px rgba(201, 146, 14, 0.6); }
 }
 .gv-shine {
   position: relative;
@@ -159,18 +210,46 @@ body {
   width: 50%;
   height: 400%;
   transform: rotate(25deg);
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.25), transparent);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.45), transparent);
   animation: gv-shine 3s linear infinite;
 }
 @keyframes gv-shine {
   from { left: -60%; }
   to { left: 160%; }
 }
-.gv-shelf {
-  height: 10px;
-  border-radius: 3px;
-  background: linear-gradient(180deg, #7c5a33, #4e3a22);
-  box-shadow: 0 5px 10px rgba(0, 0, 0, 0.5);
+/* project nameplate nailed to the top of its bookcase */
+.gv-plaque {
+  background: linear-gradient(180deg, #9a6a3a, #7a4e26);
+  border: 3px solid #3b2a18;
+  border-bottom: none;
+  box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.2);
+}
+/* the bookcase: wooden frame + warm back panel */
+.gv-case {
+  border: 3px solid #3b2a18;
+  background: linear-gradient(180deg, #9a6a3a, #7a4e26);
+  padding: 12px 12px 0;
+  box-shadow: 4px 4px 0 rgba(59, 42, 24, 0.3), inset 0 3px 0 rgba(255, 255, 255, 0.18);
+}
+/* one wooden plank under EVERY row of cards: rows are fixed at 136px with a
+   20px plank as the row gap, so the repeating gradient lines up exactly. */
+.gv-shelfbg {
+  grid-auto-rows: 136px;
+  row-gap: 20px;
+  padding-bottom: 20px;
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent 136px,
+    #c89a66 136px,
+    #c89a66 139px,
+    #8a5a33 139px,
+    #6e451f 150px,
+    rgba(0, 0, 0, 0.35) 150px,
+    rgba(0, 0, 0, 0.35) 152px,
+    transparent 152px,
+    transparent 156px
+  );
 }
 .gv-pop {
   animation: gv-pop 0.18s ease-out;
