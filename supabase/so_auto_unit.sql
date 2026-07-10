@@ -188,7 +188,10 @@ begin
   -- ---------------------------------------------------------------------
   if new.unit_id is null then
     v_project   := nullif(trim(coalesce(new.payload->>'project','')), '');
-    v_unit_norm := lower(regexp_replace(coalesce(new.unit,''), '[^a-z0-9]', '', 'g'));
+    -- NOTE: lower() BEFORE the strip. '[^a-z0-9]' is case-sensitive, so run on the
+    -- raw text it deletes UPPERCASE letters too — "C-08-10" and "B-08-10" would both
+    -- normalise to "0810" and "exact" match each other (the recurring mislink bug).
+    v_unit_norm := regexp_replace(lower(coalesce(new.unit,'')), '[^a-z0-9]', '', 'g');
 
     -- Person(s) in charge: the quote tool sends payload.pics (an array). Fall
     -- back to the preparer's name when none were ticked.
@@ -212,9 +215,9 @@ begin
     -- re-adding a SO to an auto-archived unit revives it instead of forking).
     if v_unit_norm <> '' then
       select id into v_job from public.jobs
-        where lower(regexp_replace(coalesce(unit_code,''), '[^a-z0-9]', '', 'g')) = v_unit_norm
-           or lower(regexp_replace(regexp_replace(coalesce(unit_code,''), '[ ,].*$', ''),
-                                   '[^a-z0-9]', '', 'g')) = v_unit_norm
+        where regexp_replace(lower(coalesce(unit_code,'')), '[^a-z0-9]', '', 'g') = v_unit_norm
+           or regexp_replace(lower(regexp_replace(coalesce(unit_code,''), '[ ,].*$', '')),
+                             '[^a-z0-9]', '', 'g') = v_unit_norm
         order by is_archived asc, created_at desc
         limit 1;
     end if;

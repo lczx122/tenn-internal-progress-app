@@ -3199,10 +3199,26 @@ function setQnoStatus(t){const el=document.getElementById('qno_status');if(el)el
 // to an existing one (quotations.unit_created flags which). Surface it to the user.
 async function showUnitOutcome(supa, qid){
   try{
-    const {data:q}=await supa.from('quotations').select('unit_id,unit_created').eq('id',qid).single();
+    const {data:q}=await supa.from('quotations').select('unit_id,unit_created,unit').eq('id',qid).single();
     if(!q||!q.unit_id) return;
     const {data:j}=await supa.from('jobs').select('unit_code').eq('id',q.unit_id).single();
     const code=(j&&(j.unit_code||'').trim())||'the unit';
+    // Tripwire: the DB matcher may only attach to the EXACT typed code (or a
+    // multi-part code whose first part matches). Anything else means the DB is
+    // running an outdated matcher — warn loudly and offer to unlink so the
+    // wrong unit is never credited. (supabase/fix_so_mislinks.sql relinks it.)
+    const norm=s=>String(s||'').toLowerCase().replace(/[^a-z0-9]/g,'');
+    const typed=norm(q.unit);
+    if(typed && norm(code)!==typed && norm(String(code).split(/[ ,]/)[0])!==typed){
+      setQnoStatus('⚠ Attached to '+code+' — does NOT match the typed unit '+q.unit);
+      if(await uiConfirm('Warning: this Sales Order attached to "'+code+'" instead of the typed unit "'+q.unit+'". The database unit-matcher looks outdated (run supabase/fix_so_mislinks.sql). Unlink it now so the wrong unit is not credited? The SO is kept and the fix script relinks it correctly.','Unlink','Keep')){
+        try{
+          await supa.rpc('detach_sales_orders',{p_ids:[qid]});
+          setQnoStatus('⚠ Unlinked from '+code+' — run the DB fix to relink this SO to '+q.unit);
+        }catch(e){}
+      }
+      return;
+    }
     setQnoStatus(q.unit_created ? ('✓ '+code+' unit created') : ('✓ Work saved to '+code));
   }catch(e){}
 }

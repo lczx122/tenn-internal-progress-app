@@ -110,7 +110,7 @@ select coalesce(nullif(trim(u.customer),''), u.unit_code), u.unit_code,
        'Ambience Pulau Gadong', 0, 'booked', 'Office', 'Import 01/07/26'
 from u
 where not exists (select 1 from public.jobs j
-  where lower(regexp_replace(j.unit_code,'[^a-z0-9]','','g')) = lower(regexp_replace(u.unit_code,'[^a-z0-9]','','g')));
+  where regexp_replace(lower(j.unit_code),'[^a-z0-9]','','g') = regexp_replace(lower(u.unit_code),'[^a-z0-9]','','g'));
 
 -- 2) per-trade order amounts -> order_by_category (drop the stray 'Aluminium'), then order_total
 with t as (select unit_code, trade, sum(amount) amt from _imp group by unit_code, trade),
@@ -118,12 +118,12 @@ with t as (select unit_code, trade, sum(amount) amt from _imp group by unit_code
 update public.jobs j
    set order_by_category = (coalesce(j.order_by_category,'{}'::jsonb) - 'Aluminium') || agg.obc
 from agg
-where lower(regexp_replace(j.unit_code,'[^a-z0-9]','','g')) = lower(regexp_replace(agg.unit_code,'[^a-z0-9]','','g'));
+where regexp_replace(lower(j.unit_code),'[^a-z0-9]','','g') = regexp_replace(lower(agg.unit_code),'[^a-z0-9]','','g');
 
 update public.jobs j
    set order_total = coalesce((select sum(v::numeric) from jsonb_each_text(j.order_by_category) e(k,v)),0)
 where exists (select 1 from _imp i
-  where lower(regexp_replace(j.unit_code,'[^a-z0-9]','','g')) = lower(regexp_replace(i.unit_code,'[^a-z0-9]','','g')));
+  where regexp_replace(lower(j.unit_code),'[^a-z0-9]','','g') = regexp_replace(lower(i.unit_code),'[^a-z0-9]','','g'));
 
 -- 3) assign PIC from the dominant Ref (only where blank)
 with ranked as (
@@ -134,7 +134,7 @@ with ranked as (
 update public.jobs j set pic = r.pic
 from ranked r
 where r.rk = 1 and coalesce(j.pic,'')=''
-  and lower(regexp_replace(j.unit_code,'[^a-z0-9]','','g')) = lower(regexp_replace(r.unit_code,'[^a-z0-9]','','g'));
+  and regexp_replace(lower(j.unit_code),'[^a-z0-9]','','g') = regexp_replace(lower(r.unit_code),'[^a-z0-9]','','g');
 
 -- 4) one work card per (unit, trade); Completed if all that work is installed
 with wc as (
@@ -142,22 +142,22 @@ with wc as (
          string_agg(distinct nullif(detail,''),', ') detail,
          string_agg(distinct nullif(so_no,''),', ') sos
   from _imp group by unit_code, trade),
-  j as (select id, lower(regexp_replace(unit_code,'[^a-z0-9]','','g')) nk from public.jobs)
+  j as (select id, regexp_replace(lower(unit_code),'[^a-z0-9]','','g') nk from public.jobs)
 insert into public.job_works (job_id, category, title, stage, remarks, updated_by)
 select j.id, wc.trade, '',
        case when wc.all_installed then 'completed' else 'in_progress' end,
        'Imported: ' || coalesce(wc.detail,'') || coalesce(' ('||wc.sos||')',''), 'Import 01/07/26'
-from wc join j on j.nk = lower(regexp_replace(wc.unit_code,'[^a-z0-9]','','g'))
+from wc join j on j.nk = regexp_replace(lower(wc.unit_code),'[^a-z0-9]','','g')
 where not exists (select 1 from public.job_works w where w.job_id=j.id and w.category=wc.trade);
 
 -- 5) per-trade deposit -> a Collection entry tagged to that trade
 with d as (
   select unit_code, trade, sum(deposit) dep, string_agg(distinct nullif(so_no,''),', ') sos
   from _imp where deposit>0 group by unit_code, trade),
-  j as (select id, lower(regexp_replace(unit_code,'[^a-z0-9]','','g')) nk from public.jobs)
+  j as (select id, regexp_replace(lower(unit_code),'[^a-z0-9]','','g') nk from public.jobs)
 insert into public.claims (job_id, category, amount, work_category, note, collected_on)
 select j.id, 'Booking Fee / Deposit', d.dep, d.trade,
        'Imported deposit '||d.trade||coalesce(' ('||d.sos||')',''), null
-from d join j on j.nk = lower(regexp_replace(d.unit_code,'[^a-z0-9]','','g'));
+from d join j on j.nk = regexp_replace(lower(d.unit_code),'[^a-z0-9]','','g');
 
 commit;
