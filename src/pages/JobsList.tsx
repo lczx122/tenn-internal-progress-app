@@ -14,6 +14,7 @@ import { useAutoRefresh } from '../lib/useAutoRefresh'
 import { cacheGet, cacheSet } from '../lib/pageCache'
 import { progressStart, progressDone } from '../lib/progress'
 import { usePersistedState, oneOf } from '../lib/usePersistedState'
+import { ErrorState } from '../components/ErrorState'
 
 function loadSet(key: string): Set<string> {
   try {
@@ -38,6 +39,7 @@ export default function JobsList() {
   const [jobs, setJobs] = useState<Job[]>(c0?.jobs ?? [])
   const [works, setWorks] = useState<JobWork[]>(c0?.works ?? [])
   const [loading, setLoading] = useState(!c0)
+  const [loadFailed, setLoadFailed] = useState(false)
   // Filters can be seeded from the URL (e.g. the dashboard links to
   // /units?stage=installing, /units?cat=Painting, or /units?q=Ahmad).
   const [searchParams] = useSearchParams()
@@ -90,17 +92,23 @@ export default function JobsList() {
   async function load() {
     progressStart()
     try {
-      const [{ data: j }, { data: w }] = await Promise.all([
+      const [{ data: j, error: ej }, { data: w }] = await Promise.all([
         supabase.from('jobs').select('*').order('updated_at', { ascending: false }),
         supabase.from('job_works').select('*'),
       ])
-      const nj = (j as Job[]) ?? []
-      const nw = (w as JobWork[]) ?? []
-      setJobs(nj)
-      setWorks(nw)
-      cacheSet('units', { jobs: nj, works: nw })
-      setLoading(false)
+      setLoadFailed(!!ej)
+      if (!ej) {
+        const nj = (j as Job[]) ?? []
+        const nw = (w as JobWork[]) ?? []
+        setJobs(nj)
+        setWorks(nw)
+        cacheSet('units', { jobs: nj, works: nw })
+      }
+    } catch {
+      // fetch itself threw (offline) — same treatment as a server error
+      setLoadFailed(true)
     } finally {
+      setLoading(false)
       progressDone()
     }
   }
@@ -331,9 +339,11 @@ export default function JobsList() {
 
       {loading ? (
         <p className="py-10 text-center text-slate-400">Loading…</p>
+      ) : loadFailed && jobs.length === 0 ? (
+        <ErrorState onRetry={load} />
       ) : visible.length === 0 ? (
         <div className="rounded-xl border border-dashed border-slate-300 py-12 text-center text-slate-400">
-          {showArchived ? 'No archived units.' : 'No units yet. Tap “+ New”.'}
+          {showArchived ? 'No archived units.' : 'No units yet — save a Sales Order in the Quote tab to open one.'}
         </div>
       ) : (
         <div className="space-y-5">

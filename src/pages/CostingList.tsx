@@ -12,6 +12,8 @@ import { useAutoRefresh } from '../lib/useAutoRefresh'
 import { cacheGet, cacheSet } from '../lib/pageCache'
 import { progressStart, progressDone } from '../lib/progress'
 import { usePersistedState, oneOf } from '../lib/usePersistedState'
+import { runDb } from '../lib/toast'
+import { ErrorState } from '../components/ErrorState'
 import {
   calcCosting,
   categoryLabel,
@@ -48,6 +50,7 @@ export default function CostingList() {
   const [rows, setRows] = useState<Costing[]>(c0 ?? [])
   const [jobProg, setJobProg] = useState<Map<string, UnitProgress>>(new Map())
   const [loading, setLoading] = useState(!c0)
+  const [loadFailed, setLoadFailed] = useState(false)
   const [syncing, setSyncing] = useState(false)
   const [syncMsg, setSyncMsg] = useState('')
   const [query, setQuery] = useState('')
@@ -71,16 +74,21 @@ export default function CostingList() {
     // would visibly rearrange after every edit-triggered reload.
     progressStart()
     try {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('costings')
         .select('*')
         .order('created_at', { ascending: false })
         .order('id', { ascending: true })
-      const next = (data as Costing[]) ?? []
-      setRows(next)
-      cacheSet('costing', next)
-      setLoading(false)
+      setLoadFailed(!!error)
+      if (!error) {
+        const next = (data as Costing[]) ?? []
+        setRows(next)
+        cacheSet('costing', next)
+      }
+    } catch {
+      setLoadFailed(true)
     } finally {
+      setLoading(false)
       progressDone()
     }
   }
@@ -211,20 +219,25 @@ export default function CostingList() {
   async function saveRow(id: string) {
     const r = rowsRef.current.find((x) => x.id === id)
     if (!r) return
-    await supabase
-      .from('costings')
-      .update({
-        cash_sale_no: r.cash_sale_no,
-        customer: r.customer,
-        category: r.category,
-        revenue: num(r.revenue),
-        costs: r.costs,
-        commissions: r.commissions,
-        shares: r.shares,
-        status: r.status,
-        costing_date: r.costing_date,
-      })
-      .eq('id', r.id)
+    // Inline cells auto-save on blur — a silent failure here means the edit
+    // quietly reverts on the next refresh, so surface it.
+    await runDb(
+      supabase
+        .from('costings')
+        .update({
+          cash_sale_no: r.cash_sale_no,
+          customer: r.customer,
+          category: r.category,
+          revenue: num(r.revenue),
+          costs: r.costs,
+          commissions: r.commissions,
+          shares: r.shares,
+          status: r.status,
+          costing_date: r.costing_date,
+        })
+        .eq('id', r.id),
+      { fail: 'Cell not saved' },
+    )
   }
 
   const sheetRows = visible.filter((r) => (r.category || '') === sheetCat)
@@ -311,6 +324,10 @@ export default function CostingList() {
 
       {loading ? (
         <p className="py-10 text-center text-slate-400">Loading…</p>
+      ) : loadFailed && rows.length === 0 ? (
+        <div className="mt-3">
+          <ErrorState onRetry={load} />
+        </div>
       ) : visible.length === 0 ? (
         <div className="mt-3 rounded-xl border border-dashed border-slate-300 py-12 text-center text-slate-400">
           {rows.length === 0 ? 'No costings yet. Tap “+ New”.' : 'Nothing matches your filter.'}

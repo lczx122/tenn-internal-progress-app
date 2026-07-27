@@ -6,6 +6,8 @@ import type { Appointment, Job, Profile } from '../lib/types'
 import { Layout } from '../components/Layout'
 import { Icon } from '../components/Icon'
 import { APPT_TYPES, getApptType, toLocalInput } from '../lib/appointments'
+import { runDb } from '../lib/toast'
+import { confirmDialog } from '../lib/dialog'
 
 // Default a new appointment to the next whole hour.
 function defaultStart(): string {
@@ -193,19 +195,35 @@ export default function AppointmentForm() {
   async function changeStatus(next: Appointment['status']) {
     if (!id) return
     setBusy(true)
-    await supabase.from('appointments').update({ status: next }).eq('id', id)
-    if (next === 'done' && form.job_id) {
+    const ok = await runDb(supabase.from('appointments').update({ status: next }).eq('id', id), {
+      ok: next === 'done' ? 'Marked done' : 'Updated',
+      fail: 'Not updated',
+    })
+    if (ok && next === 'done' && form.job_id) {
       await logToJob(form.job_id, `${getApptType(form.type).label} completed`)
     }
     setBusy(false)
-    navigate('/schedule')
+    if (ok) navigate('/schedule')
   }
 
   async function remove() {
-    if (!id || !window.confirm('Delete this appointment?')) return
+    if (!id) return
+    if (
+      !(await confirmDialog({
+        title: 'Delete appointment',
+        message: 'Delete this appointment? This cannot be undone.',
+        confirmLabel: 'Delete',
+        danger: true,
+      }))
+    )
+      return
     setBusy(true)
-    await supabase.from('appointments').delete().eq('id', id)
-    navigate('/schedule')
+    const ok = await runDb(supabase.from('appointments').delete().eq('id', id), {
+      ok: 'Appointment deleted',
+      fail: 'Could not delete',
+    })
+    setBusy(false)
+    if (ok) navigate('/schedule')
   }
 
   const field =

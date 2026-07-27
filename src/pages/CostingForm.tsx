@@ -7,6 +7,8 @@ import { Layout } from '../components/Layout'
 import { PercentBar } from '../components/StageBar'
 import { overallPercent } from '../lib/stages'
 import { calcCosting, money, num, progressToStatus, statusStyle, COSTING_CATEGORIES, COSTING_STATUSES, templateFor } from '../lib/costing'
+import { runDb } from '../lib/toast'
+import { confirmDialog } from '../lib/dialog'
 
 type CostRow = { label: string; amount: string }
 type CommRow = { name: string; kind: 'fixed' | 'pct'; value: string }
@@ -145,10 +147,23 @@ export default function CostingForm() {
   }
 
   async function remove() {
-    if (!id || !window.confirm('Delete this costing? This cannot be undone.')) return
+    if (!id) return
+    if (
+      !(await confirmDialog({
+        title: 'Delete costing',
+        message: 'Delete this costing? This cannot be undone.',
+        confirmLabel: 'Delete',
+        danger: true,
+      }))
+    )
+      return
     setBusy(true)
-    await supabase.from('costings').delete().eq('id', id)
-    navigate('/costing')
+    const ok = await runDb(supabase.from('costings').delete().eq('id', id), {
+      ok: 'Costing deleted',
+      fail: 'Could not delete',
+    })
+    setBusy(false)
+    if (ok) navigate('/costing')
   }
 
   const field =

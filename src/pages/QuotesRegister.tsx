@@ -10,6 +10,9 @@ import { useAutoRefresh } from '../lib/useAutoRefresh'
 import { cacheGet, cacheSet } from '../lib/pageCache'
 import { progressStart, progressDone } from '../lib/progress'
 import { usePersistedState, oneOf } from '../lib/usePersistedState'
+import { runDb } from '../lib/toast'
+import { confirmDialog } from '../lib/dialog'
+import { ErrorState } from '../components/ErrorState'
 
 const money = (n: number) =>
   'RM ' + n.toLocaleString('en-MY', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
@@ -26,6 +29,7 @@ export default function QuotesRegister() {
   const c0 = cacheGet<Quotation[]>('quotes')
   const [rows, setRows] = useState<Quotation[]>(c0 ?? [])
   const [loading, setLoading] = useState(!c0)
+  const [loadFailed, setLoadFailed] = useState(false)
   const [query, setQuery] = useState('')
   const [filter, setFilter] = usePersistedState<Filter>('tenn_quotes_filter', 'all', {
     validate: oneOf('all', 'QT', 'SO'),
@@ -35,22 +39,43 @@ export default function QuotesRegister() {
   const navigate = useNavigate()
 
   async function remove(r: Quotation) {
-    if (!window.confirm(`Delete ${r.number}? This cannot be undone.`)) return
-    await supabase.from('quotations').delete().eq('id', r.id)
+    if (
+      !(await confirmDialog({
+        title: `Delete ${r.number}`,
+        message: `Delete ${r.number}${r.unit ? ` (${r.unit})` : ''}? ${
+          r.doc_type === 'SO' ? 'Its unit keeps its history, but this order is gone for good.' : 'This cannot be undone.'
+        }`,
+        confirmLabel: 'Delete',
+        danger: true,
+      }))
+    )
+      return
+    const ok = await runDb(supabase.from('quotations').delete().eq('id', r.id), {
+      ok: `${r.number} deleted`,
+      fail: 'Could not delete',
+    })
+    // Remove locally too — realtime may be down, and the row lingering after a
+    // confirmed delete reads as "it didn't work".
+    if (ok) setRows((prev) => prev.filter((x) => x.id !== r.id))
   }
 
   async function load() {
     progressStart()
     try {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('quotations')
         .select('*')
         .order('created_at', { ascending: false })
-      const next = (data as Quotation[]) ?? []
-      setRows(next)
-      cacheSet('quotes', next)
-      setLoading(false)
+      setLoadFailed(!!error)
+      if (!error) {
+        const next = (data as Quotation[]) ?? []
+        setRows(next)
+        cacheSet('quotes', next)
+      }
+    } catch {
+      setLoadFailed(true)
     } finally {
+      setLoading(false)
       progressDone()
     }
   }
@@ -128,6 +153,8 @@ export default function QuotesRegister() {
 
       {loading ? (
         <p className="py-10 text-center text-slate-400">Loading…</p>
+      ) : loadFailed && rows.length === 0 ? (
+        <ErrorState onRetry={load} />
       ) : visible.length === 0 ? (
         <div className="rounded-xl border border-dashed border-slate-300 py-12 text-center text-slate-400">
           {rows.length === 0

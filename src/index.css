@@ -72,6 +72,9 @@ body {
 .dark .bg-amber-100 { background-color: rgba(245, 158, 11, 0.2); }
 .dark .bg-emerald-100 { background-color: rgba(16, 185, 129, 0.2); }
 .dark .bg-rose-100 { background-color: rgba(244, 63, 94, 0.2); }
+.dark .bg-red-50 { background-color: rgba(225, 29, 72, 0.12); }
+.dark .border-red-200 { border-color: rgba(225, 29, 72, 0.4); }
+.dark .text-red-700 { color: #fca5a5; }
 .dark .bg-slate-100\/70 { background-color: rgba(11, 18, 32, 0.7); }
 
 /* press / hover feedback: the light active:/hover: backgrounds flash white on
@@ -257,4 +260,13 @@ body {
 @keyframes gv-pop {
   from { transform: scale(0.94); opacity: 0.5; }
   to { transform: scale(1); opacity: 1; }
+}
+
+/* toast slide-in (src/components/Toaster.tsx) */
+.toast-in {
+  animation: toast-in 0.22s ease-out;
+}
+@keyframes toast-in {
+  from { transform: translateY(10px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
 }

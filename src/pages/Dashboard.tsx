@@ -16,6 +16,7 @@ import { useAutoRefresh } from '../lib/useAutoRefresh'
 import { cacheGet, cacheSet } from '../lib/pageCache'
 import { progressStart, progressDone } from '../lib/progress'
 import { usePersistedState, oneOf } from '../lib/usePersistedState'
+import { ErrorState } from '../components/ErrorState'
 
 type DashCache = {
   jobs: Job[]
@@ -46,6 +47,7 @@ export default function Dashboard() {
   const [appts, setAppts] = useState<Appointment[]>(c0?.appts ?? [])
   const [claims, setClaims] = useState<Claim[]>(c0?.claims ?? [])
   const [loading, setLoading] = useState(!c0)
+  const [loadFailed, setLoadFailed] = useState(false)
   const [scope, setScope] = usePersistedState<'mine' | 'all' | null>('tenn_dash_scope', null, {
     validate: oneOf('mine', 'all'),
   })
@@ -56,13 +58,15 @@ export default function Dashboard() {
   async function load() {
     progressStart()
     try {
-      const [{ data: j }, { data: w }, { data: e }, { data: ap }, { data: cl }] = await Promise.all([
+      const [{ data: j, error: ej }, { data: w }, { data: e }, { data: ap }, { data: cl }] = await Promise.all([
         supabase.from('jobs').select('*').order('updated_at', { ascending: false }),
         supabase.from('job_works').select('*'),
         supabase.from('job_events').select('*').order('created_at', { ascending: false }).limit(20),
         supabase.from('appointments').select('*').eq('status', 'scheduled').order('starts_at'),
         supabase.from('claims').select('*'),
       ])
+      setLoadFailed(!!ej)
+      if (ej) return
       const next: DashCache = {
         jobs: (j as Job[]) ?? [],
         works: (w as JobWork[]) ?? [],
@@ -76,8 +80,10 @@ export default function Dashboard() {
       setAppts(next.appts)
       setClaims(next.claims)
       cacheSet('dashboard', next)
-      setLoading(false)
+    } catch {
+      setLoadFailed(true)
     } finally {
+      setLoading(false)
       progressDone()
     }
   }
@@ -104,7 +110,9 @@ export default function Dashboard() {
   // cron. Idempotent; the jobs realtime subscription refreshes the UI if any unit
   // gets archived.
   useEffect(() => {
-    if (isAdmin) supabase.rpc('archive_completed_units')
+    // .then() so a network failure can't surface as an unhandled rejection —
+    // this is best-effort housekeeping, never user-visible.
+    if (isAdmin) supabase.rpc('archive_completed_units').then(() => {}, () => {})
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAdmin])
 
@@ -259,6 +267,8 @@ export default function Dashboard() {
       )}
       {loading ? (
         <p className="py-10 text-center text-slate-400">Loading…</p>
+      ) : loadFailed && jobs.length === 0 ? (
+        <ErrorState onRetry={load} />
       ) : (
         <div className="space-y-5">
           {/* KPI tiles */}

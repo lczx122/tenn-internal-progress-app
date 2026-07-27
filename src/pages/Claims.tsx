@@ -13,12 +13,14 @@ import { FinanceToggle } from '../components/FinanceToggle'
 import { cacheGet, cacheSet } from '../lib/pageCache'
 import { progressStart, progressDone } from '../lib/progress'
 import { usePersistedState, oneOf } from '../lib/usePersistedState'
+import { ErrorState } from '../components/ErrorState'
 
 export default function Claims() {
   const c0 = cacheGet<{ jobs: Job[]; claims: Claim[] }>('collection')
   const [jobs, setJobs] = useState<Job[]>(c0?.jobs ?? [])
   const [claims, setClaims] = useState<Claim[]>(c0?.claims ?? [])
   const [loading, setLoading] = useState(!c0)
+  const [loadFailed, setLoadFailed] = useState(false)
   const [query, setQuery] = useState('')
   const [project, setProject] = usePersistedState('tenn_claims_project', '')
   const [scope, setScope] = usePersistedState<'mine' | 'all' | null>('tenn_claims_scope', null, {
@@ -34,17 +36,22 @@ export default function Claims() {
   async function load() {
     progressStart()
     try {
-      const [{ data: j }, { data: c }] = await Promise.all([
+      const [{ data: j, error: ej }, { data: c }] = await Promise.all([
         supabase.from('jobs').select('*').eq('is_archived', false).order('project'),
         supabase.from('claims').select('*'),
       ])
-      const nj = (j as Job[]) ?? []
-      const ncl = (c as Claim[]) ?? []
-      setJobs(nj)
-      setClaims(ncl)
-      cacheSet('collection', { jobs: nj, claims: ncl })
-      setLoading(false)
+      setLoadFailed(!!ej)
+      if (!ej) {
+        const nj = (j as Job[]) ?? []
+        const ncl = (c as Claim[]) ?? []
+        setJobs(nj)
+        setClaims(ncl)
+        cacheSet('collection', { jobs: nj, claims: ncl })
+      }
+    } catch {
+      setLoadFailed(true)
     } finally {
+      setLoading(false)
       progressDone()
     }
   }
@@ -268,6 +275,8 @@ export default function Claims() {
 
       {loading ? (
         <p className="py-10 text-center text-slate-400">Loading…</p>
+      ) : loadFailed && jobs.length === 0 ? (
+        <ErrorState onRetry={load} />
       ) : rows.length === 0 ? (
         <div className="rounded-xl border border-dashed border-slate-300 py-12 text-center text-slate-400">
           No collections yet. Open a unit and set its order total to start tracking collections.

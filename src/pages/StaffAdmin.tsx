@@ -7,6 +7,7 @@ import { Layout } from '../components/Layout'
 import { Icon } from '../components/Icon'
 import { STAFF_PICS } from '../lib/units'
 import { useAutoRefresh } from '../lib/useAutoRefresh'
+import { promptDialog } from '../lib/dialog'
 
 const ROLE_STYLE: Record<Role, string> = {
   boss: 'bg-amber-100 text-amber-700',
@@ -58,7 +59,11 @@ export default function StaffAdmin() {
   }
 
   async function rename(p: Profile) {
-    const name = window.prompt("Staff member's display name", p.full_name)
+    const name = await promptDialog({
+      title: 'Rename staff member',
+      message: `Display name for ${p.full_name}:`,
+      initial: p.full_name,
+    })
     if (name == null) return
     const trimmed = name.trim()
     if (!trimmed || trimmed === p.full_name) return

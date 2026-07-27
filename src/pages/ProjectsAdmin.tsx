@@ -6,6 +6,7 @@ import { useAuth } from '../contexts/AuthContext'
 import type { Project } from '../lib/types'
 import { Layout } from '../components/Layout'
 import { useAutoRefresh } from '../lib/useAutoRefresh'
+import { confirmDialog, promptDialog } from '../lib/dialog'
 
 export default function ProjectsAdmin() {
   const { isAdmin } = useAuth()
@@ -56,7 +57,7 @@ export default function ProjectsAdmin() {
   }
 
   async function rename(p: Project) {
-    const next = window.prompt('Rename project', p.name)
+    const next = await promptDialog({ title: 'Rename project', message: `New name for “${p.name}”:`, initial: p.name })
     if (next == null) return
     const n = next.trim()
     if (!n || n === p.name) return
@@ -79,7 +80,7 @@ export default function ProjectsAdmin() {
       setError(`Can't delete “${p.name}” — ${used} unit${used === 1 ? '' : 's'} still use it. Reassign them first.`)
       return
     }
-    if (!window.confirm(`Delete project “${p.name}”?`)) return
+    if (!(await confirmDialog({ title: 'Delete project', message: `Delete project “${p.name}”?`, confirmLabel: 'Delete', danger: true }))) return
     setBusy(true)
     setError(null)
     const { error } = await supabase.from('projects').delete().eq('id', p.id)

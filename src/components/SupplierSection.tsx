@@ -9,6 +9,8 @@ import { PercentBar } from './StageBar'
 import { Icon } from './Icon'
 import { money } from '../lib/claims'
 import { formatDate } from '../lib/format'
+import { runDb } from '../lib/toast'
+import { confirmDialog } from '../lib/dialog'
 
 const inp = 'w-full rounded-lg border border-slate-300 px-3 py-2 text-base outline-none focus:border-slate-900'
 
@@ -70,41 +72,59 @@ export function SupplierSection({
     if (!form.supplier.trim()) return
     const name = form.supplier.trim()
     setBusy(true)
-    await supabase.from('unit_suppliers').insert({
-      job_id: job.id,
-      supplier: name,
-      item: form.item.trim(),
-      category: form.category,
-      stage: form.stage,
-      cost: Number(form.cost) || 0,
-      expected_date: form.expected_date || null,
-      notes: form.notes.trim(),
-      created_by: session?.user.id ?? null,
-    })
-    // Save the name to the reusable master list (no-op if it already exists).
-    await supabase
-      .from('suppliers')
-      .upsert({ name, created_by: session?.user.id ?? null }, { onConflict: 'name', ignoreDuplicates: true })
-    setForm({ supplier: '', item: '', category: form.category, stage: 'to_order', cost: '', expected_date: '', notes: '' })
-    setAdding(false)
+    const ok = await runDb(
+      supabase.from('unit_suppliers').insert({
+        job_id: job.id,
+        supplier: name,
+        item: form.item.trim(),
+        category: form.category,
+        stage: form.stage,
+        cost: Number(form.cost) || 0,
+        expected_date: form.expected_date || null,
+        notes: form.notes.trim(),
+        created_by: session?.user.id ?? null,
+      }),
+      { ok: `${name} added`, fail: 'Supplier not added' },
+    )
+    if (ok) {
+      // Save the name to the reusable master list (no-op if it already exists).
+      await supabase
+        .from('suppliers')
+        .upsert({ name, created_by: session?.user.id ?? null }, { onConflict: 'name', ignoreDuplicates: true })
+      setForm({ supplier: '', item: '', category: form.category, stage: 'to_order', cost: '', expected_date: '', notes: '' })
+      setAdding(false)
+      await loadNames()
+      await onChange()
+    }
     setBusy(false)
-    await loadNames()
-    await onChange()
   }
 
   async function patch(s: UnitSupplier, fields: Partial<UnitSupplier>) {
     setBusy(true)
-    await supabase.from('unit_suppliers').update(fields).eq('id', s.id)
+    const ok = await runDb(supabase.from('unit_suppliers').update(fields).eq('id', s.id), {
+      fail: 'Change not saved',
+    })
     setBusy(false)
-    await onChange()
+    if (ok) await onChange()
   }
 
   async function remove(s: UnitSupplier) {
-    if (!window.confirm(`Remove supplier "${s.supplier || '—'}"?`)) return
+    if (
+      !(await confirmDialog({
+        title: 'Remove supplier entry',
+        message: `Remove "${s.supplier || '—'}"${s.item ? ` (${s.item})` : ''} from this unit?`,
+        confirmLabel: 'Remove',
+        danger: true,
+      }))
+    )
+      return
     setBusy(true)
-    await supabase.from('unit_suppliers').delete().eq('id', s.id)
+    const ok = await runDb(supabase.from('unit_suppliers').delete().eq('id', s.id), {
+      ok: 'Removed',
+      fail: 'Could not remove',
+    })
     setBusy(false)
-    await onChange()
+    if (ok) await onChange()
   }
 
   return (

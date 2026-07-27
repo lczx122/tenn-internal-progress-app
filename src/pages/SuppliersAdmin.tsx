@@ -6,6 +6,7 @@ import { useAuth } from '../contexts/AuthContext'
 import type { Supplier } from '../lib/types'
 import { Layout } from '../components/Layout'
 import { useAutoRefresh } from '../lib/useAutoRefresh'
+import { confirmDialog, promptDialog } from '../lib/dialog'
 
 // Boss-only management of the reusable supplier master list (public.suppliers).
 // Mirrors ProjectsAdmin: add / rename / delete, with a usage count from
@@ -60,7 +61,11 @@ export default function SuppliersAdmin() {
   }
 
   async function rename(s: Supplier) {
-    const next = window.prompt('Rename supplier', s.name)
+    const next = await promptDialog({
+      title: 'Rename supplier',
+      message: `New name for “${s.name}” (updates every unit entry too):`,
+      initial: s.name,
+    })
     if (next == null) return
     const n = next.trim()
     if (!n || n === s.name) return
@@ -83,7 +88,7 @@ export default function SuppliersAdmin() {
       setError(`Can't delete “${s.name}” — used on ${used} unit entr${used === 1 ? 'y' : 'ies'}. Remove those first.`)
       return
     }
-    if (!window.confirm(`Delete supplier “${s.name}”?`)) return
+    if (!(await confirmDialog({ title: 'Delete supplier', message: `Delete supplier “${s.name}”?`, confirmLabel: 'Delete', danger: true }))) return
     setBusy(true)
     setError(null)
     const { error } = await supabase.from('suppliers').delete().eq('id', s.id)

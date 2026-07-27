@@ -7,6 +7,7 @@ import { Icon } from '../components/Icon'
 import { NotificationSettings } from '../components/NotificationSettings'
 import { postAnnouncement } from '../lib/push'
 import { getTheme, setTheme, type Theme } from '../lib/theme'
+import { toastErr } from '../lib/toast'
 
 type Pay = { bank_name?: string; account_name?: string; account_number?: string; note?: string }
 type Announcement = { id?: string; text?: string; by?: string }
@@ -56,7 +57,7 @@ export default function AdminSettings() {
       setPaySaved(true)
       setTimeout(() => setPaySaved(false), 2000)
     } else {
-      alert('Could not save: ' + error.message)
+      toastErr('Could not save — ' + error.message)
     }
   }
 
@@ -82,12 +83,16 @@ export default function AdminSettings() {
 
   async function clearAnn() {
     setAnnBusy(true)
-    await supabase
+    const { error } = await supabase
       .from('app_settings')
       .upsert({ key: 'announcement', value: {}, updated_at: new Date().toISOString() })
-    setAnn({})
     setAnnBusy(false)
-    setAnnMsg('Cleared.')
+    if (error) {
+      setAnnMsg('Could not clear: ' + error.message)
+    } else {
+      setAnn({})
+      setAnnMsg('Cleared.')
+    }
   }
 
   const field = 'w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-slate-900'

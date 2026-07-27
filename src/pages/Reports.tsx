@@ -10,6 +10,7 @@ import { useAutoRefresh } from '../lib/useAutoRefresh'
 import { progressStart, progressDone } from '../lib/progress'
 import { canShareFiles, shareElementAsPdf } from '../lib/sharePdf'
 import { usePersistedState } from '../lib/usePersistedState'
+import { ErrorState } from '../components/ErrorState'
 
 const ALL = '__all__'
 
@@ -21,6 +22,7 @@ export default function Reports() {
   const [claims, setClaims] = useState<Claim[]>([])
   const [soByUnit, setSoByUnit] = useState<Map<string, string>>(new Map())
   const [loading, setLoading] = useState(true)
+  const [loadFailed, setLoadFailed] = useState(false)
 
   const [cat, setCat] = usePersistedState<string>('tenn_reports_cat', 'Iron Work')
   const [project, setProject] = usePersistedState('tenn_reports_project', '')
@@ -42,21 +44,26 @@ export default function Reports() {
   async function load() {
     progressStart()
     try {
-      const [{ data: j }, { data: c }, { data: q }] = await Promise.all([
+      const [{ data: j, error: ej }, { data: c }, { data: q }] = await Promise.all([
         supabase.from('jobs').select('*').order('project'),
         supabase.from('claims').select('*'),
         supabase.from('quotations').select('number, unit_id').eq('doc_type', 'SO').not('unit_id', 'is', null),
       ])
-      setJobs((j as Job[]) ?? [])
-      setClaims((c as Claim[]) ?? [])
-      const m = new Map<string, string>()
-      for (const row of (q as { number: string; unit_id: string }[]) ?? []) {
-        const prev = m.get(row.unit_id)
-        m.set(row.unit_id, prev ? `${prev}, ${row.number}` : row.number)
+      setLoadFailed(!!ej)
+      if (!ej) {
+        setJobs((j as Job[]) ?? [])
+        setClaims((c as Claim[]) ?? [])
+        const m = new Map<string, string>()
+        for (const row of (q as { number: string; unit_id: string }[]) ?? []) {
+          const prev = m.get(row.unit_id)
+          m.set(row.unit_id, prev ? `${prev}, ${row.number}` : row.number)
+        }
+        setSoByUnit(m)
       }
-      setSoByUnit(m)
-      setLoading(false)
+    } catch {
+      setLoadFailed(true)
     } finally {
+      setLoading(false)
       progressDone()
     }
   }
@@ -215,6 +222,8 @@ export default function Reports() {
         <h1 className="mb-3 text-sm font-bold uppercase tracking-wide text-slate-900">{title}</h1>
         {loading ? (
           <p className="py-10 text-center text-slate-400">Loading…</p>
+        ) : loadFailed && jobs.length === 0 ? (
+          <ErrorState onRetry={load} />
         ) : rows.length === 0 ? (
           <p className="rounded-xl border border-dashed border-slate-300 py-10 text-center text-slate-400">
             No units with {cat === ALL ? 'an order' : cat} in this selection.

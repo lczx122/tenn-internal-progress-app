@@ -5,6 +5,8 @@ import App from './App'
 import { AuthProvider } from './contexts/AuthContext'
 import FieldEditor from './components/FieldEditor'
 import { TopProgressBar } from './components/TopProgressBar'
+import { Toaster } from './components/Toaster'
+import { DialogHost } from './components/DialogHost'
 import { applyTheme, initThemeListener } from './lib/theme'
 import './index.css'
 
@@ -54,6 +56,8 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
         <App />
         <FieldEditor />
         <TopProgressBar />
+        <Toaster />
+        <DialogHost />
       </AuthProvider>
     </BrowserRouter>
   </React.StrictMode>

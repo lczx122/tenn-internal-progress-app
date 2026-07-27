@@ -11,6 +11,8 @@ import { useAutoRefresh } from '../lib/useAutoRefresh'
 import { cacheGet, cacheSet } from '../lib/pageCache'
 import { progressStart, progressDone } from '../lib/progress'
 import { usePersistedState, oneOf } from '../lib/usePersistedState'
+import { toastErr } from '../lib/toast'
+import { ErrorState } from '../components/ErrorState'
 import {
   APPT_TYPES,
   getApptType,
@@ -27,6 +29,7 @@ export default function Schedule() {
   const c0 = cacheGet<Appointment[]>('schedule')
   const [appts, setAppts] = useState<Appointment[]>(c0 ?? [])
   const [loading, setLoading] = useState(!c0)
+  const [loadFailed, setLoadFailed] = useState(false)
   const [mode, setMode] = usePersistedState<Mode>('tenn_schedule_mode', 'agenda', {
     validate: oneOf('agenda', 'calendar'),
   })
@@ -47,34 +50,44 @@ export default function Schedule() {
   async function load() {
     progressStart()
     try {
-      const [{ data }, { data: pinData }] = await Promise.all([
+      const [{ data, error }, { data: pinData }] = await Promise.all([
         supabase.from('appointments').select('*').order('starts_at', { ascending: true }),
         supabase.from('appointment_pins').select('appointment_id'),
       ])
-      const next = (data as Appointment[]) ?? []
-      setAppts(next)
-      cacheSet('schedule', next)
-      setPins(new Set((pinData ?? []).map((p: { appointment_id: string }) => p.appointment_id)))
-      setLoading(false)
+      setLoadFailed(!!error)
+      if (!error) {
+        const next = (data as Appointment[]) ?? []
+        setAppts(next)
+        cacheSet('schedule', next)
+        setPins(new Set((pinData ?? []).map((p: { appointment_id: string }) => p.appointment_id)))
+      }
+    } catch {
+      setLoadFailed(true)
     } finally {
+      setLoading(false)
       progressDone()
     }
   }
 
-  // Pin / unpin for the signed-in user only (personal view). Optimistic.
+  // Pin / unpin for the signed-in user only (personal view). Optimistic, and
+  // rolled back (with an error toast) if the write doesn't land.
   async function togglePin(id: string) {
     if (!myId) return
     const pinned = pins.has(id)
-    setPins((prev) => {
-      const n = new Set(prev)
-      if (pinned) n.delete(id)
-      else n.add(id)
-      return n
-    })
-    if (pinned) {
-      await supabase.from('appointment_pins').delete().eq('user_id', myId).eq('appointment_id', id)
-    } else {
-      await supabase.from('appointment_pins').insert({ user_id: myId, appointment_id: id })
+    const flip = (to: boolean) =>
+      setPins((prev) => {
+        const n = new Set(prev)
+        if (to) n.add(id)
+        else n.delete(id)
+        return n
+      })
+    flip(!pinned)
+    const { error } = pinned
+      ? await supabase.from('appointment_pins').delete().eq('user_id', myId).eq('appointment_id', id)
+      : await supabase.from('appointment_pins').insert({ user_id: myId, appointment_id: id })
+    if (error) {
+      flip(pinned)
+      toastErr(`Could not ${pinned ? 'unpin' : 'pin'} — ${error.message}`)
     }
   }
 
@@ -182,6 +195,8 @@ export default function Schedule() {
 
       {loading ? (
         <p className="py-10 text-center text-slate-400">Loading…</p>
+      ) : loadFailed && appts.length === 0 ? (
+        <ErrorState onRetry={load} />
       ) : mode === 'agenda' ? (
         <Agenda
           items={filtered}

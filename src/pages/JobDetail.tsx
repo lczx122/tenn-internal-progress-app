@@ -15,6 +15,9 @@ import { ClaimsSection } from '../components/ClaimsSection'
 import { SupplierSection } from '../components/SupplierSection'
 import { formatDate, formatDateTime } from '../lib/format'
 import { useAutoRefresh } from '../lib/useAutoRefresh'
+import { runDb, toastOk } from '../lib/toast'
+import { confirmDialog } from '../lib/dialog'
+import { ErrorState } from '../components/ErrorState'
 
 export default function JobDetail() {
   const { id } = useParams<{ id: string }>()
@@ -29,13 +32,15 @@ export default function JobDetail() {
   const [soCount, setSoCount] = useState<number | null>(null)
   const [suppliers, setSuppliers] = useState<UnitSupplier[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadFailed, setLoadFailed] = useState(false)
   const [note, setNote] = useState('')
   const [busy, setBusy] = useState(false)
   const [adding, setAdding] = useState(false)
 
   const loadAll = useCallback(async () => {
     if (!id) return
-    const [{ data: j }, { data: wk }, { data: ev }, { data: ap }, { data: cl }, { count: sc }, { data: sup }] = await Promise.all([
+    try {
+      const [{ data: j, error: je }, { data: wk }, { data: ev }, { data: ap }, { data: cl }, { count: sc }, { data: sup }] = await Promise.all([
       supabase.from('jobs').select('*').eq('id', id).single(),
       supabase.from('job_works').select('*').eq('job_id', id).order('created_at'),
       supabase.from('job_events').select('*').eq('job_id', id).order('created_at', { ascending: false }),
@@ -45,14 +50,21 @@ export default function JobDetail() {
       // Boss-only (RLS returns nothing for non-boss).
       supabase.from('unit_suppliers').select('*').eq('job_id', id).order('created_at'),
     ])
-    setJob((j as Job) ?? null)
-    setWorks((wk as JobWork[]) ?? [])
-    setEvents((ev as JobEvent[]) ?? [])
-    setAppts((ap as Appointment[]) ?? [])
-    setClaims((cl as Claim[]) ?? [])
-    setSoCount(sc ?? 0)
-    setSuppliers((sup as UnitSupplier[]) ?? [])
-    setLoading(false)
+      // "No row" (PGRST116) is a real not-found; anything else is a failed load
+      // (offline / server) — show retry instead of pretending the unit is gone.
+      setLoadFailed(!!je && (je as { code?: string }).code !== 'PGRST116')
+      setJob((j as Job) ?? null)
+      setWorks((wk as JobWork[]) ?? [])
+      setEvents((ev as JobEvent[]) ?? [])
+      setAppts((ap as Appointment[]) ?? [])
+      setClaims((cl as Claim[]) ?? [])
+      setSoCount(sc ?? 0)
+      setSuppliers((sup as UnitSupplier[]) ?? [])
+    } catch {
+      setLoadFailed(true)
+    } finally {
+      setLoading(false)
+    }
   }, [id])
 
   useEffect(() => {
@@ -94,35 +106,61 @@ export default function JobDetail() {
   async function changeWorkStage(work: JobWork, stage: string) {
     if (stage === work.stage) return
     setBusy(true)
-    await supabase.from('job_works').update({ stage, updated_by: displayName }).eq('id', work.id)
-    await logEvent('stage', `${getCategory(work.category).label}: ${getStage(work.stage).label} → ${getStage(stage).label}`)
-    await touchJob()
+    const ok = await runDb(supabase.from('job_works').update({ stage, updated_by: displayName }).eq('id', work.id), {
+      fail: 'Stage not saved',
+    })
+    if (ok) {
+      await logEvent('stage', `${getCategory(work.category).label}: ${getStage(work.stage).label} → ${getStage(stage).label}`)
+      await touchJob()
+    }
     setBusy(false)
   }
 
   async function saveWorkRemarks(work: JobWork, remarks: string) {
     setBusy(true)
-    await supabase.from('job_works').update({ remarks, updated_by: displayName }).eq('id', work.id)
-    await touchJob()
+    const ok = await runDb(
+      supabase.from('job_works').update({ remarks, updated_by: displayName }).eq('id', work.id),
+      { fail: 'Remarks not saved' },
+    )
+    if (ok) await touchJob()
     setBusy(false)
   }
 
   async function deleteWork(work: JobWork) {
-    if (!window.confirm(`Remove the “${getCategory(work.category).label}” category from this unit?`)) return
+    const label = getCategory(work.category).label
+    if (
+      !(await confirmDialog({
+        title: 'Remove category',
+        message: `Remove the “${label}” category and its progress from this unit?`,
+        confirmLabel: 'Remove',
+        danger: true,
+      }))
+    )
+      return
     setBusy(true)
-    await supabase.from('job_works').delete().eq('id', work.id)
-    await logEvent('note', `Removed ${getCategory(work.category).label} category`)
-    await touchJob()
+    const ok = await runDb(supabase.from('job_works').delete().eq('id', work.id), {
+      ok: `${label} removed`,
+      fail: 'Could not remove',
+    })
+    if (ok) {
+      await logEvent('note', `Removed ${label} category`)
+      await touchJob()
+    }
     setBusy(false)
   }
 
   async function addWork(category: string, title: string, stage: string) {
     if (!id) return
     setBusy(true)
-    await supabase.from('job_works').insert({ job_id: id, category, title, stage, updated_by: displayName })
-    await logEvent('note', `Added ${getCategory(category).label}${title ? ` — ${title}` : ''}`)
-    await touchJob()
-    setAdding(false)
+    const ok = await runDb(
+      supabase.from('job_works').insert({ job_id: id, category, title, stage, updated_by: displayName }),
+      { ok: `${getCategory(category).label} added`, fail: 'Could not add category' },
+    )
+    if (ok) {
+      await logEvent('note', `Added ${getCategory(category).label}${title ? ` — ${title}` : ''}`)
+      await touchJob()
+      setAdding(false)
+    }
     setBusy(false)
   }
 
@@ -130,23 +168,55 @@ export default function JobDetail() {
     const trimmed = note.trim()
     if (!trimmed) return
     setBusy(true)
-    await logEvent('note', trimmed)
-    await touchJob()
-    setNote('')
+    const ok = await runDb(
+      supabase.from('job_events').insert({
+        job_id: id,
+        type: 'note',
+        body: trimmed,
+        author_id: session?.user.id ?? null,
+        author_name: displayName,
+      }),
+      { ok: 'Note posted', fail: 'Note not posted' },
+    )
+    if (ok) {
+      await touchJob()
+      setNote('') // keep the text on failure so nothing typed is lost
+    }
     setBusy(false)
   }
 
   async function toggleArchive() {
-    if (!job) return
-    await supabase.from('jobs').update({ is_archived: !job.is_archived, updated_by: displayName }).eq('id', job.id)
-    navigate('/units')
+    if (!job || busy) return
+    setBusy(true)
+    const ok = await runDb(
+      supabase.from('jobs').update({ is_archived: !job.is_archived, updated_by: displayName }).eq('id', job.id),
+      { ok: job.is_archived ? 'Unit restored' : 'Unit archived', fail: 'Could not archive' },
+    )
+    setBusy(false)
+    if (ok) navigate('/units')
   }
 
   async function deleteJob() {
-    if (!job) return
-    if (!window.confirm(`Permanently delete “${job.customer_name}” and all its categories, history and appointments? This cannot be undone.`)) return
-    await supabase.from('jobs').delete().eq('id', job.id)
-    navigate('/units')
+    if (!job || busy) return
+    if (
+      !(await confirmDialog({
+        title: 'Delete unit',
+        message: `Permanently delete “${job.customer_name}” and ALL its categories, collections, history and appointments? This cannot be undone.`,
+        confirmLabel: 'Delete forever',
+        danger: true,
+        requireText: job.unit_code || job.customer_name,
+      }))
+    )
+      return
+    setBusy(true)
+    const ok = await runDb(supabase.from('jobs').delete().eq('id', job.id), {
+      fail: 'Could not delete',
+    })
+    setBusy(false)
+    if (ok) {
+      toastOk('Unit deleted')
+      navigate('/units')
+    }
   }
 
   if (loading) {
@@ -160,7 +230,11 @@ export default function JobDetail() {
   if (!job) {
     return (
       <Layout title="Unit" back={<BackLink />}>
-        <p className="py-10 text-center text-slate-400">Unit not found.</p>
+        {loadFailed ? (
+          <ErrorState onRetry={loadAll} />
+        ) : (
+          <p className="py-10 text-center text-slate-400">Unit not found.</p>
+        )}
       </Layout>
     )
   }
@@ -397,14 +471,16 @@ export default function JobDetail() {
         <div className="my-6 space-y-2">
           <button
             onClick={toggleArchive}
-            className="w-full rounded-lg border border-slate-300 py-2.5 text-sm font-medium text-slate-500 active:bg-slate-100"
+            disabled={busy}
+            className="w-full rounded-lg border border-slate-300 py-2.5 text-sm font-medium text-slate-500 active:bg-slate-100 disabled:opacity-50"
           >
             {job.is_archived ? 'Unarchive unit' : 'Archive unit (mark complete)'}
           </button>
           {job.is_archived && (
             <button
               onClick={deleteJob}
-              className="w-full rounded-lg border border-red-200 py-2.5 text-sm font-medium text-red-600 active:bg-red-50"
+              disabled={busy}
+              className="w-full rounded-lg border border-red-200 py-2.5 text-sm font-medium text-red-600 active:bg-red-50 disabled:opacity-50"
             >
               Delete unit permanently
             </button>

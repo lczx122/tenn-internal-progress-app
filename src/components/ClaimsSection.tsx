@@ -5,6 +5,8 @@ import type { Claim, Job, JobWork } from '../lib/types'
 import { collectedTotal, money, perTradeRows, UNALLOCATED } from '../lib/claims'
 import { formatDate } from '../lib/format'
 import { Icon } from './Icon'
+import { runDb, toastErr } from '../lib/toast'
+import { confirmDialog } from '../lib/dialog'
 
 // The claim-entry modes shown in the dropdown. Percentage modes show the live
 // ringgit value based on the unit's order total.
@@ -104,8 +106,11 @@ export function ClaimsSection({
     const v = Number(orderTotal) || 0
     if (v === Number(job.order_total)) return
     setBusy(true)
-    await supabase.from('jobs').update({ order_total: v, updated_by: displayName }).eq('id', job.id)
-    await onChange()
+    const ok = await runDb(
+      supabase.from('jobs').update({ order_total: v, updated_by: displayName }).eq('id', job.id),
+      { ok: 'Order total saved', fail: 'Order total not saved' },
+    )
+    if (ok) await onChange()
     setBusy(false)
   }
 
@@ -117,44 +122,67 @@ export function ClaimsSection({
       if (v > 0) { map[c] = v; sum += v }
     }
     setBusy(true)
-    await supabase
-      .from('jobs')
-      .update({ order_by_category: map, order_total: sum, updated_by: displayName })
-      .eq('id', job.id)
-    setOrderTotal(String(sum || ''))
-    await onChange()
+    const ok = await runDb(
+      supabase
+        .from('jobs')
+        .update({ order_by_category: map, order_total: sum, updated_by: displayName })
+        .eq('id', job.id),
+      { ok: 'Per-trade order saved', fail: 'Not saved' },
+    )
+    if (ok) {
+      setOrderTotal(String(sum || ''))
+      await onChange()
+    }
     setBusy(false)
   }
 
   async function addClaim() {
     if (!(preview.amount > 0)) {
-      alert('Enter an amount greater than zero.')
+      toastErr('Enter an amount greater than zero.')
       return
     }
     setBusy(true)
-    await supabase.from('claims').insert({
-      job_id: job.id,
-      category: preview.category,
-      work_category: workCat || null,
-      amount: preview.amount,
-      percent: preview.percent,
-      note: note.trim(),
-      collected_on: date || null,
-      created_by: session?.user.id ?? null,
-      created_by_name: displayName,
-    })
-    setValue('')
-    setNote('')
-    setDate('')
-    await onChange()
+    const ok = await runDb(
+      supabase.from('claims').insert({
+        job_id: job.id,
+        category: preview.category,
+        work_category: workCat || null,
+        amount: preview.amount,
+        percent: preview.percent,
+        note: note.trim(),
+        collected_on: date || null,
+        created_by: session?.user.id ?? null,
+        created_by_name: displayName,
+      }),
+      { ok: `${money(preview.amount)} recorded`, fail: 'Collection NOT recorded' },
+    )
+    // Only clear the form once the record is confirmed saved — on failure the
+    // staff member keeps what they typed and can retry.
+    if (ok) {
+      setValue('')
+      setNote('')
+      setDate('')
+      await onChange()
+    }
     setBusy(false)
   }
 
   async function removeClaim(c: Claim) {
-    if (!window.confirm(`Remove this ${money(c.amount)} collection?`)) return
+    if (
+      !(await confirmDialog({
+        title: 'Remove collection',
+        message: `Remove this ${money(c.amount)} collection record? This cannot be undone.`,
+        confirmLabel: 'Remove',
+        danger: true,
+      }))
+    )
+      return
     setBusy(true)
-    await supabase.from('claims').delete().eq('id', c.id)
-    await onChange()
+    const ok = await runDb(supabase.from('claims').delete().eq('id', c.id), {
+      ok: 'Collection removed',
+      fail: 'Could not remove',
+    })
+    if (ok) await onChange()
     setBusy(false)
   }
 
