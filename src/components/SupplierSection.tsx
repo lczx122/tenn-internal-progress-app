@@ -9,8 +9,7 @@ import { PercentBar } from './StageBar'
 import { Icon } from './Icon'
 import { money } from '../lib/claims'
 import { formatDate } from '../lib/format'
-import { runDb } from '../lib/toast'
-import { confirmDialog } from '../lib/dialog'
+import { runDb, toastOk } from '../lib/toast'
 
 const inp = 'w-full rounded-lg border border-slate-300 px-3 py-2 text-base outline-none focus:border-slate-900'
 
@@ -109,22 +108,17 @@ export function SupplierSection({
   }
 
   async function remove(s: UnitSupplier) {
-    if (
-      !(await confirmDialog({
-        title: 'Remove supplier entry',
-        message: `Remove "${s.supplier || '—'}"${s.item ? ` (${s.item})` : ''} from this unit?`,
-        confirmLabel: 'Remove',
-        danger: true,
-      }))
-    )
-      return
     setBusy(true)
-    const ok = await runDb(supabase.from('unit_suppliers').delete().eq('id', s.id), {
-      ok: 'Removed',
-      fail: 'Could not remove',
-    })
+    const ok = await runDb(supabase.from('unit_suppliers').delete().eq('id', s.id), { fail: 'Could not remove' })
     setBusy(false)
-    if (ok) await onChange()
+    if (ok) {
+      toastOk(`${s.supplier || 'Entry'} removed`, () => {
+        void runDb(supabase.from('unit_suppliers').insert({ ...s }), { ok: 'Restored', fail: 'Could not restore' }).then(
+          () => onChange(),
+        )
+      })
+      await onChange()
+    }
   }
 
   return (

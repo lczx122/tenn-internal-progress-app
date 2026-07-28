@@ -7,6 +7,7 @@ import FieldEditor from './components/FieldEditor'
 import { TopProgressBar } from './components/TopProgressBar'
 import { Toaster } from './components/Toaster'
 import { DialogHost } from './components/DialogHost'
+import { OfflineBanner } from './components/OfflineBanner'
 import { applyTheme, initThemeListener } from './lib/theme'
 import './index.css'
 
@@ -58,6 +59,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
         <TopProgressBar />
         <Toaster />
         <DialogHost />
+        <OfflineBanner />
       </AuthProvider>
     </BrowserRouter>
   </React.StrictMode>

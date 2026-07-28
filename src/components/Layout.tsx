@@ -12,7 +12,7 @@ import { usePullToRefresh, PULL_THRESHOLD } from '../lib/usePullToRefresh'
 // widen so pages can lay out multi-column grids. `wide` opts into the full span
 // (e.g. the costing spreadsheet).
 function contentWidth(wide?: boolean) {
-  return wide ? 'max-w-lg lg:max-w-screen-2xl' : 'max-w-lg lg:max-w-6xl'
+  return wide ? 'max-w-lg md:max-w-3xl lg:max-w-screen-2xl' : 'max-w-lg md:max-w-3xl lg:max-w-6xl'
 }
 
 // The standard top bar: title, signed-in user (admins link to Staff & roles),

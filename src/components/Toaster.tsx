@@ -10,9 +10,10 @@ export function Toaster() {
   useEffect(() => {
     bindToaster((t) => {
       setItems((prev) => [...prev.slice(-2), t]) // max 3 on screen
+      // Errors and undo-able toasts stay longer — 2.5s is too short to react.
       window.setTimeout(() => {
         setItems((prev) => prev.filter((x) => x.id !== t.id))
-      }, t.kind === 'err' ? 5000 : 2500)
+      }, t.kind === 'err' ? 5000 : t.undo ? 6000 : 2500)
     })
     return () => bindToaster(null)
   }, [])

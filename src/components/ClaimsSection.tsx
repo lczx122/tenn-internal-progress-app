@@ -15,8 +15,7 @@ import {
 } from '../lib/claims'
 import { formatDate } from '../lib/format'
 import { Icon } from './Icon'
-import { runDb, toastErr } from '../lib/toast'
-import { confirmDialog } from '../lib/dialog'
+import { runDb, toastErr, toastOk } from '../lib/toast'
 
 export function ClaimsSection({
   job,
@@ -145,22 +144,19 @@ export function ClaimsSection({
   }
 
   async function removeClaim(c: Claim) {
-    if (
-      !(await confirmDialog({
-        title: 'Remove collection',
-        message: `Remove this ${money(c.amount)} collection record? This cannot be undone.`,
-        confirmLabel: 'Remove',
-        danger: true,
-      }))
-    )
-      return
+    // No confirm dialog — the toast's Undo re-inserts the exact row, which is
+    // both faster and safer than an OK button for a single record.
     setBusy(true)
-    const ok = await runDb(supabase.from('claims').delete().eq('id', c.id), {
-      ok: 'Collection removed',
-      fail: 'Could not remove',
-    })
-    if (ok) await onChange()
+    const ok = await runDb(supabase.from('claims').delete().eq('id', c.id), { fail: 'Could not remove' })
     setBusy(false)
+    if (ok) {
+      toastOk(`${money(c.amount)} collection removed`, () => {
+        void runDb(supabase.from('claims').insert({ ...c }), { ok: 'Restored', fail: 'Could not restore' }).then(
+          () => onChange(),
+        )
+      })
+      await onChange()
+    }
   }
 
   const inp = 'w-full rounded-lg border border-slate-300 px-3 py-2 text-base outline-none focus:border-slate-900'

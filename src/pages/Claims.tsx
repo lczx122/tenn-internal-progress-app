@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { realtimeChannel, coalesce } from '../lib/realtime'
 import { useAuth } from '../contexts/AuthContext'
@@ -23,7 +23,9 @@ export default function Claims() {
   const [claims, setClaims] = useState<Claim[]>(c0?.claims ?? [])
   const [loading, setLoading] = useState(!c0)
   const [loadFailed, setLoadFailed] = useState(false)
-  const [recording, setRecording] = useState(false)
+  // ?record=1 (home-screen shortcut) opens the record sheet straight away.
+  const [searchParams] = useSearchParams()
+  const [recording, setRecording] = useState(searchParams.get('record') === '1')
   const [query, setQuery] = useState('')
   const [project, setProject] = usePersistedState('tenn_claims_project', '')
   const [scope, setScope] = usePersistedState<'mine' | 'all' | null>('tenn_claims_scope', null, {
