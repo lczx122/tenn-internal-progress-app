@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import type { Appointment, Job, Profile } from '../lib/types'
 import { Layout } from '../components/Layout'
+import { LoadingState } from '../components/ui'
 import { BackLink, useGoBack } from '../components/BackLink'
 import { Icon } from '../components/Icon'
 import { APPT_TYPES, getApptType, toLocalInput } from '../lib/appointments'
@@ -236,7 +237,7 @@ export default function AppointmentForm() {
   if (loading) {
     return (
       <Layout title="Appointment" back={<BackLink fallback="/schedule" />}>
-        <p className="py-10 text-center text-slate-400">Loading…</p>
+        <LoadingState skeleton />
       </Layout>
     )
   }

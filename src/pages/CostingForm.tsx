@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import type { Costing, Job, JobWork } from '../lib/types'
 import { Layout } from '../components/Layout'
+import { LoadingState } from '../components/ui'
 import { BackLink } from '../components/BackLink'
 import { PercentBar } from '../components/StageBar'
 import { overallPercent } from '../lib/stages'
@@ -184,7 +185,7 @@ export default function CostingForm() {
   if (loading) {
     return (
       <Layout title="Costing" back={<BackLink fallback="/costing" />}>
-        <p className="py-10 text-center text-slate-400">Loading…</p>
+        <LoadingState skeleton />
       </Layout>
     )
   }
@@ -237,7 +238,7 @@ export default function CostingForm() {
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className={labelCls}>Selling price (RM)</label>
-              <input type="number" step="0.01" min="0" className={field} value={revenue} onChange={(e) => setRevenue(e.target.value)} />
+              <input type="number" inputMode="decimal" step="0.01" min="0" className={field} value={revenue} onChange={(e) => setRevenue(e.target.value)} />
             </div>
             <div>
               <label className={labelCls}>Date</label>
@@ -251,7 +252,7 @@ export default function CostingForm() {
           {costs.map((c, i) => (
             <div key={i} className="flex gap-2">
               <input className={rowField + ' flex-1'} placeholder="Label" value={c.label} onChange={(e) => setCosts(upd(costs, i, { label: e.target.value }))} />
-              <input type="number" step="0.01" className={rowField + ' w-28'} placeholder="RM" value={c.amount} onChange={(e) => setCosts(upd(costs, i, { amount: e.target.value }))} />
+              <input type="number" inputMode="decimal" step="0.01" className={rowField + ' w-28'} placeholder="RM" value={c.amount} onChange={(e) => setCosts(upd(costs, i, { amount: e.target.value }))} />
               <RemoveBtn onClick={() => setCosts(costs.filter((_, j) => j !== i))} />
             </div>
           ))}
@@ -267,7 +268,7 @@ export default function CostingForm() {
                 <option value="fixed">RM</option>
                 <option value="pct">% sale</option>
               </select>
-              <input type="number" step="0.01" className={rowField + ' w-20'} placeholder={c.kind === 'pct' ? '%' : 'RM'} value={c.value} onChange={(e) => setCommissions(upd(commissions, i, { value: e.target.value }))} />
+              <input type="number" inputMode="decimal" step="0.01" className={rowField + ' w-20'} placeholder={c.kind === 'pct' ? '%' : 'RM'} value={c.value} onChange={(e) => setCommissions(upd(commissions, i, { value: e.target.value }))} />
               <span className="w-24 shrink-0 text-right text-sm font-medium text-slate-700">{money(calc.commissionAmounts[i] ?? 0)}</span>
               <RemoveBtn onClick={() => setCommissions(commissions.filter((_, j) => j !== i))} />
             </div>
@@ -284,7 +285,7 @@ export default function CostingForm() {
             <div key={i} className="flex items-center gap-2">
               <input className={rowField + ' flex-1'} list="people" placeholder="Partner name" value={c.name} onChange={(e) => setShares(upd(shares, i, { name: e.target.value }))} />
               <div className="flex items-center gap-1">
-                <input type="number" step="0.1" className={rowField + ' w-20'} placeholder="%" value={c.percent} onChange={(e) => setShares(upd(shares, i, { percent: e.target.value }))} />
+                <input type="number" inputMode="decimal" step="0.1" className={rowField + ' w-20'} placeholder="%" value={c.percent} onChange={(e) => setShares(upd(shares, i, { percent: e.target.value }))} />
                 <span className="text-slate-400">%</span>
               </div>
               <span className="w-24 shrink-0 text-right text-sm font-medium text-slate-700">{money(calc.shareAmounts[i] ?? 0)}</span>

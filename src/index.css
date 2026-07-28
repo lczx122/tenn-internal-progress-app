@@ -104,6 +104,19 @@ body {
 .dark .text-violet-700 { color: #c4b5fd; }
 .dark .text-blue-700 { color: #93c5fd; }
 
+/* Touch devices: never render form controls below 16px — iOS auto-zooms on
+   focus of anything smaller, and the viewport zoom lock that used to hide the
+   problem is gone (it also blocked deliberate pinch-zoom, a WCAG 1.4.4 fail). */
+@media (pointer: coarse) {
+  input, select, textarea {
+    font-size: max(1rem, 1em);
+  }
+}
+
+/* dark tint for the loading skeleton (opacity-modified class isn't covered by
+   the .dark overrides above) */
+.dark .bg-slate-200\/60 { background-color: rgba(51, 65, 85, 0.5); }
+
 body {
   margin: 0;
   /* White, not slate: iOS paints the strip around the standalone web view (below

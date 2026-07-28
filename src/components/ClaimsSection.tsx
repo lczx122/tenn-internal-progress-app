@@ -176,7 +176,7 @@ export function ClaimsSection({
           <div className="relative flex-1">
             <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-400">RM</span>
             <input
-              type="number"
+              type="number" inputMode="decimal"
               min="0"
               step="0.01"
               value={orderTotal}
@@ -258,7 +258,7 @@ export function ClaimsSection({
                   <div className="relative w-36 shrink-0">
                     <span className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-slate-400">RM</span>
                     <input
-                      type="number"
+                      type="number" inputMode="decimal"
                       min="0"
                       step="0.01"
                       value={obc[c] ?? ''}
@@ -339,7 +339,7 @@ export function ClaimsSection({
               {mode === 'Custom %' ? '%' : 'RM'}
             </span>
             <input
-              type="number"
+              type="number" inputMode="decimal"
               min="0"
               step="0.01"
               value={value}

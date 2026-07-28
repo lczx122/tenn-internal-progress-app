@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import type { Job, Project } from '../lib/types'
 import { Layout } from '../components/Layout'
+import { LoadingState, EmptyState } from '../components/ui'
 import { BackLink } from '../components/BackLink'
 import { STAFF_PICS } from '../lib/units'
 import { useAutoRefresh } from '../lib/useAutoRefresh'
@@ -146,11 +147,11 @@ export default function UnitsBulk() {
       </p>
 
       {loading ? (
-        <p className="py-10 text-center text-slate-400">Loading…</p>
+        <LoadingState skeleton />
       ) : visible.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-slate-300 py-12 text-center text-slate-400">
+        <EmptyState>
           No {showArchived ? 'archived' : 'active'} units.
-        </div>
+        </EmptyState>
       ) : (
         <div className="overflow-x-auto rounded-xl bg-white shadow-sm">
           <table className="min-w-full">
@@ -178,7 +179,7 @@ export default function UnitsBulk() {
                       <input className={cell} value={cellValue(job, 'unit_code')} onChange={(e) => setCell(job, 'unit_code', e.target.value)} />
                     </td>
                     <td className="min-w-[8rem] px-1">
-                      <input className={cell} value={cellValue(job, 'phone')} onChange={(e) => setCell(job, 'phone', e.target.value)} />
+                      <input type="tel" className={cell} value={cellValue(job, 'phone')} onChange={(e) => setCell(job, 'phone', e.target.value)} />
                     </td>
                     <td className="min-w-[10rem] px-1">
                       <select className={cell} value={cellValue(job, 'project')} onChange={(e) => setCell(job, 'project', e.target.value)}>
@@ -202,7 +203,7 @@ export default function UnitsBulk() {
                       </select>
                     </td>
                     <td className="min-w-[8rem] px-1">
-                      <input type="number" min="0" step="0.01" className={cell + ' text-right tabular-nums'} value={cellValue(job, 'order_total')} onChange={(e) => setCell(job, 'order_total', e.target.value)} placeholder="0" />
+                      <input type="number" inputMode="decimal" min="0" step="0.01" className={cell + ' text-right tabular-nums'} value={cellValue(job, 'order_total')} onChange={(e) => setCell(job, 'order_total', e.target.value)} placeholder="0" />
                     </td>
                     <td className="min-w-[8rem] px-1">
                       <input type="date" className={cell} value={cellValue(job, 'target_date')} onChange={(e) => setCell(job, 'target_date', e.target.value)} />

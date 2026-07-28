@@ -4,6 +4,7 @@ import { realtimeChannel } from '../lib/realtime'
 import { useAuth } from '../contexts/AuthContext'
 import type { Project } from '../lib/types'
 import { Layout } from '../components/Layout'
+import { LoadingState, EmptyState } from '../components/ui'
 import { BackLink } from '../components/BackLink'
 import { useAutoRefresh } from '../lib/useAutoRefresh'
 import { confirmDialog, promptDialog } from '../lib/dialog'
@@ -125,11 +126,11 @@ export default function ProjectsAdmin() {
       {error && <p className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
 
       {loading ? (
-        <p className="py-10 text-center text-slate-400">Loading…</p>
+        <LoadingState skeleton />
       ) : projects.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-slate-300 py-12 text-center text-slate-400">
+        <EmptyState>
           No projects yet. Add your first one above.
-        </div>
+        </EmptyState>
       ) : (
         <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           {projects.map((p) => (

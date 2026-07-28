@@ -5,6 +5,7 @@ import { realtimeChannel, coalesce } from '../lib/realtime'
 import { useAuth } from '../contexts/AuthContext'
 import type { Appointment } from '../lib/types'
 import { Layout } from '../components/Layout'
+import { LoadingState, EmptyState , SearchInput , Segmented } from '../components/ui'
 import { Icon } from '../components/Icon'
 import { NotificationSettings } from '../components/NotificationSettings'
 import { useAutoRefresh } from '../lib/useAutoRefresh'
@@ -125,11 +126,10 @@ export default function Schedule() {
   return (
     <Layout title="Schedule" bottomNav onRefresh={load}>
       <div className="mb-3 flex gap-2">
-        <input
+        <SearchInput
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search customer, who, location…"
-          className="flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-slate-900"
         />
         <button
           onClick={() => setShowNotif((v) => !v)}
@@ -152,36 +152,26 @@ export default function Schedule() {
 
       {showNotif && <NotificationSettings />}
 
-      <div className="mb-3 flex rounded-lg border border-slate-300 bg-white p-0.5">
-        {(['mine', 'all'] as const).map((s) => (
-          <button
-            key={s}
-            onClick={() => setScope(s)}
-            className={
-              'flex-1 rounded-md px-2 py-1.5 text-sm font-medium ' +
-              (scope === s ? 'bg-slate-900 text-white' : 'text-slate-600')
-            }
-          >
-            {s === 'mine' ? 'My schedule' : 'Everyone'}
-          </button>
-        ))}
-      </div>
+      <Segmented
+        className="mb-3"
+        options={[
+          { key: 'mine', label: 'My schedule' },
+          { key: 'all', label: 'Everyone' },
+        ]}
+        value={scope}
+        onChange={setScope}
+      />
 
       <div className="mb-3 flex gap-2">
-        <div className="flex flex-1 rounded-lg border border-slate-300 bg-white p-0.5">
-          {(['agenda', 'calendar'] as Mode[]).map((m) => (
-            <button
-              key={m}
-              onClick={() => setMode(m)}
-              className={
-                'flex-1 rounded-md px-2 py-1.5 text-sm font-medium capitalize ' +
-                (mode === m ? 'bg-slate-900 text-white' : 'text-slate-600')
-              }
-            >
-              {m}
-            </button>
-          ))}
-        </div>
+        <Segmented
+          className="flex-1"
+          options={[
+            { key: 'agenda', label: 'Agenda' },
+            { key: 'calendar', label: 'Calendar' },
+          ]}
+          value={mode}
+          onChange={setMode}
+        />
         <select
           value={typeFilter}
           onChange={(e) => setTypeFilter(e.target.value)}
@@ -197,7 +187,7 @@ export default function Schedule() {
       </div>
 
       {loading ? (
-        <p className="py-10 text-center text-slate-400">Loading…</p>
+        <LoadingState />
       ) : loadFailed && appts.length === 0 ? (
         <ErrorState onRetry={load} />
       ) : mode === 'agenda' ? (
@@ -282,9 +272,9 @@ function Agenda({
         </div>
       )}
       {groups.length === 0 && pinned.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-slate-300 py-12 text-center text-slate-400">
+        <EmptyState>
           No appointments. Tap “+ New” to schedule one.
-        </div>
+        </EmptyState>
       ) : (
         <div className="space-y-5 lg:columns-2 lg:gap-5 lg:space-y-0 2xl:columns-3 lg:[&>div]:mb-5 lg:[&>div]:break-inside-avoid">
           {groups.map((g) => (

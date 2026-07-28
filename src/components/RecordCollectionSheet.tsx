@@ -186,7 +186,7 @@ export function RecordCollectionSheet({
               <div className="mb-3">
                 <label className={lbl}>{isPercentMode(mode) ? 'Percent of order' : 'Amount (RM)'}</label>
                 <input
-                  type="number"
+                  type="number" inputMode="decimal"
                   min="0"
                   step={isPercentMode(mode) ? '0.1' : '0.01'}
                   value={value}

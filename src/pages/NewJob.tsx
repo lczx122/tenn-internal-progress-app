@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import { Layout } from '../components/Layout'
+import { LoadingState } from '../components/ui'
 import { BackLink } from '../components/BackLink'
 import type { Job, Project } from '../lib/types'
 import {
@@ -194,7 +195,7 @@ export default function NewJob() {
   if (loading) {
     return (
       <Layout title={editing ? 'Edit unit' : 'New unit'} back={<BackLink fallback={id ? `/job/${id}` : '/units'} />}>
-        <p className="py-10 text-center text-slate-400">Loading…</p>
+        <LoadingState skeleton />
       </Layout>
     )
   }

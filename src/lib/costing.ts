@@ -3,8 +3,9 @@ export const num = (v: unknown): number => {
   return isNaN(n) ? 0 : n
 }
 
-export const money = (n: number): string =>
-  'RM ' + n.toLocaleString('en-MY', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+// Single app-wide RM formatter — costing re-exports it so existing imports keep
+// working (there used to be three separate, subtly different copies).
+export { money } from './claims'
 
 // Business categories, mirroring the workbook's analysis sheets.
 export const COSTING_CATEGORIES = [

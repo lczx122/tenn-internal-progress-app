@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase'
 import { realtimeChannel, coalesce } from '../lib/realtime'
 import type { Claim, Job } from '../lib/types'
 import { Layout } from '../components/Layout'
+import { LoadingState } from '../components/ui'
 import { CATEGORIES } from '../lib/categories'
 import { money } from '../lib/claims'
 import { formatDate } from '../lib/format'
@@ -224,7 +225,7 @@ export default function Reports() {
       <div ref={reportRef} className="report-print">
         <h1 className="mb-3 text-sm font-bold uppercase tracking-wide text-slate-900">{title}</h1>
         {loading ? (
-          <p className="py-10 text-center text-slate-400">Loading…</p>
+          <LoadingState skeleton />
         ) : loadFailed && jobs.length === 0 ? (
           <ErrorState onRetry={load} />
         ) : rows.length === 0 ? (

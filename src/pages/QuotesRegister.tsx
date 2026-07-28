@@ -5,7 +5,9 @@ import { realtimeChannel, coalesce } from '../lib/realtime'
 import { useAuth } from '../contexts/AuthContext'
 import type { DocType, Quotation } from '../lib/types'
 import { Layout } from '../components/Layout'
+import { LoadingState, EmptyState , SearchInput , Segmented } from '../components/ui'
 import { relativeTime } from '../lib/format'
+import { money } from '../lib/claims'
 import { useAutoRefresh } from '../lib/useAutoRefresh'
 import { cacheGet, cacheSet } from '../lib/pageCache'
 import { progressStart, progressDone } from '../lib/progress'
@@ -13,9 +15,6 @@ import { usePersistedState, oneOf } from '../lib/usePersistedState'
 import { runDb } from '../lib/toast'
 import { confirmDialog } from '../lib/dialog'
 import { ErrorState } from '../components/ErrorState'
-
-const money = (n: number) =>
-  'RM ' + n.toLocaleString('en-MY', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 
 type Filter = 'all' | DocType
 
@@ -121,13 +120,12 @@ export default function QuotesRegister() {
   const total = useMemo(() => visible.reduce((s, r) => s + Number(r.total || 0), 0), [visible])
 
   return (
-    <Layout title="Orders" bottomNav onRefresh={load}>
+    <Layout title="Quotes" bottomNav onRefresh={load}>
       <div className="mb-3 flex gap-2">
-        <input
+        <SearchInput
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search number, customer, staff…"
-          className="flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-slate-900"
         />
         <button
           onClick={() => navigate('/quote')}
@@ -137,33 +135,18 @@ export default function QuotesRegister() {
         </button>
       </div>
 
-      <div className="mb-3 flex gap-2">
-        {FILTERS.map((f) => (
-          <button
-            key={f.key}
-            onClick={() => setFilter(f.key)}
-            className={
-              'flex-1 rounded-lg border px-2 py-2 text-sm font-medium ' +
-              (filter === f.key
-                ? 'border-slate-900 bg-slate-900 text-white'
-                : 'border-slate-300 bg-white text-slate-600 active:bg-slate-50')
-            }
-          >
-            {f.label}
-          </button>
-        ))}
-      </div>
+      <Segmented className="mb-3" options={FILTERS} value={filter} onChange={setFilter} />
 
       {loading ? (
-        <p className="py-10 text-center text-slate-400">Loading…</p>
+        <LoadingState />
       ) : loadFailed && rows.length === 0 ? (
         <ErrorState onRetry={load} />
       ) : visible.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-slate-300 py-12 text-center text-slate-400">
+        <EmptyState>
           {rows.length === 0
             ? 'No saved documents yet. Build one in the Quote tab and tap “Save”.'
             : 'Nothing matches your filter.'}
-        </div>
+        </EmptyState>
       ) : (
         <>
           <p className="mb-2 px-1 text-xs text-slate-400">

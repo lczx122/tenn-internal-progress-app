@@ -5,9 +5,10 @@ import { realtimeChannel, coalesce } from '../lib/realtime'
 import { useAuth } from '../contexts/AuthContext'
 import type { Claim, Job } from '../lib/types'
 import { Layout } from '../components/Layout'
+import { LoadingState, EmptyState , SearchInput , Segmented } from '../components/ui'
 import { CLAIM_CATEGORIES } from '../lib/units'
 import { CATEGORIES } from '../lib/categories'
-import { money, sumByCategory, perTradeRows, UNALLOCATED } from '../lib/claims'
+import { money0, sumByCategory, perTradeRows, UNALLOCATED } from '../lib/claims'
 import { useAutoRefresh } from '../lib/useAutoRefresh'
 import { FinanceToggle } from '../components/FinanceToggle'
 import { cacheGet, cacheSet } from '../lib/pageCache'
@@ -170,15 +171,12 @@ export default function Claims() {
 
   const pct = (collected: number, order: number) =>
     order > 0 ? Math.round((collected / order) * 100) + '%' : '—'
-  // Compact RM (rounded, no cents) so the table fits any phone without sideways
-  // scroll — the tiles above show full precision.
-  const rm = (n: number) => 'RM ' + Math.round(n).toLocaleString('en-MY')
 
   const num = 'px-1.5 py-2 text-right tabular-nums whitespace-nowrap overflow-hidden'
   const head = 'px-1.5 py-2 text-right text-xs font-semibold text-slate-500 whitespace-nowrap'
 
   return (
-    <Layout title="Collection" bottomNav wide onRefresh={load}>
+    <Layout title="Money" bottomNav wide onRefresh={load}>
       <FinanceToggle current="collection" />
 
       <div className="mb-3 flex gap-2">
@@ -199,30 +197,23 @@ export default function Claims() {
       {recording && <RecordCollectionSheet jobs={jobs} onClose={() => setRecording(false)} onSaved={load} />}
 
       {staffPic && (
-        <div className="mb-3 flex gap-2">
-          {(['mine', 'all'] as const).map((s) => (
-            <button
-              key={s}
-              onClick={() => setScope(s)}
-              className={
-                'flex-1 rounded-lg border px-2 py-2 text-sm font-medium ' +
-                (effectiveScope === s
-                  ? 'border-slate-900 bg-slate-900 text-white'
-                  : 'border-slate-300 bg-white text-slate-600 active:bg-slate-50')
-              }
-            >
-              {s === 'mine' ? 'My collection' : 'All collections'}
-            </button>
-          ))}
-        </div>
+        <Segmented
+          className="mb-3"
+          options={[
+            { key: 'mine', label: 'My collection' },
+            { key: 'all', label: 'All collections' },
+          ]}
+          value={effectiveScope}
+          onChange={setScope}
+        />
       )}
 
       <div className="mb-3">
-        <input
+        <SearchInput
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search unit, customer, project…"
-          className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-slate-900"
+          className="w-full"
         />
       </div>
 
@@ -248,11 +239,11 @@ export default function Claims() {
 
       {/* Summary tiles for the active project */}
       <div className="mb-4 grid grid-cols-3 gap-3">
-        <Tile label="Total order value" value={money(totals.order)} />
-        <Tile label="Collected" value={money(totals.collected)} accent="text-emerald-600" />
+        <Tile label="Total order value" value={money0(totals.order)} />
+        <Tile label="Collected" value={money0(totals.collected)} accent="text-emerald-600" />
         <Tile
           label="Outstanding"
-          value={money(totals.balance)}
+          value={money0(totals.balance)}
           accent={totals.balance > 0 ? 'text-amber-600' : 'text-slate-900'}
         />
       </div>
@@ -274,10 +265,10 @@ export default function Claims() {
               {tradeAgg.map((t) => (
                 <tr key={t.cat} className="border-b border-slate-100 last:border-0">
                   <td className="truncate px-2 py-2 font-medium text-slate-700">{t.cat}</td>
-                  <td className={num + ' text-slate-600'}>{t.order ? rm(t.order) : '—'}</td>
-                  <td className={num + ' font-semibold text-emerald-700'}>{rm(t.collected)}</td>
+                  <td className={num + ' text-slate-600'}>{t.order ? money0(t.order) : '—'}</td>
+                  <td className={num + ' font-semibold text-emerald-700'}>{money0(t.collected)}</td>
                   <td className={num + (t.cat === UNALLOCATED ? ' text-slate-400' : t.balance > 0 ? ' font-semibold text-amber-700' : ' text-slate-400')}>
-                    {t.cat === UNALLOCATED ? '—' : rm(t.balance)}
+                    {t.cat === UNALLOCATED ? '—' : money0(t.balance)}
                   </td>
                 </tr>
               ))}
@@ -287,13 +278,13 @@ export default function Claims() {
       )}
 
       {loading ? (
-        <p className="py-10 text-center text-slate-400">Loading…</p>
+        <LoadingState />
       ) : loadFailed && jobs.length === 0 ? (
         <ErrorState onRetry={load} />
       ) : rows.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-slate-300 py-12 text-center text-slate-400">
+        <EmptyState>
           No collections yet. Open a unit and set its order total to start tracking collections.
-        </div>
+        </EmptyState>
       ) : (
         <div className="rounded-xl bg-white shadow-sm">
           <table className="w-full table-fixed text-xs">
@@ -330,11 +321,11 @@ export default function Claims() {
                           </div>
                         </div>
                       </td>
-                      <td className={num + ' text-slate-700'}>{r.order ? rm(r.order) : '—'}</td>
-                      <td className={num + ' font-semibold text-emerald-700'}>{rm(r.collected)}</td>
+                      <td className={num + ' text-slate-700'}>{r.order ? money0(r.order) : '—'}</td>
+                      <td className={num + ' font-semibold text-emerald-700'}>{money0(r.collected)}</td>
                       <td className={num + ' text-slate-500'}>{pct(r.collected, r.order)}</td>
                       <td className={num + (r.balance > 0 ? ' font-semibold text-amber-700' : ' text-slate-400')}>
-                        {rm(r.balance)}
+                        {money0(r.balance)}
                       </td>
                     </tr>
                     {isOpen && (
@@ -350,10 +341,10 @@ export default function Claims() {
                                 {trades.map((t) => (
                                   <tr key={t.cat} className="text-[11px]">
                                     <td className="truncate py-0.5 pl-5 pr-2 text-slate-500">{t.cat}</td>
-                                    <td className={num + ' w-[84px] text-slate-500'}>{t.order ? rm(t.order) : '—'}</td>
-                                    <td className={num + ' w-[84px] text-emerald-700'}>{rm(t.collected)}</td>
+                                    <td className={num + ' w-[84px] text-slate-500'}>{t.order ? money0(t.order) : '—'}</td>
+                                    <td className={num + ' w-[84px] text-emerald-700'}>{money0(t.collected)}</td>
                                     <td className={num + ' w-[84px] ' + (t.cat === UNALLOCATED ? 'text-slate-400' : t.balance > 0 ? 'text-amber-700' : 'text-slate-400')}>
-                                      {t.cat === UNALLOCATED ? '—' : rm(t.balance)}
+                                      {t.cat === UNALLOCATED ? '—' : money0(t.balance)}
                                     </td>
                                   </tr>
                                 ))}
@@ -370,10 +361,10 @@ export default function Claims() {
             <tfoot>
               <tr className="border-t-2 border-slate-200 bg-slate-50 font-semibold">
                 <td className="px-2 py-2 text-left text-slate-700">Total ({rows.length})</td>
-                <td className={num + ' text-slate-800'}>{rm(totals.order)}</td>
-                <td className={num + ' text-emerald-700'}>{rm(totals.collected)}</td>
+                <td className={num + ' text-slate-800'}>{money0(totals.order)}</td>
+                <td className={num + ' text-emerald-700'}>{money0(totals.collected)}</td>
                 <td className={num + ' text-slate-600'}>{pct(totals.collected, totals.order)}</td>
-                <td className={num + ' text-amber-700'}>{rm(totals.balance)}</td>
+                <td className={num + ' text-amber-700'}>{money0(totals.balance)}</td>
               </tr>
             </tfoot>
           </table>

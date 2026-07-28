@@ -5,6 +5,7 @@ import { realtimeChannel, coalesce } from '../lib/realtime'
 import { useAuth } from '../contexts/AuthContext'
 import type { Costing, JobWork } from '../lib/types'
 import { Layout } from '../components/Layout'
+import { LoadingState, EmptyState , SearchInput , Segmented } from '../components/ui'
 import { Icon } from '../components/Icon'
 import { FinanceToggle } from '../components/FinanceToggle'
 import { overallPercent } from '../lib/stages'
@@ -281,22 +282,21 @@ export default function CostingList() {
 
   if (!isBoss) {
     return (
-      <Layout title="Costing" bottomNav>
+      <Layout title="Money" bottomNav>
         <p className="rounded-xl border border-dashed border-slate-300 py-12 text-center text-slate-400">Boss only.</p>
       </Layout>
     )
   }
 
   return (
-    <Layout title="Costing" bottomNav wide onRefresh={refreshAll}>
+    <Layout title="Money" bottomNav wide onRefresh={refreshAll}>
       <FinanceToggle current="costing" />
       <div className="space-y-3 lg:max-w-3xl">
         <div className="flex gap-2">
-          <input
+          <SearchInput
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search cash sale no. or customer…"
-            className="flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-slate-900"
           />
           <button onClick={syncFromSheet} disabled={syncing} title="Pull the latest from the Google Sheet" className="shrink-0 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 active:bg-slate-50 disabled:opacity-50">
             {syncing ? 'Syncing…' : '⟳ Sync sheet'}
@@ -317,26 +317,28 @@ export default function CostingList() {
               <option key={c.key} value={c.key}>{c.label}</option>
             ))}
           </select>
-          <div className="flex rounded-lg border border-slate-300 bg-white p-0.5">
-            {(['list', 'sheet'] as View[]).map((v) => (
-              <button key={v} onClick={() => setView(v)} className={'rounded-md px-3 py-1.5 text-sm font-medium ' + (view === v ? 'bg-slate-900 text-white' : 'text-slate-600')}>
-                {v === 'list' ? 'List' : 'Spreadsheet'}
-              </button>
-            ))}
-          </div>
+          <Segmented
+            className="shrink-0"
+            options={[
+              { key: 'list', label: 'List' },
+              { key: 'sheet', label: 'Spreadsheet' },
+            ]}
+            value={view}
+            onChange={setView}
+          />
         </div>
       </div>
 
       {loading ? (
-        <p className="py-10 text-center text-slate-400">Loading…</p>
+        <LoadingState />
       ) : loadFailed && rows.length === 0 ? (
         <div className="mt-3">
           <ErrorState onRetry={load} />
         </div>
       ) : visible.length === 0 ? (
-        <div className="mt-3 rounded-xl border border-dashed border-slate-300 py-12 text-center text-slate-400">
+        <EmptyState className="mt-3">
           {rows.length === 0 ? 'No costings yet. Tap “+ New”.' : 'Nothing matches your filter.'}
-        </div>
+        </EmptyState>
       ) : (
         <div className="mt-4">
           {view === 'sheet' ? (
@@ -488,13 +490,13 @@ function EditableSheet({
                   const v = costVal(r, col)
                   return (
                     <td key={col} className="px-1.5 py-1">
-                      <input type="number" step="0.01" className={editCls + ' text-slate-600'} value={v === 0 ? '' : v} {...focus} onChange={(e) => onSetCost(r.id, col, e.target.value)} />
+                      <input type="number" inputMode="decimal" step="0.01" className={editCls + ' text-slate-600'} value={v === 0 ? '' : v} {...focus} onChange={(e) => onSetCost(r.id, col, e.target.value)} />
                     </td>
                   )
                 })}
                 <td className={numTd + ' text-slate-500'}>{nf(c.totalCost)}</td>
                 <td className="px-1.5 py-1">
-                  <input type="number" step="0.01" className={editCls + ' font-medium text-slate-800'} value={num(r.revenue) === 0 ? '' : (r.revenue as number) ?? ''} {...focus} onChange={(e) => onPatch(r.id, { revenue: e.target.value })} />
+                  <input type="number" inputMode="decimal" step="0.01" className={editCls + ' font-medium text-slate-800'} value={num(r.revenue) === 0 ? '' : (r.revenue as number) ?? ''} {...focus} onChange={(e) => onPatch(r.id, { revenue: e.target.value })} />
                 </td>
                 <td className={numTd + ' font-semibold ' + (c.grossProfit < 0 ? 'text-rose-600' : 'text-emerald-700')}>{nf(c.grossProfit)}</td>
                 <td className={numTd + ' font-medium ' + marginColor(c.margin)}>{c.margin.toFixed(1)}%</td>

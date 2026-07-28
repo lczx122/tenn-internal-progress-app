@@ -5,6 +5,7 @@ import { realtimeChannel, coalesce } from '../lib/realtime'
 import { useAuth } from '../contexts/AuthContext'
 import type { Job, JobWork } from '../lib/types'
 import { Layout } from '../components/Layout'
+import { LoadingState, EmptyState , SearchInput , Segmented } from '../components/ui'
 import { Icon } from '../components/Icon'
 import { PercentBar } from '../components/StageBar'
 import { getStage, overallPercent, STAGES } from '../lib/stages'
@@ -208,11 +209,10 @@ export default function JobsList() {
   return (
     <Layout title="Units" bottomNav onRefresh={load}>
       <div className="mb-3 flex gap-2">
-        <input
+        <SearchInput
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search unit, address, category, key holder…"
-          className="flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-slate-900"
         />
         {isLucas && (
           <Link
@@ -233,22 +233,15 @@ export default function JobsList() {
       </div>
 
       {staffPic && (
-        <div className="mb-3 flex gap-2">
-          {(['mine', 'all'] as const).map((s) => (
-            <button
-              key={s}
-              onClick={() => setScope(s)}
-              className={
-                'flex-1 rounded-lg border px-2 py-2 text-sm font-medium ' +
-                (effectiveScope === s
-                  ? 'border-slate-900 bg-slate-900 text-white'
-                  : 'border-slate-300 bg-white text-slate-600 active:bg-slate-50')
-              }
-            >
-              {s === 'mine' ? 'My units' : 'All units'}
-            </button>
-          ))}
-        </div>
+        <Segmented
+          className="mb-3"
+          options={[
+            { key: 'mine', label: 'My units' },
+            { key: 'all', label: 'All units' },
+          ]}
+          value={effectiveScope}
+          onChange={setScope}
+        />
       )}
       {!isAdmin && !staffPic && (
         <p className="mb-3 rounded-lg bg-slate-100 px-3 py-2 text-xs text-slate-500">
@@ -346,13 +339,13 @@ export default function JobsList() {
       </div>
 
       {loading ? (
-        <p className="py-10 text-center text-slate-400">Loading…</p>
+        <LoadingState />
       ) : loadFailed && jobs.length === 0 ? (
         <ErrorState onRetry={load} />
       ) : visible.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-slate-300 py-12 text-center text-slate-400">
+        <EmptyState>
           {showArchived ? 'No archived units.' : 'No units yet — save a Sales Order in the Quote tab to open one.'}
-        </div>
+        </EmptyState>
       ) : (
         <div className="space-y-5">
           {groups.map((g) => {

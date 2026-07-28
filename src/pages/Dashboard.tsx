@@ -5,6 +5,7 @@ import { realtimeChannel, coalesce } from '../lib/realtime'
 import { useAuth } from '../contexts/AuthContext'
 import type { Appointment, Claim, Job, JobEvent, JobWork } from '../lib/types'
 import { Layout } from '../components/Layout'
+import { LoadingState , Segmented } from '../components/ui'
 import { STAGES, getStage, overallPercent } from '../lib/stages'
 import { CATEGORIES } from '../lib/categories'
 import { getApptType, startOfDay, addDays, dayLabel, timeLabel } from '../lib/appointments'
@@ -262,25 +263,19 @@ export default function Dashboard() {
       </div>
       {recording && <RecordCollectionSheet jobs={jobs} onClose={() => setRecording(false)} onSaved={load} />}
       {staffPic && (
-        <div className="mb-4 flex gap-2">
-          {(['mine', 'all'] as const).map((s) => (
-            <button
-              key={s}
-              onClick={() => setScope(s)}
-              className={
-                'flex-1 rounded-lg border px-2 py-2 text-sm font-medium ' +
-                (effectiveScope === s
-                  ? 'border-slate-900 bg-slate-900 text-white'
-                  : 'border-slate-300 bg-white text-slate-600 active:bg-slate-50')
-              }
-            >
-              {s === 'mine' ? 'My units' : 'All units'}
-            </button>
-          ))}
+        <div className="mb-4">
+          <Segmented
+            options={[
+              { key: 'mine', label: 'My units' },
+              { key: 'all', label: 'All units' },
+            ]}
+            value={effectiveScope}
+            onChange={setScope}
+          />
         </div>
       )}
       {loading ? (
-        <p className="py-10 text-center text-slate-400">Loading…</p>
+        <LoadingState />
       ) : loadFailed && jobs.length === 0 ? (
         <ErrorState onRetry={load} />
       ) : (
@@ -430,22 +425,22 @@ export default function Dashboard() {
                   <div className="min-w-0 rounded-lg bg-slate-50 px-1.5 py-2">
                     <div className="text-[11px] text-slate-400">Order</div>
                     <div className="text-sm font-semibold leading-tight tabular-nums text-slate-800 lg:text-[13px]">
-                      <span className="lg:hidden">{money(claimsSummary.order)}</span>
-                      <span className="hidden lg:inline">{money0(claimsSummary.order)}</span>
+                      
+                      <span>{money0(claimsSummary.order)}</span>
                     </div>
                   </div>
                   <div className="min-w-0 rounded-lg bg-emerald-50 px-1.5 py-2">
                     <div className="text-[11px] text-emerald-700/70">Collected</div>
                     <div className="text-sm font-semibold leading-tight tabular-nums text-emerald-700 lg:text-[13px]">
-                      <span className="lg:hidden">{money(claimsSummary.collected)}</span>
-                      <span className="hidden lg:inline">{money0(claimsSummary.collected)}</span>
+                      
+                      <span>{money0(claimsSummary.collected)}</span>
                     </div>
                   </div>
                   <div className="min-w-0 rounded-lg bg-amber-50 px-1.5 py-2">
                     <div className="text-[11px] text-amber-700/70">Outstanding</div>
                     <div className="text-sm font-semibold leading-tight tabular-nums text-amber-700 lg:text-[13px]">
-                      <span className="lg:hidden">{money(claimsSummary.balance)}</span>
-                      <span className="hidden lg:inline">{money0(claimsSummary.balance)}</span>
+                      
+                      <span>{money0(claimsSummary.balance)}</span>
                     </div>
                   </div>
                 </div>

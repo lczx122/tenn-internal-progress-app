@@ -10,6 +10,7 @@ import { getApptType } from '../lib/appointments'
 import { eventIconName } from '../lib/jobEvents'
 import { Icon } from '../components/Icon'
 import { Layout } from '../components/Layout'
+import { LoadingState } from '../components/ui'
 import { BackLink } from '../components/BackLink'
 import { StageBar } from '../components/StageBar'
 import { ClaimsSection } from '../components/ClaimsSection'
@@ -226,7 +227,7 @@ export default function JobDetail() {
   if (loading) {
     return (
       <Layout title="Unit">
-        <p className="py-10 text-center text-slate-400">Loading…</p>
+        <LoadingState skeleton />
       </Layout>
     )
   }
