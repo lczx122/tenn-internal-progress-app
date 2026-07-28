@@ -1,10 +1,10 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { realtimeChannel } from '../lib/realtime'
 import { useAuth } from '../contexts/AuthContext'
 import type { Project } from '../lib/types'
 import { Layout } from '../components/Layout'
+import { BackLink } from '../components/BackLink'
 import { useAutoRefresh } from '../lib/useAutoRefresh'
 import { confirmDialog, promptDialog } from '../lib/dialog'
 
@@ -91,7 +91,7 @@ export default function ProjectsAdmin() {
 
   if (!isAdmin) {
     return (
-      <Layout title="Projects" back={<BackLink />}>
+      <Layout title="Projects" back={<BackLink fallback="/settings" />}>
         <p className="rounded-xl border border-dashed border-slate-300 py-12 text-center text-slate-400">
           Admins only.
         </p>
@@ -100,7 +100,7 @@ export default function ProjectsAdmin() {
   }
 
   return (
-    <Layout title="Projects" back={<BackLink />} onRefresh={load}>
+    <Layout title="Projects" back={<BackLink fallback="/settings" />} onRefresh={load}>
       <p className="mb-3 px-1 text-xs text-slate-500">
         Projects group your units. Staff pick from this list when creating a unit — only admins can add,
         rename or remove projects here.
@@ -161,13 +161,5 @@ export default function ProjectsAdmin() {
         </ul>
       )}
     </Layout>
-  )
-}
-
-function BackLink() {
-  return (
-    <Link to="/units" className="text-xl leading-none text-slate-300">
-      ←
-    </Link>
   )
 }

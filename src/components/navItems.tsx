@@ -20,7 +20,7 @@ const baseTabs: NavTab[] = [
   { to: '/units', label: 'Units', end: false, icon: 'home' },
   { to: '/quotes', label: 'Quotes', end: false, icon: 'ledger', match: ['/quote'] },
   { to: '/schedule', label: 'Schedule', end: false, icon: 'calendar' },
-  { to: '/claims', label: 'Money', end: false, icon: 'wallet', match: ['/costing'] },
+  { to: '/claims', label: 'Money', end: false, icon: 'wallet', match: ['/costing', '/reports'] },
 ]
 
 // The visible tabs for the current user (guests only get the quotation tool).

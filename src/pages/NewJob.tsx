@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import { Layout } from '../components/Layout'
+import { BackLink } from '../components/BackLink'
 import type { Job, Project } from '../lib/types'
 import {
   HOUSE_TYPES,
@@ -192,14 +193,14 @@ export default function NewJob() {
 
   if (loading) {
     return (
-      <Layout title={editing ? 'Edit unit' : 'New unit'} back={<BackLink id={id} />}>
+      <Layout title={editing ? 'Edit unit' : 'New unit'} back={<BackLink fallback={id ? `/job/${id}` : '/units'} />}>
         <p className="py-10 text-center text-slate-400">Loading…</p>
       </Layout>
     )
   }
 
   return (
-    <Layout title={editing ? 'Edit unit' : 'New Unit'} back={<BackLink id={id} />}>
+    <Layout title={editing ? 'Edit unit' : 'New Unit'} back={<BackLink fallback={id ? `/job/${id}` : '/units'} />}>
       <form onSubmit={onSubmit} className="mx-auto max-w-2xl space-y-4">
         {/* Customer details */}
         <div className={cardCls}>
@@ -438,13 +439,5 @@ export default function NewJob() {
         </button>
       </form>
     </Layout>
-  )
-}
-
-function BackLink({ id }: { id?: string }) {
-  return (
-    <Link to={id ? `/job/${id}` : '/units'} className="text-xl leading-none text-slate-300">
-      ←
-    </Link>
   )
 }

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-import { realtimeChannel } from '../lib/realtime'
+import { realtimeChannel, coalesce } from '../lib/realtime'
 import { useAuth } from '../contexts/AuthContext'
 import type { Appointment } from '../lib/types'
 import { Layout } from '../components/Layout'
@@ -47,8 +47,8 @@ export default function Schedule() {
   const myId = session?.user.id
   const navigate = useNavigate()
 
-  async function load() {
-    progressStart()
+  async function load(quiet = false) {
+    if (!quiet) progressStart()
     try {
       const [{ data, error }, { data: pinData }] = await Promise.all([
         supabase.from('appointments').select('*').order('starts_at', { ascending: true }),
@@ -65,7 +65,7 @@ export default function Schedule() {
       setLoadFailed(true)
     } finally {
       setLoading(false)
-      progressDone()
+      if (!quiet) progressDone()
     }
   }
 
@@ -93,11 +93,14 @@ export default function Schedule() {
 
   useEffect(() => {
     load()
+    // One quiet refetch per burst of realtime events (no progress-bar sweep).
+    const rt = coalesce(() => load(true))
     const channel = realtimeChannel('schedule')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'appointments' }, () => load())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'appointment_pins' }, () => load())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'appointments' }, rt.run)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'appointment_pins' }, rt.run)
       .subscribe()
     return () => {
+      rt.cancel()
       supabase.removeChannel(channel)
     }
   }, [])

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-import { realtimeChannel } from '../lib/realtime'
+import { realtimeChannel, coalesce } from '../lib/realtime'
 import { useAuth } from '../contexts/AuthContext'
 import type { Costing, JobWork } from '../lib/types'
 import { Layout } from '../components/Layout'
@@ -68,11 +68,11 @@ export default function CostingList() {
   rowsRef.current = rows
   const editingRef = useRef(false)
 
-  async function load() {
+  async function load(quiet = false) {
     // Secondary sort on id: imported rows share one created_at, and without a
     // tiebreaker Postgres returns them in arbitrary (changing) order — rows
     // would visibly rearrange after every edit-triggered reload.
-    progressStart()
+    if (!quiet) progressStart()
     try {
       const { data, error } = await supabase
         .from('costings')
@@ -89,7 +89,7 @@ export default function CostingList() {
       setLoadFailed(true)
     } finally {
       setLoading(false)
-      progressDone()
+      if (!quiet) progressDone()
     }
   }
 
@@ -118,15 +118,20 @@ export default function CostingList() {
     }
     load()
     loadProgress()
+    // One quiet refetch per burst of realtime events (no progress-bar sweep).
+    const rtLoad = coalesce(() => {
+      if (!editingRef.current) load(true) // don't clobber an in-progress edit
+    })
+    const rtProg = coalesce(() => loadProgress())
     const channel = realtimeChannel('costings')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'costings' }, () => {
-        if (!editingRef.current) load() // don't clobber an in-progress edit
-      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'costings' }, rtLoad.run)
       // Linked costings track unit progress — refresh when work cards move.
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'job_works' }, () => loadProgress())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'jobs' }, () => loadProgress())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'job_works' }, rtProg.run)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'jobs' }, rtProg.run)
       .subscribe()
     return () => {
+      rtLoad.cancel()
+      rtProg.cancel()
       supabase.removeChannel(channel)
     }
   }, [isBoss])

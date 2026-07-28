@@ -1,10 +1,10 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { realtimeChannel } from '../lib/realtime'
 import { useAuth } from '../contexts/AuthContext'
 import type { Supplier } from '../lib/types'
 import { Layout } from '../components/Layout'
+import { BackLink } from '../components/BackLink'
 import { useAutoRefresh } from '../lib/useAutoRefresh'
 import { confirmDialog, promptDialog } from '../lib/dialog'
 
@@ -99,14 +99,14 @@ export default function SuppliersAdmin() {
 
   if (!isBoss) {
     return (
-      <Layout title="Suppliers" back={<BackLink />}>
+      <Layout title="Suppliers" back={<BackLink fallback="/settings" />}>
         <p className="rounded-xl border border-dashed border-slate-300 py-12 text-center text-slate-400">Boss only.</p>
       </Layout>
     )
   }
 
   return (
-    <Layout title="Suppliers" back={<BackLink />} onRefresh={load}>
+    <Layout title="Suppliers" back={<BackLink fallback="/settings" />} onRefresh={load}>
       <p className="mb-3 px-1 text-xs text-slate-500">
         Your reusable supplier list. Suppliers you type on a unit are added here automatically; rename or remove them
         here. Renaming updates every unit that uses that supplier.
@@ -167,13 +167,5 @@ export default function SuppliersAdmin() {
         </ul>
       )}
     </Layout>
-  )
-}
-
-function BackLink() {
-  return (
-    <Link to="/" className="text-xl leading-none text-slate-300">
-      ←
-    </Link>
   )
 }

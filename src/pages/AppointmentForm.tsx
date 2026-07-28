@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import type { Appointment, Job, Profile } from '../lib/types'
 import { Layout } from '../components/Layout'
+import { BackLink, useGoBack } from '../components/BackLink'
 import { Icon } from '../components/Icon'
 import { APPT_TYPES, getApptType, toLocalInput } from '../lib/appointments'
 import { runDb } from '../lib/toast'
@@ -20,7 +21,9 @@ export default function AppointmentForm() {
   const { id } = useParams<{ id: string }>()
   const [params] = useSearchParams()
   const { displayName, session, isAdmin } = useAuth()
-  const navigate = useNavigate()
+  // Done/deleted/saved → back to wherever the user came from (a unit page,
+  // Dashboard, or Schedule) instead of always teleporting to Schedule.
+  const goBack = useGoBack('/schedule')
   const isEdit = Boolean(id)
 
   const [jobs, setJobs] = useState<Job[]>([])
@@ -184,7 +187,7 @@ export default function AppointmentForm() {
         await logToJob(row.job_id, `${getApptType(row.type).label} scheduled for ${when}${row.who ? ` (${row.who})` : ''}`)
       }
     }
-    navigate('/schedule')
+    goBack()
   }
 
   function fail(msg: string) {
@@ -203,7 +206,7 @@ export default function AppointmentForm() {
       await logToJob(form.job_id, `${getApptType(form.type).label} completed`)
     }
     setBusy(false)
-    if (ok) navigate('/schedule')
+    if (ok) goBack()
   }
 
   async function remove() {
@@ -223,7 +226,7 @@ export default function AppointmentForm() {
       fail: 'Could not delete',
     })
     setBusy(false)
-    if (ok) navigate('/schedule')
+    if (ok) goBack()
   }
 
   const field =
@@ -232,14 +235,14 @@ export default function AppointmentForm() {
 
   if (loading) {
     return (
-      <Layout title="Appointment" back={<BackLink />}>
+      <Layout title="Appointment" back={<BackLink fallback="/schedule" />}>
         <p className="py-10 text-center text-slate-400">Loading…</p>
       </Layout>
     )
   }
 
   return (
-    <Layout title={isEdit ? 'Edit appointment' : 'New appointment'} back={<BackLink />}>
+    <Layout title={isEdit ? 'Edit appointment' : 'New appointment'} back={<BackLink fallback="/schedule" />}>
       <form onSubmit={onSubmit} className="mx-auto max-w-2xl space-y-4">
         <div className="space-y-4 rounded-xl bg-white p-4 shadow-sm">
           <div>
@@ -436,13 +439,5 @@ export default function AppointmentForm() {
         </div>
       )}
     </Layout>
-  )
-}
-
-function BackLink() {
-  return (
-    <Link to="/schedule" className="text-xl leading-none text-slate-300">
-      ←
-    </Link>
   )
 }

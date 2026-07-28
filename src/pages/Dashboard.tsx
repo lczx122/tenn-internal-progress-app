@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-import { realtimeChannel } from '../lib/realtime'
+import { realtimeChannel, coalesce } from '../lib/realtime'
 import { useAuth } from '../contexts/AuthContext'
 import type { Appointment, Claim, Job, JobEvent, JobWork } from '../lib/types'
 import { Layout } from '../components/Layout'
@@ -17,6 +17,7 @@ import { cacheGet, cacheSet } from '../lib/pageCache'
 import { progressStart, progressDone } from '../lib/progress'
 import { usePersistedState, oneOf } from '../lib/usePersistedState'
 import { ErrorState } from '../components/ErrorState'
+import { RecordCollectionSheet } from '../components/RecordCollectionSheet'
 
 type DashCache = {
   jobs: Job[]
@@ -48,6 +49,7 @@ export default function Dashboard() {
   const [claims, setClaims] = useState<Claim[]>(c0?.claims ?? [])
   const [loading, setLoading] = useState(!c0)
   const [loadFailed, setLoadFailed] = useState(false)
+  const [recording, setRecording] = useState(false)
   const [scope, setScope] = usePersistedState<'mine' | 'all' | null>('tenn_dash_scope', null, {
     validate: oneOf('mine', 'all'),
   })
@@ -55,8 +57,8 @@ export default function Dashboard() {
   const myId = session?.user.id
   const effectiveScope: 'mine' | 'all' = scope ?? (!isAdmin && staffPic ? 'mine' : 'all')
 
-  async function load() {
-    progressStart()
+  async function load(quiet = false) {
+    if (!quiet) progressStart()
     try {
       const [{ data: j, error: ej }, { data: w }, { data: e }, { data: ap }, { data: cl }] = await Promise.all([
         supabase.from('jobs').select('*').order('updated_at', { ascending: false }),
@@ -84,20 +86,23 @@ export default function Dashboard() {
       setLoadFailed(true)
     } finally {
       setLoading(false)
-      progressDone()
+      if (!quiet) progressDone()
     }
   }
 
   useEffect(() => {
     load()
+    // One quiet refetch per burst of realtime events (no progress-bar sweep).
+    const rt = coalesce(() => load(true))
     const channel = realtimeChannel('dashboard')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'jobs' }, () => load())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'job_works' }, () => load())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'job_events' }, () => load())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'appointments' }, () => load())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'claims' }, () => load())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'jobs' }, rt.run)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'job_works' }, rt.run)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'job_events' }, rt.run)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'appointments' }, rt.run)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'claims' }, rt.run)
       .subscribe()
     return () => {
+      rt.cancel()
       supabase.removeChannel(channel)
     }
   }, [])
@@ -241,12 +246,21 @@ export default function Dashboard() {
 
   return (
     <Layout title="Dashboard" bottomNav onRefresh={load}>
-      <Link
-        to="/quote"
-        className="mb-4 flex items-center justify-center gap-2 rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm active:bg-slate-700"
-      >
-        <Icon name="receipt" className="h-4 w-4" /> New Quotation
-      </Link>
+      <div className="mb-4 flex gap-2">
+        <Link
+          to="/quote"
+          className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm active:bg-slate-700"
+        >
+          <Icon name="receipt" className="h-4 w-4" /> New Quotation
+        </Link>
+        <button
+          onClick={() => setRecording(true)}
+          className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm active:bg-emerald-700"
+        >
+          <Icon name="cash" className="h-4 w-4" /> Record collection
+        </button>
+      </div>
+      {recording && <RecordCollectionSheet jobs={jobs} onClose={() => setRecording(false)} onSaved={load} />}
       {staffPic && (
         <div className="mb-4 flex gap-2">
           {(['mine', 'all'] as const).map((s) => (
@@ -403,7 +417,10 @@ export default function Dashboard() {
           <section>
             <div className="mb-2 flex items-center justify-between px-1">
               <h2 className="text-sm font-semibold text-slate-700">Collection</h2>
-              <Link to="/claims" className="text-xs font-medium text-slate-500">View all ›</Link>
+              <span className="flex items-center gap-3">
+                <Link to="/reports" className="text-xs font-medium text-slate-500">Report ›</Link>
+                <Link to="/claims" className="text-xs font-medium text-slate-500">View all ›</Link>
+              </span>
             </div>
             {claimsSummary.order === 0 && claimsSummary.collected === 0 ? (
               <Empty>No order totals set yet. Add one on a unit to track collections.</Empty>

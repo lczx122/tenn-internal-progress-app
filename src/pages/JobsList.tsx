@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type Dispatch, type SetStateAction } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-import { realtimeChannel } from '../lib/realtime'
+import { realtimeChannel, coalesce } from '../lib/realtime'
 import { useAuth } from '../contexts/AuthContext'
 import type { Job, JobWork } from '../lib/types'
 import { Layout } from '../components/Layout'
@@ -89,8 +89,8 @@ export default function JobsList() {
   const toggleCollapse = (p: string) => toggleIn(p, setCollapsed, 'tenn_collapsed_projects')
   const togglePin = (p: string) => toggleIn(p, setPinned, 'tenn_pinned_projects')
 
-  async function load() {
-    progressStart()
+  async function load(quiet = false) {
+    if (!quiet) progressStart()
     try {
       const [{ data: j, error: ej }, { data: w }] = await Promise.all([
         supabase.from('jobs').select('*').order('updated_at', { ascending: false }),
@@ -109,18 +109,21 @@ export default function JobsList() {
       setLoadFailed(true)
     } finally {
       setLoading(false)
-      progressDone()
+      if (!quiet) progressDone()
     }
   }
 
   useEffect(() => {
     load()
     // Live updates on units and their work categories.
+    // One quiet refetch per burst of realtime events (no progress-bar sweep).
+    const rt = coalesce(() => load(true))
     const channel = realtimeChannel('jobs-list')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'jobs' }, () => load())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'job_works' }, () => load())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'jobs' }, rt.run)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'job_works' }, rt.run)
       .subscribe()
     return () => {
+      rt.cancel()
       supabase.removeChannel(channel)
     }
   }, [])
@@ -322,6 +325,11 @@ export default function JobsList() {
               Bulk edit ▦
             </Link>
           )}
+          {/* Units normally come from saving a Sales Order; this covers the
+              odd job that never had one. */}
+          <Link to="/units/new" className="text-xs font-medium text-slate-500 underline">
+            + New unit
+          </Link>
         </div>
         {(catFilter || stageFilter || projectFilter) && (
           <button

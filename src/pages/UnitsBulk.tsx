@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import type { Job, Project } from '../lib/types'
 import { Layout } from '../components/Layout'
+import { BackLink } from '../components/BackLink'
 import { STAFF_PICS } from '../lib/units'
 import { useAutoRefresh } from '../lib/useAutoRefresh'
 import { usePersistedState } from '../lib/usePersistedState'
@@ -100,7 +101,7 @@ export default function UnitsBulk() {
 
   if (!isAdmin) {
     return (
-      <Layout title="Bulk edit" back={<BackLink />}>
+      <Layout title="Bulk edit" back={<BackLink fallback="/units" />}>
         <p className="rounded-xl border border-dashed border-slate-300 py-12 text-center text-slate-400">
           Admins only.
         </p>
@@ -112,7 +113,7 @@ export default function UnitsBulk() {
   const th = 'px-2 py-2 text-left text-xs font-semibold text-slate-500 whitespace-nowrap'
 
   return (
-    <Layout title="Bulk edit units" back={<BackLink />} wide onRefresh={load}>
+    <Layout title="Bulk edit units" back={<BackLink fallback="/units" />} wide onRefresh={load}>
       <div className="mb-3 flex items-center justify-between gap-2">
         <button
           onClick={() => setShowArchived((v) => !v)}
@@ -217,13 +218,5 @@ export default function UnitsBulk() {
         </div>
       )}
     </Layout>
-  )
-}
-
-function BackLink() {
-  return (
-    <Link to="/units" className="text-xl leading-none text-slate-300">
-      ←
-    </Link>
   )
 }

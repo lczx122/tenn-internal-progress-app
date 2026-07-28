@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import { Layout } from '../components/Layout'
+import { BackLink } from '../components/BackLink'
 import { Icon } from '../components/Icon'
 import { NotificationSettings } from '../components/NotificationSettings'
 import { postAnnouncement } from '../lib/push'
@@ -107,7 +108,7 @@ export default function AdminSettings() {
   const initial = (displayName || '?').trim().charAt(0).toUpperCase() || '?'
 
   return (
-    <Layout title="Settings" back={<BackLink />}>
+    <Layout title="Settings" back={<BackLink fallback="/" />}>
       {/* Account (everyone) */}
       <section className="mb-4 rounded-xl bg-white p-4 shadow-sm">
         <div className="flex items-center gap-3">
@@ -157,6 +158,20 @@ export default function AdminSettings() {
 
       {/* Notifications (everyone) */}
       <NotificationSettings />
+
+      {/* Reports (everyone) */}
+      <section className="mb-4">
+        <h2 className="mb-2 px-1 text-xs font-semibold uppercase tracking-wide text-slate-400">Reports</h2>
+        <Link
+          to="/reports"
+          className="flex items-center justify-between rounded-xl bg-white p-3.5 shadow-sm active:bg-slate-50"
+        >
+          <span className="flex items-center gap-2 text-sm font-medium text-slate-700">
+            <Icon name="cash" className="h-4 w-4 text-slate-500" /> Balance report
+          </span>
+          <span className="text-slate-300">›</span>
+        </Link>
+      </section>
 
       {/* Management (admin) */}
       {isAdmin && (
@@ -277,14 +292,5 @@ export default function AdminSettings() {
         </section>
       )}
     </Layout>
-  )
-}
-
-function BackLink() {
-  const navigate = useNavigate()
-  return (
-    <button onClick={() => navigate(-1)} className="text-xl leading-none text-slate-300" aria-label="Back">
-      ←
-    </button>
   )
 }

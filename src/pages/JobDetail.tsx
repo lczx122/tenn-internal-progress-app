@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-import { realtimeChannel } from '../lib/realtime'
+import { realtimeChannel, coalesce } from '../lib/realtime'
 import { useAuth } from '../contexts/AuthContext'
 import type { Appointment, Claim, Job, JobEvent, JobWork, UnitSupplier } from '../lib/types'
 import { STAGES, getStage } from '../lib/stages'
@@ -10,6 +10,7 @@ import { getApptType } from '../lib/appointments'
 import { eventIconName } from '../lib/jobEvents'
 import { Icon } from '../components/Icon'
 import { Layout } from '../components/Layout'
+import { BackLink } from '../components/BackLink'
 import { StageBar } from '../components/StageBar'
 import { ClaimsSection } from '../components/ClaimsSection'
 import { SupplierSection } from '../components/SupplierSection'
@@ -69,16 +70,19 @@ export default function JobDetail() {
 
   useEffect(() => {
     loadAll()
+    // One quiet refetch per burst of realtime events (no progress-bar sweep).
+    const rt = coalesce(() => loadAll())
     const channel = realtimeChannel(`job-${id}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'jobs', filter: `id=eq.${id}` }, () => loadAll())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'job_works', filter: `job_id=eq.${id}` }, () => loadAll())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'job_events', filter: `job_id=eq.${id}` }, () => loadAll())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'appointments', filter: `job_id=eq.${id}` }, () => loadAll())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'claims', filter: `job_id=eq.${id}` }, () => loadAll())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'quotations', filter: `unit_id=eq.${id}` }, () => loadAll())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'unit_suppliers', filter: `job_id=eq.${id}` }, () => loadAll())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'jobs', filter: `id=eq.${id}` }, rt.run)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'job_works', filter: `job_id=eq.${id}` }, rt.run)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'job_events', filter: `job_id=eq.${id}` }, rt.run)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'appointments', filter: `job_id=eq.${id}` }, rt.run)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'claims', filter: `job_id=eq.${id}` }, rt.run)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'quotations', filter: `unit_id=eq.${id}` }, rt.run)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'unit_suppliers', filter: `job_id=eq.${id}` }, rt.run)
       .subscribe()
     return () => {
+      rt.cancel()
       supabase.removeChannel(channel)
     }
   }, [id, loadAll])
@@ -229,7 +233,7 @@ export default function JobDetail() {
 
   if (!job) {
     return (
-      <Layout title="Unit" back={<BackLink />}>
+      <Layout title="Unit" back={<BackLink fallback="/units" />}>
         {loadFailed ? (
           <ErrorState onRetry={loadAll} />
         ) : (
@@ -242,7 +246,7 @@ export default function JobDetail() {
   const usedCategories = new Set(works.map((w) => w.category))
 
   return (
-    <Layout title={job.unit_code || job.address || job.customer_name} back={<BackLink />} onRefresh={loadAll}>
+    <Layout title={job.unit_code || job.address || job.customer_name} back={<BackLink fallback="/units" />} onRefresh={loadAll}>
       <div className="xl:columns-2 xl:gap-6 xl:[&>div]:break-inside-avoid xl:[&>section]:mb-4 xl:[&>section]:mt-0 xl:[&>section]:break-inside-avoid">
       {/* Summary card */}
       <section className="rounded-xl bg-white p-4 shadow-sm">
@@ -668,12 +672,3 @@ function AddWorkForm({
     </div>
   )
 }
-
-function BackLink() {
-  return (
-    <Link to="/units" className="text-xl leading-none text-slate-300">
-      ←
-    </Link>
-  )
-}
-

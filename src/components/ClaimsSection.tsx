@@ -2,44 +2,21 @@ import { useMemo, useState } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
 import type { Claim, Job, JobWork } from '../lib/types'
-import { collectedTotal, money, perTradeRows, UNALLOCATED } from '../lib/claims'
+import {
+  collectedTotal,
+  money,
+  perTradeRows,
+  UNALLOCATED,
+  CLAIM_MODES,
+  type ClaimMode,
+  isPercentMode,
+  resolveClaim,
+  modeNeedsValue,
+} from '../lib/claims'
 import { formatDate } from '../lib/format'
 import { Icon } from './Icon'
 import { runDb, toastErr } from '../lib/toast'
 import { confirmDialog } from '../lib/dialog'
-
-// The claim-entry modes shown in the dropdown. Percentage modes show the live
-// ringgit value based on the unit's order total.
-type Mode =
-  | 'Booking Fee / Deposit'
-  | '50% Collected'
-  | '100% Collected'
-  | 'Custom amount'
-  | 'Custom %'
-
-const MODES: Mode[] = ['Booking Fee / Deposit', '50% Collected', '100% Collected', 'Custom amount', 'Custom %']
-
-function isPercentMode(m: Mode) {
-  return m === '50% Collected' || m === '100% Collected' || m === 'Custom %'
-}
-
-// Resolve a mode + entered value to { amount, percent, category }.
-function resolve(mode: Mode, value: string, orderTotal: number) {
-  const v = parseFloat(value) || 0
-  switch (mode) {
-    case '50% Collected':
-      return { amount: orderTotal * 0.5, percent: 50, category: '50% Collected' }
-    case '100% Collected':
-      return { amount: orderTotal * 1, percent: 100, category: '100% Collected' }
-    case 'Custom %':
-      return { amount: (orderTotal * v) / 100, percent: v, category: 'Custom' }
-    case 'Booking Fee / Deposit':
-      return { amount: v, percent: null as number | null, category: 'Booking Fee / Deposit' }
-    case 'Custom amount':
-    default:
-      return { amount: v, percent: null as number | null, category: 'Custom' }
-  }
-}
 
 export function ClaimsSection({
   job,
@@ -59,7 +36,7 @@ export function ClaimsSection({
   onChange: () => void | Promise<void>
 }) {
   const [orderTotal, setOrderTotal] = useState(String(job.order_total || ''))
-  const [mode, setMode] = useState<Mode>('Booking Fee / Deposit')
+  const [mode, setMode] = useState<ClaimMode>('Booking Fee / Deposit')
   const [value, setValue] = useState('')
   const [note, setNote] = useState('')
   const [date, setDate] = useState('')
@@ -99,8 +76,8 @@ export function ClaimsSection({
   // percentage modes (50% / 100% / Custom %) are of THAT trade, not the whole unit.
   const tradeOrder = workCat ? Number(job.order_by_category?.[workCat] || 0) : 0
   const pctBase = tradeOrder > 0 ? tradeOrder : total
-  const preview = resolve(mode, value, pctBase)
-  const needsValue = mode === 'Booking Fee / Deposit' || mode === 'Custom amount' || mode === 'Custom %'
+  const preview = resolveClaim(mode, value, pctBase)
+  const needsValue = modeNeedsValue(mode)
 
   async function saveOrderTotal() {
     const v = Number(orderTotal) || 0
@@ -337,8 +314,8 @@ export function ClaimsSection({
       {/* Add a claim */}
       <div className="rounded-lg border border-slate-200 p-3">
         <label className="mb-1 block text-xs font-medium text-slate-500">Record a collection</label>
-        <select value={mode} onChange={(e) => { setMode(e.target.value as Mode); setValue('') }} className={`${inp} mb-2`}>
-          {MODES.map((m) => (
+        <select value={mode} onChange={(e) => { setMode(e.target.value as ClaimMode); setValue('') }} className={`${inp} mb-2`}>
+          {CLAIM_MODES.map((m) => (
             <option key={m} value={m}>
               {m}
             </option>

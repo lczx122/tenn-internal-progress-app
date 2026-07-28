@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-import { realtimeChannel } from '../lib/realtime'
+import { realtimeChannel, coalesce } from '../lib/realtime'
 import { useAuth } from '../contexts/AuthContext'
 import type { Claim, Job, JobWork, UnitSupplier } from '../lib/types'
 import { STAGES, getStage, overallPercent } from '../lib/stages'
@@ -431,8 +431,8 @@ export default function GameView() {
     document.head.appendChild(l)
   }, [])
 
-  async function load() {
-    progressStart()
+  async function load(quiet = false) {
+    if (!quiet) progressStart()
     try {
       const [{ data: j }, { data: w }, { data: c }, { data: s }] = await Promise.all([
         supabase.from('jobs').select('*').order('project'),
@@ -451,21 +451,26 @@ export default function GameView() {
       setClaims(next.claims)
       setSuppliers(next.suppliers)
       cacheSet('game', next)
-      setLoading(false)
+    } catch {
+      // offline — keep whatever is on screen; the shelf isn't critical
     } finally {
-      progressDone()
+      setLoading(false)
+      if (!quiet) progressDone()
     }
   }
 
   useEffect(() => {
     load()
+    // One quiet refetch per burst of realtime events (no progress-bar sweep).
+    const rt = coalesce(() => load(true))
     const channel = realtimeChannel('game-view')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'jobs' }, () => load())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'job_works' }, () => load())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'claims' }, () => load())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'unit_suppliers' }, () => load())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'jobs' }, rt.run)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'job_works' }, rt.run)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'claims' }, rt.run)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'unit_suppliers' }, rt.run)
       .subscribe()
     return () => {
+      rt.cancel()
       supabase.removeChannel(channel)
     }
   }, [])

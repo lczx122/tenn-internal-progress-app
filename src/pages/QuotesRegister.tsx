@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-import { realtimeChannel } from '../lib/realtime'
+import { realtimeChannel, coalesce } from '../lib/realtime'
 import { useAuth } from '../contexts/AuthContext'
 import type { DocType, Quotation } from '../lib/types'
 import { Layout } from '../components/Layout'
@@ -59,8 +59,8 @@ export default function QuotesRegister() {
     if (ok) setRows((prev) => prev.filter((x) => x.id !== r.id))
   }
 
-  async function load() {
-    progressStart()
+  async function load(quiet = false) {
+    if (!quiet) progressStart()
     try {
       const { data, error } = await supabase
         .from('quotations')
@@ -76,16 +76,19 @@ export default function QuotesRegister() {
       setLoadFailed(true)
     } finally {
       setLoading(false)
-      progressDone()
+      if (!quiet) progressDone()
     }
   }
 
   useEffect(() => {
     load()
+    // One quiet refetch per burst of realtime events (no progress-bar sweep).
+    const rt = coalesce(() => load(true))
     const channel = realtimeChannel('quotations-register')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'quotations' }, () => load())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'quotations' }, rt.run)
       .subscribe()
     return () => {
+      rt.cancel()
       supabase.removeChannel(channel)
     }
   }, [])

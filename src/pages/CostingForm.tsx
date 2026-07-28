@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import type { Costing, Job, JobWork } from '../lib/types'
 import { Layout } from '../components/Layout'
+import { BackLink } from '../components/BackLink'
 import { PercentBar } from '../components/StageBar'
 import { overallPercent } from '../lib/stages'
 import { calcCosting, money, num, progressToStatus, statusStyle, COSTING_CATEGORIES, COSTING_STATUSES, templateFor } from '../lib/costing'
@@ -175,21 +176,21 @@ export default function CostingForm() {
 
   if (!isBoss) {
     return (
-      <Layout title="Costing" back={<BackLink />}>
+      <Layout title="Costing" back={<BackLink fallback="/costing" />}>
         <p className="py-10 text-center text-slate-400">Boss only.</p>
       </Layout>
     )
   }
   if (loading) {
     return (
-      <Layout title="Costing" back={<BackLink />}>
+      <Layout title="Costing" back={<BackLink fallback="/costing" />}>
         <p className="py-10 text-center text-slate-400">Loading…</p>
       </Layout>
     )
   }
 
   return (
-    <Layout title={isEdit ? 'Edit costing' : 'New costing'} back={<BackLink />}>
+    <Layout title={isEdit ? 'Edit costing' : 'New costing'} back={<BackLink fallback="/costing" />}>
       <form onSubmit={onSubmit} className="mx-auto max-w-3xl space-y-4">
         {/* Sale */}
         <div className="space-y-4 rounded-xl bg-white p-4 shadow-sm">
@@ -369,11 +370,5 @@ function AddBtn({ label, onClick }: { label: string; onClick: () => void }) {
 function RemoveBtn({ onClick }: { onClick: () => void }) {
   return (
     <button type="button" onClick={onClick} className="shrink-0 rounded-lg bg-rose-50 px-2 text-rose-500 active:bg-rose-100" title="Remove">✕</button>
-  )
-}
-
-function BackLink() {
-  return (
-    <Link to="/costing" className="text-xl leading-none text-slate-300">←</Link>
   )
 }

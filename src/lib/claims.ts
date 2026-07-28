@@ -9,6 +9,51 @@ export const money = (n: number) =>
 export const money0 = (n: number) =>
   'RM ' + Math.round(Number(n || 0)).toLocaleString('en-MY')
 
+// ---- claim-entry modes -----------------------------------------------------
+// Shared by the unit page's ClaimsSection and the quick RecordCollectionSheet.
+// Percentage modes show the live ringgit value based on the order total.
+export type ClaimMode =
+  | 'Booking Fee / Deposit'
+  | '50% Collected'
+  | '100% Collected'
+  | 'Custom amount'
+  | 'Custom %'
+
+export const CLAIM_MODES: ClaimMode[] = [
+  'Booking Fee / Deposit',
+  '50% Collected',
+  '100% Collected',
+  'Custom amount',
+  'Custom %',
+]
+
+export function isPercentMode(m: ClaimMode): boolean {
+  return m === '50% Collected' || m === '100% Collected' || m === 'Custom %'
+}
+
+// Resolve a mode + entered value to { amount, percent, category }.
+export function resolveClaim(mode: ClaimMode, value: string, orderTotal: number) {
+  const v = parseFloat(value) || 0
+  switch (mode) {
+    case '50% Collected':
+      return { amount: orderTotal * 0.5, percent: 50, category: '50% Collected' }
+    case '100% Collected':
+      return { amount: orderTotal * 1, percent: 100, category: '100% Collected' }
+    case 'Custom %':
+      return { amount: (orderTotal * v) / 100, percent: v, category: 'Custom' }
+    case 'Booking Fee / Deposit':
+      return { amount: v, percent: null as number | null, category: 'Booking Fee / Deposit' }
+    case 'Custom amount':
+    default:
+      return { amount: v, percent: null as number | null, category: 'Custom' }
+  }
+}
+
+// Modes that need a typed value (the others derive from the order total).
+export function modeNeedsValue(m: ClaimMode): boolean {
+  return m === 'Booking Fee / Deposit' || m === 'Custom amount' || m === 'Custom %'
+}
+
 // Total collected across a set of claims.
 export function collectedTotal(claims: Claim[]): number {
   return claims.reduce((s, c) => s + Number(c.amount || 0), 0)

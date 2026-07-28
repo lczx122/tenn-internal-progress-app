@@ -1,7 +1,7 @@
 import { Fragment, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-import { realtimeChannel } from '../lib/realtime'
+import { realtimeChannel, coalesce } from '../lib/realtime'
 import { useAuth } from '../contexts/AuthContext'
 import type { Claim, Job } from '../lib/types'
 import { Layout } from '../components/Layout'
@@ -14,6 +14,7 @@ import { cacheGet, cacheSet } from '../lib/pageCache'
 import { progressStart, progressDone } from '../lib/progress'
 import { usePersistedState, oneOf } from '../lib/usePersistedState'
 import { ErrorState } from '../components/ErrorState'
+import { RecordCollectionSheet } from '../components/RecordCollectionSheet'
 
 export default function Claims() {
   const c0 = cacheGet<{ jobs: Job[]; claims: Claim[] }>('collection')
@@ -21,6 +22,7 @@ export default function Claims() {
   const [claims, setClaims] = useState<Claim[]>(c0?.claims ?? [])
   const [loading, setLoading] = useState(!c0)
   const [loadFailed, setLoadFailed] = useState(false)
+  const [recording, setRecording] = useState(false)
   const [query, setQuery] = useState('')
   const [project, setProject] = usePersistedState('tenn_claims_project', '')
   const [scope, setScope] = usePersistedState<'mine' | 'all' | null>('tenn_claims_scope', null, {
@@ -33,8 +35,8 @@ export default function Claims() {
   const effectiveScope: 'mine' | 'all' = scope ?? (!isAdmin && staffPic ? 'mine' : 'all')
   const navigate = useNavigate()
 
-  async function load() {
-    progressStart()
+  async function load(quiet = false) {
+    if (!quiet) progressStart()
     try {
       const [{ data: j, error: ej }, { data: c }] = await Promise.all([
         supabase.from('jobs').select('*').eq('is_archived', false).order('project'),
@@ -52,17 +54,20 @@ export default function Claims() {
       setLoadFailed(true)
     } finally {
       setLoading(false)
-      progressDone()
+      if (!quiet) progressDone()
     }
   }
 
   useEffect(() => {
     load()
+    // One quiet refetch per burst of realtime events (no progress-bar sweep).
+    const rt = coalesce(() => load(true))
     const channel = realtimeChannel('claims-page')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'claims' }, () => load())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'jobs' }, () => load())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'claims' }, rt.run)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'jobs' }, rt.run)
       .subscribe()
     return () => {
+      rt.cancel()
       supabase.removeChannel(channel)
     }
   }, [])
@@ -176,14 +181,22 @@ export default function Claims() {
     <Layout title="Collection" bottomNav wide onRefresh={load}>
       <FinanceToggle current="collection" />
 
-      <div className="mb-3 flex justify-end">
+      <div className="mb-3 flex gap-2">
+        <button
+          onClick={() => setRecording(true)}
+          className="flex-1 rounded-lg bg-emerald-600 px-3 py-2 text-sm font-semibold text-white active:bg-emerald-700"
+        >
+          + Record collection
+        </button>
         <button
           onClick={() => navigate('/reports')}
-          className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 active:bg-slate-100"
+          className="shrink-0 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 active:bg-slate-100"
         >
           Balance report ›
         </button>
       </div>
+
+      {recording && <RecordCollectionSheet jobs={jobs} onClose={() => setRecording(false)} onSaved={load} />}
 
       {staffPic && (
         <div className="mb-3 flex gap-2">

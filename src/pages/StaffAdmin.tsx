@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import type { Profile, Role } from '../lib/types'
 import { Layout } from '../components/Layout'
+import { BackLink } from '../components/BackLink'
 import { Icon } from '../components/Icon'
 import { STAFF_PICS } from '../lib/units'
 import { useAutoRefresh } from '../lib/useAutoRefresh'
@@ -77,7 +78,7 @@ export default function StaffAdmin() {
 
   if (!isAdmin) {
     return (
-      <Layout title="Staff" back={<BackLink />}>
+      <Layout title="Staff" back={<BackLink fallback="/settings" />}>
         <p className="rounded-xl border border-dashed border-slate-300 py-12 text-center text-slate-400">
           Admins only.
         </p>
@@ -86,7 +87,7 @@ export default function StaffAdmin() {
   }
 
   return (
-    <Layout title="Staff & roles" back={<BackLink />} onRefresh={load}>
+    <Layout title="Staff & roles" back={<BackLink fallback="/settings" />} onRefresh={load}>
       <p className="mb-3 px-1 text-xs text-slate-500">
         Tap <b>Rename</b> to set a staff member's display name (used everywhere in the app). Admins can
         also delete records, archive units, and edit prices. Add new staff in your Supabase dashboard
@@ -165,13 +166,5 @@ export default function StaffAdmin() {
         </ul>
       )}
     </Layout>
-  )
-}
-
-function BackLink() {
-  return (
-    <Link to="/" className="text-xl leading-none text-slate-300">
-      ←
-    </Link>
   )
 }

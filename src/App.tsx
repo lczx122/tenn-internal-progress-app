@@ -59,6 +59,7 @@ export default function App() {
     <Routes>
       <Route path="/" element={<Dashboard />} />
       <Route path="/units" element={<JobsList />} />
+      <Route path="/units/new" element={<NewJob />} />
       <Route path="/units/bulk" element={<UnitsBulk />} />
       <Route path="/claims" element={<Claims />} />
       <Route path="/reports" element={<Reports />} />

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
-import { realtimeChannel } from '../lib/realtime'
+import { realtimeChannel, coalesce } from '../lib/realtime'
 import type { Claim, Job } from '../lib/types'
 import { Layout } from '../components/Layout'
 import { CATEGORIES } from '../lib/categories'
@@ -41,8 +41,8 @@ export default function Reports() {
     return () => mq.removeEventListener('change', on)
   }, [])
 
-  async function load() {
-    progressStart()
+  async function load(quiet = false) {
+    if (!quiet) progressStart()
     try {
       const [{ data: j, error: ej }, { data: c }, { data: q }] = await Promise.all([
         supabase.from('jobs').select('*').order('project'),
@@ -64,18 +64,21 @@ export default function Reports() {
       setLoadFailed(true)
     } finally {
       setLoading(false)
-      progressDone()
+      if (!quiet) progressDone()
     }
   }
 
   useEffect(() => {
     load()
+    // One quiet refetch per burst of realtime events (no progress-bar sweep).
+    const rt = coalesce(() => load(true))
     const channel = realtimeChannel('reports')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'jobs' }, () => load())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'claims' }, () => load())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'quotations' }, () => load())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'jobs' }, rt.run)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'claims' }, rt.run)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'quotations' }, rt.run)
       .subscribe()
     return () => {
+      rt.cancel()
       supabase.removeChannel(channel)
     }
   }, [])
