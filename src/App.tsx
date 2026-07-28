@@ -31,7 +31,7 @@ export default function App() {
   // guest never briefly sees an internal page.
   if (loading || (session && !roleReady)) {
     return (
-      <div className="flex h-full items-center justify-center text-slate-500">
+      <div className="flex h-full items-center justify-center text-muted-2">
         Loading…
       </div>
     )

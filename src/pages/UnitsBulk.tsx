@@ -103,22 +103,22 @@ export default function UnitsBulk() {
   if (!isAdmin) {
     return (
       <Layout title="Bulk edit" back={<BackLink fallback="/units" />}>
-        <p className="rounded-xl border border-dashed border-slate-300 py-12 text-center text-slate-400">
+        <p className="rounded-xl border border-dashed border-line-2 py-12 text-center text-faint">
           Admins only.
         </p>
       </Layout>
     )
   }
 
-  const cell = 'w-full rounded border border-transparent bg-transparent px-2 py-1.5 text-sm outline-none hover:border-slate-200 focus:border-slate-900 focus:bg-white'
-  const th = 'px-2 py-2 text-left text-xs font-semibold text-slate-500 whitespace-nowrap'
+  const cell = 'w-full rounded border border-transparent bg-transparent px-2 py-1.5 text-sm outline-none hover:border-line focus:border-strong focus:bg-surface'
+  const th = 'px-2 py-2 text-left text-xs font-semibold text-muted-2 whitespace-nowrap'
 
   return (
     <Layout title="Bulk edit units" back={<BackLink fallback="/units" />} wide onRefresh={load}>
       <div className="mb-3 flex items-center justify-between gap-2">
         <button
           onClick={() => setShowArchived((v) => !v)}
-          className="text-xs font-medium text-slate-500 underline"
+          className="text-xs font-medium text-muted-2 underline"
         >
           {showArchived ? '← Active units' : 'View archived'}
         </button>
@@ -126,7 +126,7 @@ export default function UnitsBulk() {
           {dirtyIds.length > 0 && (
             <button
               onClick={() => { setDrafts({}); setMsg(null) }}
-              className="rounded-lg px-3 py-1.5 text-sm font-medium text-slate-500 active:bg-slate-100"
+              className="rounded-lg px-3 py-1.5 text-sm font-medium text-muted-2 active:bg-press"
             >
               Discard
             </button>
@@ -134,7 +134,7 @@ export default function UnitsBulk() {
           <button
             onClick={saveAll}
             disabled={saving || dirtyIds.length === 0}
-            className="rounded-lg bg-slate-900 px-4 py-1.5 text-sm font-medium text-white active:bg-slate-700 disabled:opacity-40"
+            className="rounded-lg bg-primary px-4 py-1.5 text-sm font-medium text-white active:bg-primary-press disabled:opacity-40"
           >
             {saving ? 'Saving…' : dirtyIds.length ? `Save ${dirtyIds.length} change${dirtyIds.length === 1 ? '' : 's'}` : 'Save'}
           </button>
@@ -142,7 +142,7 @@ export default function UnitsBulk() {
       </div>
 
       {msg && <p className="mb-3 rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-700">{msg}</p>}
-      <p className="mb-3 px-1 text-xs text-slate-400">
+      <p className="mb-3 px-1 text-xs text-faint">
         Tip: edit any cell, then Save. Leave the richer fields (house type, owner, keys) to each unit's full form.
       </p>
 
@@ -153,10 +153,10 @@ export default function UnitsBulk() {
           No {showArchived ? 'archived' : 'active'} units.
         </EmptyState>
       ) : (
-        <div className="overflow-x-auto rounded-xl bg-white shadow-sm">
+        <div className="overflow-x-auto rounded-xl bg-surface shadow-sm">
           <table className="min-w-full">
             <thead>
-              <tr className="border-b border-slate-200">
+              <tr className="border-b border-line">
                 <th className={th}>Customer</th>
                 <th className={th}>Address / unit code</th>
                 <th className={th}>Phone</th>
@@ -171,7 +171,7 @@ export default function UnitsBulk() {
               {visible.map((job) => {
                 const dirty = job.id in drafts
                 return (
-                  <tr key={job.id} className={'border-b border-slate-100 last:border-0 ' + (dirty ? 'bg-amber-50/60' : '')}>
+                  <tr key={job.id} className={'border-b border-line-faint last:border-0 ' + (dirty ? 'bg-amber-50/60' : '')}>
                     <td className="min-w-[10rem] px-1">
                       <input className={cell} value={cellValue(job, 'customer_name')} onChange={(e) => setCell(job, 'customer_name', e.target.value)} />
                     </td>
@@ -209,7 +209,7 @@ export default function UnitsBulk() {
                       <input type="date" className={cell} value={cellValue(job, 'target_date')} onChange={(e) => setCell(job, 'target_date', e.target.value)} />
                     </td>
                     <td className="px-2 whitespace-nowrap">
-                      <Link to={`/job/${job.id}`} className="text-xs font-medium text-slate-400 underline">Open</Link>
+                      <Link to={`/job/${job.id}`} className="text-xs font-medium text-faint underline">Open</Link>
                     </td>
                   </tr>
                 )

@@ -250,7 +250,7 @@ export default function Dashboard() {
       <div className="mb-4 flex gap-2">
         <Link
           to="/quote"
-          className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm active:bg-slate-700"
+          className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white shadow-sm active:bg-primary-press"
         >
           <Icon name="receipt" className="h-4 w-4" /> New Quotation
         </Link>
@@ -284,7 +284,7 @@ export default function Dashboard() {
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:gap-4">
             <StatTile label="Active units" value={active.length} />
             <StatTile label="Done · ready to archive" value={doneCount} accent="text-emerald-600" />
-            <StatTile label="Needs attention" value={attention.length} accent={attention.length ? 'text-rose-600' : 'text-slate-900'} />
+            <StatTile label="Needs attention" value={attention.length} accent={attention.length ? 'text-rose-600' : 'text-ink'} />
             <StatTile label="Open work items" value={openItems} />
           </div>
 
@@ -294,8 +294,8 @@ export default function Dashboard() {
           {/* Schedule: overdue + upcoming */}
           <section>
             <div className="mb-2 flex items-center justify-between px-1">
-              <h2 className="text-sm font-semibold text-slate-700">My schedule</h2>
-              <Link to="/schedule" className="text-xs font-medium text-slate-500">View all ›</Link>
+              <h2 className="text-sm font-semibold text-body">My schedule</h2>
+              <Link to="/schedule" className="text-xs font-medium text-muted-2">View all ›</Link>
             </div>
             {schedule.length === 0 ? (
               <Empty>Nothing assigned to you in the next week.</Empty>
@@ -305,14 +305,14 @@ export default function Dashboard() {
                   <li key={a.id}>
                     <Link
                       to={`/appointment/${a.id}`}
-                      className="flex items-center justify-between gap-2 rounded-xl bg-white p-3 shadow-sm active:bg-slate-50"
+                      className="flex items-center justify-between gap-2 rounded-xl bg-surface p-3 shadow-sm active:bg-press"
                     >
                       <div className="min-w-0">
-                        <p className="flex items-center gap-1.5 truncate font-medium text-slate-800">
-                          <Icon name={getApptType(a.type).icon} className="h-4 w-4 shrink-0 text-slate-400" />
+                        <p className="flex items-center gap-1.5 truncate font-medium text-ink-2">
+                          <Icon name={getApptType(a.type).icon} className="h-4 w-4 shrink-0 text-faint" />
                           <span className="truncate">{a.title || a.customer_name || getApptType(a.type).label}</span>
                         </p>
-                        <p className="truncate text-xs text-slate-500">
+                        <p className="truncate text-xs text-muted-2">
                           {dayLabel(new Date(a.starts_at))} · {timeLabel(a.starts_at)}
                           {a.who ? ` · ${a.who}` : ''}
                         </p>
@@ -342,10 +342,10 @@ export default function Dashboard() {
                     className="block active:opacity-70"
                   >
                     <div className="mb-1 flex items-center justify-between text-xs">
-                      <span className="font-medium text-slate-700">{stage.label}</span>
-                      <span className="text-slate-500">{count}</span>
+                      <span className="font-medium text-body">{stage.label}</span>
+                      <span className="text-muted-2">{count}</span>
                     </div>
-                    <div className="h-2.5 w-full overflow-hidden rounded-full bg-slate-100">
+                    <div className="h-2.5 w-full overflow-hidden rounded-full bg-page">
                       <div
                         className={`h-full rounded-full transition-all duration-500 ${stage.color}`}
                         style={{ width: `${Math.round((count / max) * 100)}%` }}
@@ -371,13 +371,13 @@ export default function Dashboard() {
                   <li key={u.job.id}>
                     <Link
                       to={`/job/${u.job.id}`}
-                      className="block rounded-xl bg-white p-3 shadow-sm active:bg-slate-50"
+                      className="block rounded-xl bg-surface p-3 shadow-sm active:bg-press"
                     >
                       <div className="flex items-start justify-between gap-2">
                         <div className="min-w-0">
-                          <p className="truncate font-semibold text-slate-900">{u.job.unit_code || u.job.address || u.job.customer_name}</p>
+                          <p className="truncate font-semibold text-ink">{u.job.unit_code || u.job.address || u.job.customer_name}</p>
                           {u.job.customer_name && (u.job.unit_code || u.job.address) && (
-                            <p className="truncate text-xs text-slate-500">{u.job.customer_name}</p>
+                            <p className="truncate text-xs text-muted-2">{u.job.customer_name}</p>
                           )}
                         </div>
                         <div className="flex shrink-0 flex-wrap justify-end gap-1">
@@ -396,7 +396,7 @@ export default function Dashboard() {
                           ))}
                         </div>
                       </div>
-                      <p className="mt-1.5 text-xs text-slate-400">
+                      <p className="mt-1.5 text-xs text-faint">
                         {u.pct}% · updated {relativeTime(u.job.updated_at)}
                       </p>
                     </Link>
@@ -411,20 +411,20 @@ export default function Dashboard() {
           {/* Claims summary */}
           <section>
             <div className="mb-2 flex items-center justify-between px-1">
-              <h2 className="text-sm font-semibold text-slate-700">Collection</h2>
+              <h2 className="text-sm font-semibold text-body">Collection</h2>
               <span className="flex items-center gap-3">
-                <Link to="/reports" className="text-xs font-medium text-slate-500">Report ›</Link>
-                <Link to="/claims" className="text-xs font-medium text-slate-500">View all ›</Link>
+                <Link to="/reports" className="text-xs font-medium text-muted-2">Report ›</Link>
+                <Link to="/claims" className="text-xs font-medium text-muted-2">View all ›</Link>
               </span>
             </div>
             {claimsSummary.order === 0 && claimsSummary.collected === 0 ? (
               <Empty>No order totals set yet. Add one on a unit to track collections.</Empty>
             ) : (
-              <div className="space-y-3 rounded-xl bg-white p-4 shadow-sm">
+              <div className="space-y-3 rounded-xl bg-surface p-4 shadow-sm">
                 <div className="grid grid-cols-3 gap-1.5 text-center">
-                  <div className="min-w-0 rounded-lg bg-slate-50 px-1.5 py-2">
-                    <div className="text-[11px] text-slate-400">Order</div>
-                    <div className="text-sm font-semibold leading-tight tabular-nums text-slate-800 lg:text-[13px]">
+                  <div className="min-w-0 rounded-lg bg-surface-2 px-1.5 py-2">
+                    <div className="text-[11px] text-faint">Order</div>
+                    <div className="text-sm font-semibold leading-tight tabular-nums text-ink-2 lg:text-[13px]">
                       
                       <span>{money0(claimsSummary.order)}</span>
                     </div>
@@ -444,7 +444,7 @@ export default function Dashboard() {
                     </div>
                   </div>
                 </div>
-                <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100">
+                <div className="h-2 w-full overflow-hidden rounded-full bg-page">
                   <div
                     className="h-full rounded-full bg-emerald-500 transition-all"
                     style={{ width: `${claimsSummary.order > 0 ? Math.min(100, Math.round((claimsSummary.collected / claimsSummary.order) * 100)) : 0}%` }}
@@ -456,9 +456,9 @@ export default function Dashboard() {
                       <li key={job.id}>
                         <Link
                           to={`/job/${job.id}`}
-                          className="flex items-center justify-between gap-2 rounded-lg px-2 py-1.5 active:bg-slate-50"
+                          className="flex items-center justify-between gap-2 rounded-lg px-2 py-1.5 active:bg-press"
                         >
-                          <span className="min-w-0 truncate text-sm text-slate-700">
+                          <span className="min-w-0 truncate text-sm text-body">
                             {job.customer_name || job.unit_code || '—'}
                           </span>
                           <span className="shrink-0 text-sm font-medium text-amber-700">{money(balance)}</span>
@@ -476,18 +476,18 @@ export default function Dashboard() {
             {categoryStats.length === 0 ? (
               <Empty>No categories on any active unit yet.</Empty>
             ) : (
-              <div className="space-y-3 rounded-xl bg-white p-4 shadow-sm">
+              <div className="space-y-3 rounded-xl bg-surface p-4 shadow-sm">
                 {categoryStats.map(({ cat, count, pct }) => (
                   <Link key={cat.key} to={`/units?cat=${cat.key}`} className="block active:opacity-70">
                     <div className="mb-1 flex items-center justify-between text-xs">
                       <span className={`rounded-full border px-2 py-0.5 font-semibold ${cat.accent}`}>
                         {cat.label}
                       </span>
-                      <span className="text-slate-500">
+                      <span className="text-muted-2">
                         {pct}% · {count} {count === 1 ? 'unit' : 'units'}
                       </span>
                     </div>
-                    <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100">
+                    <div className="h-2 w-full overflow-hidden rounded-full bg-page">
                       <div
                         className={`h-full rounded-full transition-all duration-500 ${getStage(stageForPercent(pct)).color}`}
                         style={{ width: `${pct}%` }}
@@ -524,20 +524,20 @@ export default function Dashboard() {
             {events.length === 0 ? (
               <Empty>No activity yet.</Empty>
             ) : (
-              <ul className="max-h-[26rem] space-y-3 overflow-y-auto rounded-xl bg-white p-4 shadow-sm">
+              <ul className="max-h-[26rem] space-y-3 overflow-y-auto rounded-xl bg-surface p-4 shadow-sm">
                 {events.map((ev) => (
                   <li key={ev.id} className="flex gap-3">
-                    <div className="mt-0.5 text-slate-400"><Icon name={eventIconName(ev.type)} className="h-4 w-4" /></div>
+                    <div className="mt-0.5 text-faint"><Icon name={eventIconName(ev.type)} className="h-4 w-4" /></div>
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm text-slate-800">
+                      <p className="text-sm text-ink-2">
                         {ev.job_id && jobName.has(ev.job_id) && (
-                          <Link to={`/job/${ev.job_id}`} className="font-semibold text-slate-900 underline">
+                          <Link to={`/job/${ev.job_id}`} className="font-semibold text-ink underline">
                             {jobName.get(ev.job_id)}
                           </Link>
                         )}{' '}
                         <span className="break-words">{ev.body}</span>
                       </p>
-                      <p className="mt-0.5 text-xs text-slate-400">
+                      <p className="mt-0.5 text-xs text-faint">
                         {ev.author_name || 'Someone'} · {formatDateTime(ev.created_at)}
                       </p>
                     </div>
@@ -561,11 +561,11 @@ function stageForPercent(pct: number): string {
   return best.key
 }
 
-function StatTile({ label, value, accent = 'text-slate-900' }: { label: string; value: number; accent?: string }) {
+function StatTile({ label, value, accent = 'text-ink' }: { label: string; value: number; accent?: string }) {
   return (
-    <div className="rounded-xl bg-white p-4 shadow-sm">
-      <div className={`text-3xl font-bold leading-none ${accent}`}>{value}</div>
-      <div className="mt-1.5 text-xs font-medium text-slate-500">{label}</div>
+    <div className="rounded-xl bg-surface p-4 shadow-sm">
+      <div className={`font-display text-3xl font-bold leading-none tabular-nums ${accent}`}>{value}</div>
+      <div className="mt-1.5 text-xs font-medium text-muted-2">{label}</div>
     </div>
   )
 }
@@ -573,7 +573,7 @@ function StatTile({ label, value, accent = 'text-slate-900' }: { label: string; 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section>
-      <h2 className="mb-2 px-1 text-sm font-semibold text-slate-700">{title}</h2>
+      <h2 className="mb-2 px-1 text-sm font-semibold text-body">{title}</h2>
       {children}
     </section>
   )
@@ -581,7 +581,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 
 function Empty({ children }: { children: React.ReactNode }) {
   return (
-    <div className="rounded-xl border border-dashed border-slate-300 py-6 text-center text-sm text-slate-400">
+    <div className="rounded-xl border border-dashed border-line-2 py-6 text-center text-sm text-faint">
       {children}
     </div>
   )

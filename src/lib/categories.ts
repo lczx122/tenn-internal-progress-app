@@ -14,7 +14,7 @@ export interface Category {
 export const CATEGORIES: Category[] = [
   { key: 'Mindhome',         label: 'Mindhome',         accent: 'text-indigo-700 bg-indigo-50 border-indigo-200' },
   { key: 'Aluminium Cabinet',label: 'Aluminium Cabinet',accent: 'text-cyan-700 bg-cyan-50 border-cyan-200' },
-  { key: 'Iron Work',        label: 'Iron Work',        accent: 'text-slate-700 bg-slate-100 border-slate-300' },
+  { key: 'Iron Work',        label: 'Iron Work',        accent: 'text-body bg-page border-line-2' },
   { key: 'Aluminium Work',   label: 'Aluminium Work',   accent: 'text-sky-700 bg-sky-50 border-sky-200' },
   { key: 'Painting',         label: 'Painting',         accent: 'text-fuchsia-700 bg-fuchsia-50 border-fuchsia-200' },
   { key: 'Waterproofing',    label: 'Waterproofing',    accent: 'text-blue-700 bg-blue-50 border-blue-200' },
@@ -31,7 +31,7 @@ export function getCategory(key: string): Category {
     byKey.get(key) ?? {
       key,
       label: key,
-      accent: 'text-slate-700 bg-slate-50 border-slate-200',
+      accent: 'text-body bg-surface-2 border-line',
     }
   )
 }

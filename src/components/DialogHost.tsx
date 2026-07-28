@@ -47,10 +47,10 @@ export function DialogHost() {
         role="dialog"
         aria-modal="true"
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-sm rounded-2xl bg-white p-4 shadow-xl"
+        className="w-full max-w-sm rounded-2xl bg-surface p-4 shadow-xl"
       >
-        {d.title && <h2 className="mb-1 text-base font-semibold text-slate-900">{d.title}</h2>}
-        <p className="text-sm text-slate-700">{d.message}</p>
+        {d.title && <h2 className="mb-1 text-base font-semibold text-ink">{d.title}</h2>}
+        <p className="text-sm text-body">{d.message}</p>
 
         {d.input && (
           <input
@@ -61,21 +61,21 @@ export function DialogHost() {
               if (e.key === 'Enter') confirm()
             }}
             placeholder={d.input.placeholder}
-            className="mt-3 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-base text-slate-900 outline-none focus:border-slate-900"
+            className="mt-3 w-full rounded-lg border border-line-2 bg-surface px-3 py-2.5 text-base text-ink outline-none focus:border-strong"
           />
         )}
 
         {d.requireText && (
           <div className="mt-3">
-            <p className="mb-1 text-xs text-slate-500">
-              Type <span className="font-mono font-bold text-slate-700">{d.requireText}</span> to confirm:
+            <p className="mb-1 text-xs text-muted-2">
+              Type <span className="font-mono font-bold text-body">{d.requireText}</span> to confirm:
             </p>
             <input
               ref={inputRef}
               value={guard}
               onChange={(e) => setGuard(e.target.value)}
               placeholder={d.requireText}
-              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-base text-slate-900 outline-none focus:border-red-500"
+              className="w-full rounded-lg border border-line-2 bg-surface px-3 py-2.5 text-base text-ink outline-none focus:border-red-500"
             />
           </div>
         )}
@@ -83,7 +83,7 @@ export function DialogHost() {
         <div className="mt-4 flex justify-end gap-2">
           <button
             onClick={() => close(d.input ? null : false)}
-            className="min-h-[44px] rounded-lg border border-slate-300 bg-white px-4 text-sm font-medium text-slate-700 active:bg-slate-50"
+            className="min-h-[44px] rounded-lg border border-line-2 bg-surface px-4 text-sm font-medium text-body active:bg-press"
           >
             {d.cancelLabel}
           </button>
@@ -93,7 +93,7 @@ export function DialogHost() {
             autoFocus={!d.input && !d.requireText}
             className={
               'min-h-[44px] rounded-lg px-4 text-sm font-semibold text-white disabled:opacity-50 ' +
-              (d.danger ? 'bg-red-600 active:bg-red-700' : 'bg-slate-900 active:bg-slate-700')
+              (d.danger ? 'bg-red-600 active:bg-red-700' : 'bg-primary active:bg-primary-press')
             }
           >
             {d.confirmLabel}

@@ -231,8 +231,8 @@ export default function AppointmentForm() {
   }
 
   const field =
-    'block w-full min-w-0 rounded-lg border border-slate-300 px-3 py-2.5 text-base outline-none focus:border-slate-900'
-  const labelCls = 'mb-1 block text-sm font-medium text-slate-700'
+    'block w-full min-w-0 rounded-lg border border-line-2 px-3 py-2.5 text-base outline-none focus:border-strong'
+  const labelCls = 'mb-1 block text-sm font-medium text-body'
 
   if (loading) {
     return (
@@ -245,7 +245,7 @@ export default function AppointmentForm() {
   return (
     <Layout title={isEdit ? 'Edit appointment' : 'New appointment'} back={<BackLink fallback="/schedule" />}>
       <form onSubmit={onSubmit} className="mx-auto max-w-2xl space-y-4">
-        <div className="space-y-4 rounded-xl bg-white p-4 shadow-sm">
+        <div className="space-y-4 rounded-xl bg-surface p-4 shadow-sm">
           <div>
             <label className={labelCls}>Type</label>
             <select className={field} value={form.type} onChange={(e) => set('type', e.target.value)}>
@@ -299,8 +299,8 @@ export default function AppointmentForm() {
                     className={
                       'rounded-full border px-3 py-1.5 text-sm font-medium ' +
                       (on
-                        ? 'border-slate-900 bg-slate-900 text-white'
-                        : 'border-slate-300 bg-white text-slate-600 active:bg-slate-50')
+                        ? 'border-primary bg-primary text-white'
+                        : 'border-line-2 bg-surface text-muted active:bg-press')
                     }
                   >
                     {on ? '✓ ' : ''}
@@ -308,7 +308,7 @@ export default function AppointmentForm() {
                   </button>
                 )
               })}
-              {people.length === 0 && <p className="text-sm text-slate-400">No users found.</p>}
+              {people.length === 0 && <p className="text-sm text-faint">No users found.</p>}
             </div>
           </div>
           {(!isEdit || ownerId === session?.user.id) && (
@@ -321,19 +321,19 @@ export default function AppointmentForm() {
                 className={
                   'flex w-full items-center justify-between gap-3 rounded-lg border px-3 py-2.5 text-left ' +
                   (form.is_private
-                    ? 'border-slate-900 bg-slate-900 text-white'
-                    : 'border-slate-300 bg-white text-slate-700')
+                    ? 'border-primary bg-primary text-white'
+                    : 'border-line-2 bg-surface text-body')
                 }
               >
                 <span className="flex items-center gap-2 text-sm font-medium">
                   <Icon name="lock" className="h-4 w-4" /> Private — only you can see this
                 </span>
                 <span className={'relative h-6 w-10 shrink-0 rounded-full transition ' + (form.is_private ? 'bg-emerald-400' : 'bg-slate-300')}>
-                  <span className={'absolute top-0.5 h-5 w-5 rounded-full bg-white transition-all ' + (form.is_private ? 'left-[1.125rem]' : 'left-0.5')} />
+                  <span className={'absolute top-0.5 h-5 w-5 rounded-full bg-surface transition-all ' + (form.is_private ? 'left-[1.125rem]' : 'left-0.5')} />
                 </span>
               </button>
               {form.is_private && (
-                <p className="mt-1 text-xs text-slate-500">
+                <p className="mt-1 text-xs text-muted-2">
                   Hidden from everyone else, including admins. Your reminders still work.
                 </p>
               )}
@@ -341,7 +341,7 @@ export default function AppointmentForm() {
           )}
         </div>
 
-        <div className="space-y-4 rounded-xl bg-white p-4 shadow-sm">
+        <div className="space-y-4 rounded-xl bg-surface p-4 shadow-sm">
           <div>
             <label className={labelCls}>Linked unit (optional)</label>
             <select
@@ -365,7 +365,7 @@ export default function AppointmentForm() {
               ))}
             </select>
             {selectedJob && (
-              <Link to={`/job/${selectedJob.id}`} className="mt-1 inline-block text-xs text-slate-500 underline">
+              <Link to={`/job/${selectedJob.id}`} className="mt-1 inline-block text-xs text-muted-2 underline">
                 Open unit ›
               </Link>
             )}
@@ -394,7 +394,7 @@ export default function AppointmentForm() {
         <button
           type="submit"
           disabled={busy}
-          className="w-full rounded-lg bg-slate-900 py-3 font-medium text-white active:bg-slate-700 disabled:opacity-60"
+          className="w-full rounded-lg bg-primary py-3 font-medium text-white active:bg-primary-press disabled:opacity-60"
         >
           {busy ? 'Saving…' : isEdit ? 'Save changes' : 'Create appointment'}
         </button>
@@ -414,7 +414,7 @@ export default function AppointmentForm() {
               <button
                 onClick={() => changeStatus('cancelled')}
                 disabled={busy}
-                className="flex-1 rounded-lg border border-slate-300 py-2.5 text-sm font-medium text-slate-600 active:bg-slate-100 disabled:opacity-60"
+                className="flex-1 rounded-lg border border-line-2 py-2.5 text-sm font-medium text-muted active:bg-press disabled:opacity-60"
               >
                 Cancel appt
               </button>
@@ -423,7 +423,7 @@ export default function AppointmentForm() {
             <button
               onClick={() => changeStatus('scheduled')}
               disabled={busy}
-              className="w-full rounded-lg border border-slate-300 py-2.5 text-sm font-medium text-slate-600 active:bg-slate-100 disabled:opacity-60"
+              className="w-full rounded-lg border border-line-2 py-2.5 text-sm font-medium text-muted active:bg-press disabled:opacity-60"
             >
               Reopen (mark scheduled)
             </button>

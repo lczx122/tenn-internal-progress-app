@@ -179,19 +179,19 @@ export default function FieldEditor() {
   }
 
   const inputClass =
-    'w-full rounded-[10px] border-[1.5px] border-slate-900 px-3 py-3 text-[17px] outline-none'
+    'w-full rounded-[10px] border-[1.5px] border-primary px-3 py-3 text-[17px] outline-none'
 
   return (
     <div
       ref={rootRef}
       className={`fixed inset-0 z-[200] ${open ? '' : 'pointer-events-none opacity-0'}`}
     >
-      <div className="absolute inset-0 bg-slate-900/45" onClick={dismiss} />
+      <div className="absolute inset-0 bg-primary/45" onClick={dismiss} />
       <div
         ref={cardRef}
-        className="absolute left-1/2 w-[min(360px,calc(100%-2rem))] -translate-x-1/2 -translate-y-1/2 rounded-2xl bg-white p-4 shadow-2xl"
+        className="absolute left-1/2 w-[min(360px,calc(100%-2rem))] -translate-x-1/2 -translate-y-1/2 rounded-2xl bg-surface p-4 shadow-2xl"
       >
-        <div className="mb-2 text-[11px] font-bold uppercase tracking-wide text-slate-500">
+        <div className="mb-2 text-[11px] font-bold uppercase tracking-wide text-muted-2">
           {label || 'Edit'}
         </div>
         <input ref={inputRef} tabIndex={-1} onInput={onBoxInput} onKeyDown={onKeyDown} className={inputClass} />
@@ -200,14 +200,14 @@ export default function FieldEditor() {
           <button
             type="button"
             onClick={cancel}
-            className="rounded-[10px] border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-600 active:bg-slate-50"
+            className="rounded-[10px] border border-line-2 px-4 py-2.5 text-sm font-semibold text-muted active:bg-press"
           >
             Cancel
           </button>
           <button
             type="button"
             onClick={dismiss}
-            className="flex-1 rounded-[10px] bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white active:bg-slate-700"
+            className="flex-1 rounded-[10px] bg-primary px-4 py-2.5 text-sm font-semibold text-white active:bg-primary-press"
           >
             Done
           </button>

@@ -175,7 +175,7 @@ export default function Claims() {
     order > 0 ? Math.round((collected / order) * 100) + '%' : '—'
 
   const num = 'px-1.5 py-2 text-right tabular-nums whitespace-nowrap overflow-hidden'
-  const head = 'px-1.5 py-2 text-right text-xs font-semibold text-slate-500 whitespace-nowrap'
+  const head = 'px-1.5 py-2 text-right text-xs font-semibold text-muted-2 whitespace-nowrap'
 
   return (
     <Layout title="Money" bottomNav wide onRefresh={load}>
@@ -190,7 +190,7 @@ export default function Claims() {
         </button>
         <button
           onClick={() => navigate('/reports')}
-          className="shrink-0 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 active:bg-slate-100"
+          className="shrink-0 rounded-lg border border-line-2 bg-surface px-3 py-2 text-sm font-medium text-body active:bg-press"
         >
           Balance report ›
         </button>
@@ -229,8 +229,8 @@ export default function Claims() {
               className={
                 'shrink-0 rounded-full border px-3 py-1.5 text-sm font-medium ' +
                 (p === activeProject
-                  ? 'border-slate-900 bg-slate-900 text-white'
-                  : 'border-slate-300 bg-white text-slate-600 active:bg-slate-50')
+                  ? 'border-primary bg-primary text-white'
+                  : 'border-line-2 bg-surface text-muted active:bg-press')
               }
             >
               {p}
@@ -246,18 +246,18 @@ export default function Claims() {
         <Tile
           label="Outstanding"
           value={money0(totals.balance)}
-          accent={totals.balance > 0 ? 'text-amber-600' : 'text-slate-900'}
+          accent={totals.balance > 0 ? 'text-amber-600' : 'text-ink'}
         />
       </div>
 
       {/* Collected & balance per work category, across the active project + scope */}
       {hasTradeData && (
-        <div className="mb-4 overflow-hidden rounded-xl bg-white shadow-sm">
-          <div className="border-b border-slate-200 px-3 py-2 text-xs font-semibold text-slate-500">Collected by trade</div>
+        <div className="mb-4 overflow-hidden rounded-xl bg-surface shadow-sm">
+          <div className="border-b border-line px-3 py-2 text-xs font-semibold text-muted-2">Collected by trade</div>
           <table className="w-full table-fixed text-xs">
             <thead>
-              <tr className="border-b border-slate-200">
-                <th className="px-2 py-2 text-left text-xs font-semibold text-slate-500">Trade</th>
+              <tr className="border-b border-line">
+                <th className="px-2 py-2 text-left text-xs font-semibold text-muted-2">Trade</th>
                 <th className={head + ' w-[84px]'}>Order</th>
                 <th className={head + ' w-[84px]'}>Collect</th>
                 <th className={head + ' w-[84px]'}>Bal.</th>
@@ -265,11 +265,11 @@ export default function Claims() {
             </thead>
             <tbody>
               {tradeAgg.map((t) => (
-                <tr key={t.cat} className="border-b border-slate-100 last:border-0">
-                  <td className="truncate px-2 py-2 font-medium text-slate-700">{t.cat}</td>
-                  <td className={num + ' text-slate-600'}>{t.order ? money0(t.order) : '—'}</td>
+                <tr key={t.cat} className="border-b border-line-faint last:border-0">
+                  <td className="truncate px-2 py-2 font-medium text-body">{t.cat}</td>
+                  <td className={num + ' text-muted'}>{t.order ? money0(t.order) : '—'}</td>
                   <td className={num + ' font-semibold text-emerald-700'}>{money0(t.collected)}</td>
-                  <td className={num + (t.cat === UNALLOCATED ? ' text-slate-400' : t.balance > 0 ? ' font-semibold text-amber-700' : ' text-slate-400')}>
+                  <td className={num + (t.cat === UNALLOCATED ? ' text-faint' : t.balance > 0 ? ' font-semibold text-amber-700' : ' text-faint')}>
                     {t.cat === UNALLOCATED ? '—' : money0(t.balance)}
                   </td>
                 </tr>
@@ -288,11 +288,11 @@ export default function Claims() {
           No collections yet. Open a unit and set its order total to start tracking collections.
         </EmptyState>
       ) : (
-        <div className="rounded-xl bg-white shadow-sm">
+        <div className="rounded-xl bg-surface shadow-sm">
           <table className="w-full table-fixed text-xs">
             <thead>
-              <tr className="border-b border-slate-200">
-                <th className="px-2 py-2 text-left text-xs font-semibold text-slate-500">Unit</th>
+              <tr className="border-b border-line">
+                <th className="px-2 py-2 text-left text-xs font-semibold text-muted-2">Unit</th>
                 <th className={head + ' w-[80px]'}>Order</th>
                 <th className={head + ' w-[80px]'}>Collect</th>
                 <th className={head + ' w-[36px]'}>%</th>
@@ -305,12 +305,12 @@ export default function Claims() {
                 const trades = perTradeRows(r.job, claimsByJob.get(r.job.id) ?? [])
                 return (
                   <Fragment key={r.job.id}>
-                    <tr className="border-b border-slate-100 last:border-0 hover:bg-slate-50">
+                    <tr className="border-b border-line-faint last:border-0 hover:bg-press">
                       <td className="px-2 py-2">
                         <div className="flex items-start gap-1.5">
                           <button
                             onClick={() => toggleExpand(r.job.id)}
-                            className="-m-1.5 shrink-0 p-2.5 text-slate-400 active:text-slate-700"
+                            className="-m-1.5 shrink-0 p-2.5 text-faint active:text-body"
                             title={isOpen ? 'Hide trades' : 'Show trades'}
                             aria-expanded={isOpen}
                             aria-label={isOpen ? 'Hide trades' : 'Show trades'}
@@ -321,25 +321,25 @@ export default function Claims() {
                             className="min-w-0 text-left"
                             onClick={() => navigate(`/job/${r.job.id}`)}
                           >
-                            <span className="block truncate font-medium text-slate-800">
+                            <span className="block truncate font-medium text-ink-2">
                               {r.job.customer_name || r.job.unit_code || '—'}
                             </span>
-                            {r.job.unit_code && <span className="block truncate text-[11px] text-slate-400">{r.job.unit_code}</span>}
+                            {r.job.unit_code && <span className="block truncate text-[11px] text-faint">{r.job.unit_code}</span>}
                           </button>
                         </div>
                       </td>
-                      <td className={num + ' text-slate-700'}>{r.order ? money0(r.order) : '—'}</td>
+                      <td className={num + ' text-body'}>{r.order ? money0(r.order) : '—'}</td>
                       <td className={num + ' font-semibold text-emerald-700'}>{money0(r.collected)}</td>
-                      <td className={num + ' text-slate-500'}>{pct(r.collected, r.order)}</td>
-                      <td className={num + (r.balance > 0 ? ' font-semibold text-amber-700' : ' text-slate-400')}>
+                      <td className={num + ' text-muted-2'}>{pct(r.collected, r.order)}</td>
+                      <td className={num + (r.balance > 0 ? ' font-semibold text-amber-700' : ' text-faint')}>
                         {money0(r.balance)}
                       </td>
                     </tr>
                     {isOpen && (
-                      <tr className="border-b border-slate-100 bg-slate-50/60">
+                      <tr className="border-b border-line-faint bg-slate-50/60">
                         <td colSpan={5} className="px-2 py-1.5">
                           {trades.length === 0 ? (
-                            <p className="py-1 text-[11px] text-slate-400">
+                            <p className="py-1 text-[11px] text-faint">
                               No per-trade breakdown yet — set order amounts by trade on the unit.
                             </p>
                           ) : (
@@ -347,10 +347,10 @@ export default function Claims() {
                               <tbody>
                                 {trades.map((t) => (
                                   <tr key={t.cat} className="text-[11px]">
-                                    <td className="truncate py-0.5 pl-5 pr-2 text-slate-500">{t.cat}</td>
-                                    <td className={num + ' w-[84px] text-slate-500'}>{t.order ? money0(t.order) : '—'}</td>
+                                    <td className="truncate py-0.5 pl-5 pr-2 text-muted-2">{t.cat}</td>
+                                    <td className={num + ' w-[84px] text-muted-2'}>{t.order ? money0(t.order) : '—'}</td>
                                     <td className={num + ' w-[84px] text-emerald-700'}>{money0(t.collected)}</td>
-                                    <td className={num + ' w-[84px] ' + (t.cat === UNALLOCATED ? 'text-slate-400' : t.balance > 0 ? 'text-amber-700' : 'text-slate-400')}>
+                                    <td className={num + ' w-[84px] ' + (t.cat === UNALLOCATED ? 'text-faint' : t.balance > 0 ? 'text-amber-700' : 'text-faint')}>
                                       {t.cat === UNALLOCATED ? '—' : money0(t.balance)}
                                     </td>
                                   </tr>
@@ -366,11 +366,11 @@ export default function Claims() {
               })}
             </tbody>
             <tfoot>
-              <tr className="border-t-2 border-slate-200 bg-slate-50 font-semibold">
-                <td className="px-2 py-2 text-left text-slate-700">Total ({rows.length})</td>
-                <td className={num + ' text-slate-800'}>{money0(totals.order)}</td>
+              <tr className="border-t-2 border-line bg-surface-2 font-semibold">
+                <td className="px-2 py-2 text-left text-body">Total ({rows.length})</td>
+                <td className={num + ' text-ink-2'}>{money0(totals.order)}</td>
                 <td className={num + ' text-emerald-700'}>{money0(totals.collected)}</td>
-                <td className={num + ' text-slate-600'}>{pct(totals.collected, totals.order)}</td>
+                <td className={num + ' text-muted'}>{pct(totals.collected, totals.order)}</td>
                 <td className={num + ' text-amber-700'}>{money0(totals.balance)}</td>
               </tr>
             </tfoot>
@@ -381,11 +381,11 @@ export default function Claims() {
   )
 }
 
-function Tile({ label, value, accent = 'text-slate-900' }: { label: string; value: string; accent?: string }) {
+function Tile({ label, value, accent = 'text-ink' }: { label: string; value: string; accent?: string }) {
   return (
-    <div className="rounded-xl bg-white p-3 shadow-sm">
+    <div className="rounded-xl bg-surface p-3 shadow-sm">
       <div className={`text-base font-bold leading-tight sm:text-xl ${accent}`}>{value}</div>
-      <div className="mt-1 text-[11px] font-medium text-slate-500">{label}</div>
+      <div className="mt-1 text-[11px] font-medium text-muted-2">{label}</div>
     </div>
   )
 }

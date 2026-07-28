@@ -51,20 +51,20 @@ export function PaymentButton() {
 
       {open && (
         <div
-          className="fixed inset-0 z-40 flex items-end justify-center bg-slate-900/50 lg:hidden"
+          className="fixed inset-0 z-40 flex items-end justify-center bg-primary/50 lg:hidden"
           onClick={() => setOpen(false)}
         >
           <div
-            className="w-full max-w-md rounded-t-2xl bg-white p-5"
+            className="w-full max-w-md rounded-t-2xl bg-surface p-5"
             style={{ paddingBottom: 'calc(1.25rem + env(safe-area-inset-bottom))' }}
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mb-3 flex items-center justify-between">
-              <h2 className="text-base font-semibold text-slate-800">Collect payment</h2>
+              <h2 className="text-base font-semibold text-ink-2">Collect payment</h2>
               <button
                 onClick={() => setOpen(false)}
                 aria-label="Close"
-                className="min-h-[40px] min-w-[40px] rounded-lg text-slate-400 active:text-slate-600"
+                className="min-h-[40px] min-w-[40px] rounded-lg text-faint active:text-muted"
               >
                 ✕
               </button>
@@ -73,35 +73,35 @@ export function PaymentButton() {
               <img
                 src="/payment-qr.png"
                 alt="Payment QR"
-                className="mx-auto mb-4 w-56 max-w-full rounded-lg border border-slate-200"
+                className="mx-auto mb-4 w-56 max-w-full rounded-lg border border-line"
                 onError={() => setQrOk(false)}
               />
             )}
             <div className="space-y-1.5 text-sm">
               {pay.bank_name && (
                 <div>
-                  <span className="text-slate-400">Bank </span>
-                  <span className="font-medium text-slate-800">{pay.bank_name}</span>
+                  <span className="text-faint">Bank </span>
+                  <span className="font-medium text-ink-2">{pay.bank_name}</span>
                 </div>
               )}
               {pay.account_name && (
                 <div>
-                  <span className="text-slate-400">Name </span>
-                  <span className="font-medium text-slate-800">{pay.account_name}</span>
+                  <span className="text-faint">Name </span>
+                  <span className="font-medium text-ink-2">{pay.account_name}</span>
                 </div>
               )}
               {pay.account_number && (
                 <button
                   onClick={copyAcct}
-                  className="flex w-full items-center justify-between rounded-lg border border-slate-200 px-3 py-2 active:bg-slate-50"
+                  className="flex w-full items-center justify-between rounded-lg border border-line px-3 py-2 active:bg-press"
                 >
-                  <span className="font-mono text-base font-semibold text-slate-900">{pay.account_number}</span>
+                  <span className="font-mono text-base font-semibold text-ink">{pay.account_number}</span>
                   <span className="text-xs font-medium text-emerald-600">{copied ? 'Copied ✓' : 'Tap to copy'}</span>
                 </button>
               )}
-              {pay.note && <p className="pt-1 text-xs text-slate-500">{pay.note}</p>}
+              {pay.note && <p className="pt-1 text-xs text-muted-2">{pay.note}</p>}
               {!pay.bank_name && !pay.account_number && (
-                <p className="text-xs text-slate-400">Bank details not set yet — an admin can add them in Settings.</p>
+                <p className="text-xs text-faint">Bank details not set yet — an admin can add them in Settings.</p>
               )}
             </div>
           </div>

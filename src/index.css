@@ -1,4 +1,15 @@
 @tailwind base;
+
+/* Brand display face (variable weight 600-800), self-hosted — used for page
+   titles and big figures via the `font-display` family token. */
+@font-face {
+  font-family: 'Archivo';
+  src: url('/fonts/archivo.woff2') format('woff2');
+  font-weight: 600 800;
+  font-style: normal;
+  font-display: swap;
+}
+
 @tailwind components;
 @tailwind utilities;
 
@@ -18,45 +29,70 @@ body {
 }
 
 /* ============================================================
-   DARK MODE
-   Re-theme the common neutral utilities under `.dark` (higher specificity than
-   the base utility, so no per-element edits needed). The app chrome (slate-900
-   header / sidebar / primary buttons) is already dark, so it's intentionally
-   left untouched and stays dark in both themes. Accent "soft" chips become dark
-   translucent tints so they don't glare on dark cards.
+   THEME TOKENS
+   Semantic neutrals as CSS variables, consumed by tailwind.config.js
+   (bg-surface, text-ink, border-line, …). Dark mode = redefine the
+   variables once — no per-utility override rules for neutrals. Accent
+   tints below still use targeted .dark rules (stable, complete set).
    ============================================================ */
+:root {
+  --surface: #ffffff;
+  --surface-2: #f8fafc;
+  --page: #f1f5f9;
+  --fill: #e2e8f0;
+  --ink: #0f172a;
+  --ink-2: #1e293b;
+  --body: #334155;
+  --muted: #475569;
+  --muted-2: #64748b;
+  --faint: #94a3b8;
+  --line: #e2e8f0;
+  --line-2: #cbd5e1;
+  --line-faint: #f1f5f9;
+  --press: #f1f5f9;
+  --press-2: #e2e8f0;
+  --strong: #0f172a;
+  /* primary = app chrome + primary buttons; deliberately dark in BOTH themes */
+  --primary: #0f172a;
+  --primary-press: #334155;
+}
+.dark {
+  --surface: #1e293b;
+  --surface-2: #1e293b;
+  --page: #0b1220;
+  --fill: #334155;
+  --ink: #f1f5f9;
+  --ink-2: #e7edf5;
+  --body: #cbd5e1;
+  --muted: #b4c0d4;
+  --muted-2: #94a3b8;
+  --faint: #8a9bb2;
+  --line: #334155;
+  --line-2: #3c4b63;
+  --line-faint: #243044;
+  --press: #26344e;
+  --press-2: #26344e;
+  --strong: #64748b;
+}
+
 .dark body { background: #0b1220; color: #e2e8f0; }
 /* native controls (date pickers, dropdown arrows, scrollbars) render dark */
 .dark { color-scheme: dark; }
 
-/* form controls: many inputs don't carry a bg-white class, so theme them all so
+/* form controls: many inputs don't carry a bg class, so theme them all so
    their text never ends up dark-on-dark (or light-on-white). */
 .dark input, .dark select, .dark textarea { background-color: #1e293b; color: #e7edf5; border-color: #3c4b63; }
 .dark input::placeholder, .dark textarea::placeholder { color: #8a9bb2; }
+/* Transparent inline-edit cells (costing spreadsheet, bulk grid): the broad
+   input rule above would paint them as solid boxes and destroy the row striping
+   — two classes beat one class + element, so bg-transparent wins again. */
+.dark input.bg-transparent, .dark textarea.bg-transparent, .dark select.bg-transparent { background-color: transparent; }
 
-/* surfaces */
-.dark .bg-white { background-color: #1e293b; }
-.dark .bg-slate-50 { background-color: #1e293b; }
-.dark .bg-slate-100 { background-color: #0b1220; }
-.dark .bg-slate-200 { background-color: #334155; }
-
-/* text */
-.dark .text-slate-900 { color: #f1f5f9; }
-.dark .text-slate-800 { color: #e7edf5; }
-.dark .text-slate-700 { color: #cbd5e1; }
-.dark .text-slate-600 { color: #b4c0d4; }
-.dark .text-slate-500 { color: #94a3b8; }
-.dark .text-slate-400 { color: #8a9bb2; }
-
-/* borders / dividers */
-.dark .border-slate-100 { border-color: #243044; }
-.dark .border-slate-200 { border-color: #334155; }
-.dark .border-slate-300 { border-color: #3c4b63; }
-.dark .divide-slate-100 > * + * { border-color: #243044; }
-.dark .divide-slate-200 > * + * { border-color: #334155; }
-
-/* input focus ring colour (slate-900 is dark-on-dark otherwise) */
-.dark .focus\:border-slate-900:focus { border-color: #64748b; }
+/* legacy opacity-modified classes still in use (token colors don't take
+   opacity modifiers, so these two keep their targeted rules) */
+.dark .bg-slate-100\/70 { background-color: rgba(11, 18, 32, 0.7); }
+.dark .bg-slate-50\/60 { background-color: rgba(11, 18, 32, 0.5); }
+.dark .bg-slate-200\/60 { background-color: rgba(51, 65, 85, 0.5); }
 
 /* soft accent chips → dark translucent tints */
 .dark .bg-emerald-50 { background-color: rgba(16, 185, 129, 0.13); }
@@ -75,13 +111,6 @@ body {
 .dark .bg-red-50 { background-color: rgba(225, 29, 72, 0.12); }
 .dark .border-red-200 { border-color: rgba(225, 29, 72, 0.4); }
 .dark .text-red-700 { color: #fca5a5; }
-.dark .bg-slate-100\/70 { background-color: rgba(11, 18, 32, 0.7); }
-
-/* Transparent inline-edit cells (costing spreadsheet, bulk grid): the broad
-   input rule above would paint them as solid boxes and destroy the row striping
-   — two classes beat one class + element, so bg-transparent wins again. */
-.dark input.bg-transparent, .dark textarea.bg-transparent, .dark select.bg-transparent { background-color: transparent; }
-
 /* remaining -100 accent chips (costing status, QT badge) */
 .dark .bg-violet-100 { background-color: rgba(139, 92, 246, 0.25); }
 .dark .bg-sky-100 { background-color: rgba(14, 165, 233, 0.25); }
@@ -92,7 +121,6 @@ body {
 .dark .text-amber-700\/70 { color: rgba(252, 211, 77, 0.75); }
 .dark .text-amber-700\/80 { color: rgba(252, 211, 77, 0.85); }
 .dark .bg-amber-200\/70 { background-color: rgba(245, 158, 11, 0.25); }
-.dark .bg-slate-50\/60 { background-color: rgba(11, 18, 32, 0.5); }
 .dark .bg-amber-50\/60 { background-color: rgba(245, 158, 11, 0.1); }
 
 /* red text/borders on dark cards */
@@ -100,13 +128,7 @@ body {
 .dark .border-red-300 { border-color: rgba(225, 29, 72, 0.5); }
 .dark .border-amber-200 { border-color: rgba(245, 158, 11, 0.35); }
 
-/* press / hover feedback: the light active:/hover: backgrounds flash white on
-   dark, so give them a subtle dark highlight instead (one step up from a card). */
-.dark .active\:bg-slate-50:active,
-.dark .active\:bg-slate-100:active,
-.dark .active\:bg-slate-200:active,
-.dark .hover\:bg-slate-50:hover,
-.dark .hover\:bg-slate-100:hover { background-color: #26344e; }
+/* press feedback for accent-tinted rows */
 .dark .active\:bg-red-50:active,
 .dark .active\:bg-rose-100:active { background-color: rgba(244, 63, 94, 0.2); }
 .dark .active\:bg-amber-100:active { background-color: rgba(245, 158, 11, 0.22); }
@@ -145,10 +167,6 @@ body {
     font-size: max(1rem, 1em);
   }
 }
-
-/* dark tint for the loading skeleton (opacity-modified class isn't covered by
-   the .dark overrides above) */
-.dark .bg-slate-200\/60 { background-color: rgba(51, 65, 85, 0.5); }
 
 body {
   margin: 0;

@@ -10,8 +10,8 @@ export function FinanceToggle({ current }: { current: 'collection' | 'costing' }
   if (!isBoss) return null
 
   const base = 'flex-1 rounded-lg px-3 py-2 text-sm font-medium '
-  const on = 'bg-slate-900 text-white'
-  const off = 'border border-slate-300 bg-white text-slate-600 active:bg-slate-50'
+  const on = 'bg-primary text-white'
+  const off = 'border border-line-2 bg-surface text-muted active:bg-press'
   return (
     <div className="mb-3 flex gap-2">
       <button

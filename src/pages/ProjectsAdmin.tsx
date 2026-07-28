@@ -93,7 +93,7 @@ export default function ProjectsAdmin() {
   if (!isAdmin) {
     return (
       <Layout title="Projects" back={<BackLink fallback="/settings" />}>
-        <p className="rounded-xl border border-dashed border-slate-300 py-12 text-center text-slate-400">
+        <p className="rounded-xl border border-dashed border-line-2 py-12 text-center text-faint">
           Admins only.
         </p>
       </Layout>
@@ -102,7 +102,7 @@ export default function ProjectsAdmin() {
 
   return (
     <Layout title="Projects" back={<BackLink fallback="/settings" />} onRefresh={load}>
-      <p className="mb-3 px-1 text-xs text-slate-500">
+      <p className="mb-3 px-1 text-xs text-muted-2">
         Projects group your units. Staff pick from this list when creating a unit — only admins can add,
         rename or remove projects here.
       </p>
@@ -112,12 +112,12 @@ export default function ProjectsAdmin() {
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="New project name…"
-          className="flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-base outline-none focus:border-slate-900"
+          className="flex-1 rounded-lg border border-line-2 bg-surface px-3 py-2.5 text-base outline-none focus:border-strong"
         />
         <button
           type="submit"
           disabled={busy || !name.trim()}
-          className="shrink-0 rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-medium text-white active:bg-slate-700 disabled:opacity-50"
+          className="shrink-0 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-white active:bg-primary-press disabled:opacity-50"
         >
           Add
         </button>
@@ -134,10 +134,10 @@ export default function ProjectsAdmin() {
       ) : (
         <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           {projects.map((p) => (
-            <li key={p.id} className="flex items-center justify-between gap-2 rounded-xl bg-white p-3 shadow-sm">
+            <li key={p.id} className="flex items-center justify-between gap-2 rounded-xl bg-surface p-3 shadow-sm">
               <div className="min-w-0">
-                <p className="truncate font-medium text-slate-800">{p.name}</p>
-                <p className="text-xs text-slate-400">
+                <p className="truncate font-medium text-ink-2">{p.name}</p>
+                <p className="text-xs text-faint">
                   {(counts[p.name] ?? 0)} {(counts[p.name] ?? 0) === 1 ? 'unit' : 'units'}
                 </p>
               </div>
@@ -145,7 +145,7 @@ export default function ProjectsAdmin() {
                 <button
                   onClick={() => rename(p)}
                   disabled={busy}
-                  className="text-xs font-medium text-slate-500 underline disabled:opacity-50"
+                  className="text-xs font-medium text-muted-2 underline disabled:opacity-50"
                 >
                   Rename
                 </button>

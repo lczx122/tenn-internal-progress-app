@@ -187,10 +187,10 @@ export default function NewJob() {
   }
 
   const field =
-    'w-full rounded-lg border border-slate-300 px-3 py-2.5 text-base outline-none focus:border-slate-900'
-  const labelCls = 'mb-1 block text-sm font-medium text-slate-700'
-  const cardCls = 'rounded-xl bg-white p-4 shadow-sm space-y-4'
-  const sectionTitle = 'text-sm font-semibold text-slate-800'
+    'w-full rounded-lg border border-line-2 px-3 py-2.5 text-base outline-none focus:border-strong'
+  const labelCls = 'mb-1 block text-sm font-medium text-body'
+  const cardCls = 'rounded-xl bg-surface p-4 shadow-sm space-y-4'
+  const sectionTitle = 'text-sm font-semibold text-ink-2'
 
   if (loading) {
     return (
@@ -239,8 +239,8 @@ export default function NewJob() {
                   className={
                     'flex-1 rounded-lg border px-3 py-2.5 text-sm font-medium ' +
                     (form.is_owner === o.v
-                      ? 'border-slate-900 bg-slate-900 text-white'
-                      : 'border-slate-300 bg-white text-slate-600 active:bg-slate-50')
+                      ? 'border-primary bg-primary text-white'
+                      : 'border-line-2 bg-surface text-muted active:bg-press')
                   }
                 >
                   {o.label}
@@ -283,10 +283,10 @@ export default function NewJob() {
           <div>
             <label className={labelCls}>Project</label>
             {projects.length === 0 ? (
-              <p className="rounded-lg border border-dashed border-slate-300 px-3 py-2.5 text-sm text-slate-400">
+              <p className="rounded-lg border border-dashed border-line-2 px-3 py-2.5 text-sm text-faint">
                 No projects yet.{' '}
                 {isAdmin ? (
-                  <Link to="/projects" className="font-medium text-slate-600 underline">
+                  <Link to="/projects" className="font-medium text-muted underline">
                     Add one
                   </Link>
                 ) : (
@@ -307,7 +307,7 @@ export default function NewJob() {
               </select>
             )}
             {isAdmin && projects.length > 0 && (
-              <Link to="/projects" className="mt-1 inline-block text-xs font-medium text-slate-400 underline">
+              <Link to="/projects" className="mt-1 inline-block text-xs font-medium text-faint underline">
                 Manage projects
               </Link>
             )}
@@ -325,8 +325,8 @@ export default function NewJob() {
                     className={
                       'rounded-full border px-3 py-1.5 text-sm font-medium ' +
                       (on
-                        ? 'border-slate-900 bg-slate-900 text-white'
-                        : 'border-slate-300 bg-white text-slate-600 active:bg-slate-50')
+                        ? 'border-primary bg-primary text-white'
+                        : 'border-line-2 bg-surface text-muted active:bg-press')
                     }
                   >
                     {on ? '✓ ' : ''}
@@ -335,7 +335,7 @@ export default function NewJob() {
                 )
               })}
             </div>
-            <p className="mt-1 text-xs text-slate-400">Tick all that apply.</p>
+            <p className="mt-1 text-xs text-faint">Tick all that apply.</p>
           </div>
         </div>
 
@@ -355,8 +355,8 @@ export default function NewJob() {
                     className={
                       'rounded-full border px-3 py-1.5 text-sm font-medium ' +
                       (on
-                        ? 'border-slate-900 bg-slate-900 text-white'
-                        : 'border-slate-300 bg-white text-slate-600 active:bg-slate-50')
+                        ? 'border-primary bg-primary text-white'
+                        : 'border-line-2 bg-surface text-muted active:bg-press')
                     }
                   >
                     {on ? '✓ ' : ''}
@@ -434,7 +434,7 @@ export default function NewJob() {
         <button
           type="submit"
           disabled={busy}
-          className="w-full rounded-lg bg-slate-900 py-3 font-medium text-white active:bg-slate-700 disabled:opacity-60"
+          className="w-full rounded-lg bg-primary py-3 font-medium text-white active:bg-primary-press disabled:opacity-60"
         >
           {busy ? 'Saving…' : editing ? 'Save changes' : 'Create unit'}
         </button>

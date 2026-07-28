@@ -83,9 +83,9 @@ export function statusStyle(s: string): string {
     case 'In Progress':
       return 'bg-amber-100 text-amber-700'
     case 'Chatting':
-      return 'bg-slate-200 text-slate-600'
+      return 'bg-fill text-muted'
     default:
-      return 'bg-slate-100 text-slate-600'
+      return 'bg-page text-muted'
   }
 }
 

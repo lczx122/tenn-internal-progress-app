@@ -169,7 +169,7 @@ export default function Reports() {
   }
 
   const field =
-    'rounded-lg border border-slate-300 bg-white px-2 py-2 text-sm outline-none focus:border-slate-900'
+    'rounded-lg border border-line-2 bg-surface px-2 py-2 text-sm outline-none focus:border-strong'
 
   return (
     <Layout title="Reports" bottomNav wide onRefresh={load}>
@@ -192,28 +192,28 @@ export default function Reports() {
               </option>
             ))}
           </select>
-          <label className="flex items-center gap-1.5 text-sm text-slate-600">
+          <label className="flex items-center gap-1.5 text-sm text-muted">
             Up to
             <input type="date" value={cutoff} onChange={(e) => setCutoff(e.target.value)} className={field} />
           </label>
         </div>
         <div className="flex flex-wrap items-center gap-3">
-          <label className="flex items-center gap-1.5 text-sm text-slate-600">
+          <label className="flex items-center gap-1.5 text-sm text-muted">
             <input type="checkbox" checked={outstandingOnly} onChange={(e) => setOutstandingOnly(e.target.checked)} />
             Outstanding only
           </label>
-          <label className="flex items-center gap-1.5 text-sm text-slate-600">
+          <label className="flex items-center gap-1.5 text-sm text-muted">
             <input type="checkbox" checked={includeArchived} onChange={(e) => setIncludeArchived(e.target.checked)} />
             Include archived
           </label>
           <div className="ml-auto flex gap-2">
-            <button onClick={downloadCsv} className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 active:bg-slate-100">
+            <button onClick={downloadCsv} className="rounded-lg border border-line-2 bg-surface px-3 py-2 text-sm font-medium text-body active:bg-press">
               CSV
             </button>
             <button
               onClick={shareOrPrint}
               disabled={sharing}
-              className="rounded-lg bg-slate-900 px-3 py-2 text-sm font-medium text-white active:bg-slate-700 disabled:opacity-60"
+              className="rounded-lg bg-primary px-3 py-2 text-sm font-medium text-white active:bg-primary-press disabled:opacity-60"
             >
               {sharing ? 'Preparing…' : useShare ? 'Share PDF' : 'Print / PDF'}
             </button>
@@ -223,54 +223,54 @@ export default function Reports() {
 
       {/* The report itself — the only thing that prints */}
       <div ref={reportRef} className="report-print">
-        <h1 className="mb-3 text-sm font-bold uppercase tracking-wide text-slate-900">{title}</h1>
+        <h1 className="mb-3 text-sm font-bold uppercase tracking-wide text-ink">{title}</h1>
         {loading ? (
           <LoadingState skeleton />
         ) : loadFailed && jobs.length === 0 ? (
           <ErrorState onRetry={load} />
         ) : rows.length === 0 ? (
-          <p className="rounded-xl border border-dashed border-slate-300 py-10 text-center text-slate-400">
+          <p className="rounded-xl border border-dashed border-line-2 py-10 text-center text-faint">
             No units with {cat === ALL ? 'an order' : cat} in this selection.
           </p>
         ) : (
           <div className="overflow-x-auto">
             <table className="report-table w-full border-collapse text-xs">
               <thead>
-                <tr className="bg-slate-100 text-slate-600">
-                  <th className="border border-slate-300 px-2 py-1.5 text-left">No</th>
-                  <th className="border border-slate-300 px-2 py-1.5 text-left">Doc No</th>
-                  <th className="border border-slate-300 px-2 py-1.5 text-left">Debtor Name</th>
-                  <th className="border border-slate-300 px-2 py-1.5 text-left">Unit</th>
-                  <th className="border border-slate-300 px-2 py-1.5 text-right">Amount</th>
-                  <th className="border border-slate-300 px-2 py-1.5 text-right">Deposit</th>
-                  <th className="border border-slate-300 px-2 py-1.5 text-right">Balance</th>
-                  <th className="border border-slate-300 px-2 py-1.5 text-left">Remarks</th>
+                <tr className="bg-page text-muted">
+                  <th className="border border-line-2 px-2 py-1.5 text-left">No</th>
+                  <th className="border border-line-2 px-2 py-1.5 text-left">Doc No</th>
+                  <th className="border border-line-2 px-2 py-1.5 text-left">Debtor Name</th>
+                  <th className="border border-line-2 px-2 py-1.5 text-left">Unit</th>
+                  <th className="border border-line-2 px-2 py-1.5 text-right">Amount</th>
+                  <th className="border border-line-2 px-2 py-1.5 text-right">Deposit</th>
+                  <th className="border border-line-2 px-2 py-1.5 text-right">Balance</th>
+                  <th className="border border-line-2 px-2 py-1.5 text-left">Remarks</th>
                 </tr>
               </thead>
               <tbody>
                 {rows.map((r, i) => (
-                  <tr key={r.job.id} className="text-slate-800">
-                    <td className="border border-slate-300 px-2 py-1 text-slate-500">{i + 1}</td>
-                    <td className="whitespace-nowrap border border-slate-300 px-2 py-1">{r.docNo || '—'}</td>
-                    <td className="border border-slate-300 px-2 py-1">
+                  <tr key={r.job.id} className="text-ink-2">
+                    <td className="border border-line-2 px-2 py-1 text-muted-2">{i + 1}</td>
+                    <td className="whitespace-nowrap border border-line-2 px-2 py-1">{r.docNo || '—'}</td>
+                    <td className="border border-line-2 px-2 py-1">
                       {r.job.customer_name}
                       {r.job.unit_code ? ` (${r.job.unit_code})` : ''}
                     </td>
-                    <td className="whitespace-nowrap border border-slate-300 px-2 py-1">{r.job.unit_code || '—'}</td>
-                    <td className="whitespace-nowrap border border-slate-300 px-2 py-1 text-right tabular-nums">{money(r.amount)}</td>
-                    <td className="whitespace-nowrap border border-slate-300 px-2 py-1 text-right tabular-nums">{money(r.deposit)}</td>
-                    <td className="whitespace-nowrap border border-slate-300 px-2 py-1 text-right font-semibold tabular-nums">{money(r.balance)}</td>
-                    <td className="border border-slate-300 px-2 py-1" />
+                    <td className="whitespace-nowrap border border-line-2 px-2 py-1">{r.job.unit_code || '—'}</td>
+                    <td className="whitespace-nowrap border border-line-2 px-2 py-1 text-right tabular-nums">{money(r.amount)}</td>
+                    <td className="whitespace-nowrap border border-line-2 px-2 py-1 text-right tabular-nums">{money(r.deposit)}</td>
+                    <td className="whitespace-nowrap border border-line-2 px-2 py-1 text-right font-semibold tabular-nums">{money(r.balance)}</td>
+                    <td className="border border-line-2 px-2 py-1" />
                   </tr>
                 ))}
-                <tr className="report-total bg-slate-100 font-semibold text-slate-900">
-                  <td className="border border-slate-300 px-2 py-1.5" colSpan={4}>
+                <tr className="report-total bg-page font-semibold text-ink">
+                  <td className="border border-line-2 px-2 py-1.5" colSpan={4}>
                     TOTAL · {rows.length} unit{rows.length === 1 ? '' : 's'}
                   </td>
-                  <td className="border border-slate-300 px-2 py-1.5 text-right tabular-nums">{money(totals.amount)}</td>
-                  <td className="border border-slate-300 px-2 py-1.5 text-right tabular-nums">{money(totals.deposit)}</td>
-                  <td className="border border-slate-300 px-2 py-1.5 text-right tabular-nums">{money(totals.balance)}</td>
-                  <td className="border border-slate-300 px-2 py-1.5" />
+                  <td className="border border-line-2 px-2 py-1.5 text-right tabular-nums">{money(totals.amount)}</td>
+                  <td className="border border-line-2 px-2 py-1.5 text-right tabular-nums">{money(totals.deposit)}</td>
+                  <td className="border border-line-2 px-2 py-1.5 text-right tabular-nums">{money(totals.balance)}</td>
+                  <td className="border border-line-2 px-2 py-1.5" />
                 </tr>
               </tbody>
             </table>

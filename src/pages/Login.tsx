@@ -21,17 +21,17 @@ export default function Login() {
     <div className="flex min-h-full items-center justify-center px-4">
       <div className="w-full max-w-sm">
         <div className="mb-6 text-center">
-          <h1 className="text-2xl font-bold text-slate-900">Tenn Renovation</h1>
-          <p className="mt-1 text-sm text-slate-500">
+          <h1 className="font-display text-2xl font-bold tracking-tight text-ink">Tenn Renovation</h1>
+          <p className="mt-1 text-sm text-muted-2">
             Sign in to view and update job progress
           </p>
         </div>
         <form
           onSubmit={onSubmit}
-          className="space-y-4 rounded-2xl bg-white p-6 shadow-sm"
+          className="space-y-4 rounded-2xl bg-surface p-6 shadow-sm"
         >
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700">
+            <label className="mb-1 block text-sm font-medium text-body">
               Email
             </label>
             <input
@@ -40,12 +40,12 @@ export default function Login() {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-base outline-none focus:border-slate-900"
+              className="w-full rounded-lg border border-line-2 px-3 py-2.5 text-base outline-none focus:border-strong"
               placeholder="you@company.com"
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700">
+            <label className="mb-1 block text-sm font-medium text-body">
               Password
             </label>
             <input
@@ -54,7 +54,7 @@ export default function Login() {
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-base outline-none focus:border-slate-900"
+              className="w-full rounded-lg border border-line-2 px-3 py-2.5 text-base outline-none focus:border-strong"
               placeholder="••••••••"
             />
           </div>
@@ -66,12 +66,12 @@ export default function Login() {
           <button
             type="submit"
             disabled={busy}
-            className="w-full rounded-lg bg-slate-900 py-2.5 font-medium text-white active:bg-slate-700 disabled:opacity-60"
+            className="w-full rounded-lg bg-primary py-2.5 font-medium text-white active:bg-primary-press disabled:opacity-60"
           >
             {busy ? 'Signing in…' : 'Sign in'}
           </button>
         </form>
-        <p className="mt-4 text-center text-xs text-slate-400">
+        <p className="mt-4 text-center text-xs text-faint">
           Accounts are created by the admin. Forgot your password? Ask your admin
           to reset it.
         </p>

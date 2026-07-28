@@ -22,7 +22,7 @@ export function OfflineBanner() {
   return (
     <div
       role="status"
-      className="fixed inset-x-0 top-0 z-[90] bg-amber-500 px-4 py-1.5 text-center text-xs font-semibold text-slate-900"
+      className="fixed inset-x-0 top-0 z-[90] bg-amber-500 px-4 py-1.5 text-center text-xs font-semibold text-ink"
       style={{ paddingTop: 'calc(0.375rem + env(safe-area-inset-top))' }}
     >
       You're offline — changes can't be saved right now.

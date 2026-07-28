@@ -169,16 +169,16 @@ export default function CostingForm() {
   }
 
   const field =
-    'block w-full min-w-0 rounded-lg border border-slate-300 px-3 py-2.5 text-base outline-none focus:border-slate-900'
+    'block w-full min-w-0 rounded-lg border border-line-2 px-3 py-2.5 text-base outline-none focus:border-strong'
   // Row inputs sit in flex rows — no w-full (it fights flex-1 and collapses them).
   const rowField =
-    'min-w-0 rounded-lg border border-slate-300 px-3 py-2.5 text-base outline-none focus:border-slate-900'
-  const labelCls = 'mb-1 block text-sm font-medium text-slate-700'
+    'min-w-0 rounded-lg border border-line-2 px-3 py-2.5 text-base outline-none focus:border-strong'
+  const labelCls = 'mb-1 block text-sm font-medium text-body'
 
   if (!isBoss) {
     return (
       <Layout title="Costing" back={<BackLink fallback="/costing" />}>
-        <p className="py-10 text-center text-slate-400">Boss only.</p>
+        <p className="py-10 text-center text-faint">Boss only.</p>
       </Layout>
     )
   }
@@ -194,7 +194,7 @@ export default function CostingForm() {
     <Layout title={isEdit ? 'Edit costing' : 'New costing'} back={<BackLink fallback="/costing" />}>
       <form onSubmit={onSubmit} className="mx-auto max-w-3xl space-y-4">
         {/* Sale */}
-        <div className="space-y-4 rounded-xl bg-white p-4 shadow-sm">
+        <div className="space-y-4 rounded-xl bg-surface p-4 shadow-sm">
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className={labelCls}>Cash sale no.</label>
@@ -225,12 +225,12 @@ export default function CostingForm() {
               ))}
             </select>
             {linkedJob && (
-              <div className="mt-2 rounded-lg bg-slate-50 p-3">
+              <div className="mt-2 rounded-lg bg-surface-2 p-3">
                 <PercentBar percent={linkedPercent ?? 0} label="Unit progress" />
-                <p className="mt-2 text-xs text-slate-500">
+                <p className="mt-2 text-xs text-muted-2">
                   Status follows this unit —{' '}
                   <span className={`rounded-full px-1.5 py-0.5 text-[11px] font-medium ${statusStyle(derivedStatus ?? '')}`}>{derivedStatus}</span>. Update the unit's work cards to change it.{' '}
-                  <Link to={`/job/${jobId}`} className="font-medium text-slate-600 underline">Open unit →</Link>
+                  <Link to={`/job/${jobId}`} className="font-medium text-muted underline">Open unit →</Link>
                 </p>
               </div>
             )}
@@ -269,7 +269,7 @@ export default function CostingForm() {
                 <option value="pct">% sale</option>
               </select>
               <input type="number" inputMode="decimal" step="0.01" className={rowField + ' w-20'} placeholder={c.kind === 'pct' ? '%' : 'RM'} value={c.value} onChange={(e) => setCommissions(upd(commissions, i, { value: e.target.value }))} />
-              <span className="w-24 shrink-0 text-right text-sm font-medium text-slate-700">{money(calc.commissionAmounts[i] ?? 0)}</span>
+              <span className="w-24 shrink-0 text-right text-sm font-medium text-body">{money(calc.commissionAmounts[i] ?? 0)}</span>
               <RemoveBtn onClick={() => setCommissions(commissions.filter((_, j) => j !== i))} />
             </div>
           ))}
@@ -286,9 +286,9 @@ export default function CostingForm() {
               <input className={rowField + ' flex-1'} list="people" placeholder="Partner name" value={c.name} onChange={(e) => setShares(upd(shares, i, { name: e.target.value }))} />
               <div className="flex items-center gap-1">
                 <input type="number" inputMode="decimal" step="0.1" className={rowField + ' w-20'} placeholder="%" value={c.percent} onChange={(e) => setShares(upd(shares, i, { percent: e.target.value }))} />
-                <span className="text-slate-400">%</span>
+                <span className="text-faint">%</span>
               </div>
-              <span className="w-24 shrink-0 text-right text-sm font-medium text-slate-700">{money(calc.shareAmounts[i] ?? 0)}</span>
+              <span className="w-24 shrink-0 text-right text-sm font-medium text-body">{money(calc.shareAmounts[i] ?? 0)}</span>
               <RemoveBtn onClick={() => setShares(shares.filter((_, j) => j !== i))} />
             </div>
           ))}
@@ -297,12 +297,12 @@ export default function CostingForm() {
 
         <Figure label="Unallocated / retained" value={calc.unallocated} />
 
-        <div className="rounded-xl bg-white p-4 shadow-sm">
+        <div className="rounded-xl bg-surface p-4 shadow-sm">
           <label className={labelCls}>Status</label>
           {linkedJob ? (
-            <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm">
+            <div className="flex items-center gap-2 rounded-lg border border-line bg-surface-2 px-3 py-2.5 text-sm">
               <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${statusStyle(derivedStatus ?? '')}`}>{derivedStatus}</span>
-              <span className="text-slate-500">{linkedPercent ?? 0}% · synced from linked unit</span>
+              <span className="text-muted-2">{linkedPercent ?? 0}% · synced from linked unit</span>
             </div>
           ) : (
             <select className={field} value={status} onChange={(e) => setStatus(e.target.value)}>
@@ -317,7 +317,7 @@ export default function CostingForm() {
 
         {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
 
-        <button type="submit" disabled={busy} className="w-full rounded-lg bg-slate-900 py-3 font-medium text-white active:bg-slate-700 disabled:opacity-60">
+        <button type="submit" disabled={busy} className="w-full rounded-lg bg-primary py-3 font-medium text-white active:bg-primary-press disabled:opacity-60">
           {busy ? 'Saving…' : isEdit ? 'Save changes' : 'Create costing'}
         </button>
       </form>
@@ -343,10 +343,10 @@ function upd<T>(arr: T[], i: number, patch: Partial<T>): T[] {
 
 function Section({ title, total, children }: { title: string; total: string; children: React.ReactNode }) {
   return (
-    <section className="space-y-2 rounded-xl bg-white p-4 shadow-sm">
+    <section className="space-y-2 rounded-xl bg-surface p-4 shadow-sm">
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-slate-700">{title}</h2>
-        <span className="text-sm font-semibold text-slate-900">{total}</span>
+        <h2 className="text-sm font-semibold text-body">{title}</h2>
+        <span className="text-sm font-semibold text-ink">{total}</span>
       </div>
       {children}
     </section>
@@ -355,8 +355,8 @@ function Section({ title, total, children }: { title: string; total: string; chi
 
 function Figure({ label, value, strong, sub }: { label: string; value: number; strong?: boolean; sub?: string }) {
   return (
-    <div className="flex items-center justify-between rounded-xl bg-slate-900 px-4 py-3 text-white">
-      <span className="text-sm">{label}{sub && <span className="ml-2 text-xs text-slate-400">{sub}</span>}</span>
+    <div className="flex items-center justify-between rounded-xl bg-primary px-4 py-3 text-white">
+      <span className="text-sm">{label}{sub && <span className="ml-2 text-xs text-faint">{sub}</span>}</span>
       <span className={(strong ? 'text-lg font-bold ' : 'font-medium ') + (value < 0 ? 'text-rose-300' : '')}>{money(value)}</span>
     </div>
   )
@@ -364,7 +364,7 @@ function Figure({ label, value, strong, sub }: { label: string; value: number; s
 
 function AddBtn({ label, onClick }: { label: string; onClick: () => void }) {
   return (
-    <button type="button" onClick={onClick} className="text-sm font-medium text-slate-500 active:text-slate-800">{label}</button>
+    <button type="button" onClick={onClick} className="text-sm font-medium text-muted-2 active:text-ink-2">{label}</button>
   )
 }
 

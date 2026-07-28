@@ -21,10 +21,10 @@ function contentWidth(wide?: boolean) {
 export function AppHeader({ title, back, wide }: { title: string; back?: ReactNode; wide?: boolean }) {
   const { displayName, isAdmin, signOut } = useAuth()
   return (
-    <header className="shrink-0 bg-slate-900 text-white shadow pt-[env(safe-area-inset-top)]">
+    <header className="shrink-0 bg-primary text-white shadow pt-[env(safe-area-inset-top)]">
       <div className={`mx-auto flex w-full items-center gap-3 px-4 py-3 lg:px-8 ${contentWidth(wide)}`}>
         {back}
-        <h1 className="flex-1 truncate text-lg font-semibold">{title}</h1>
+        <h1 className="flex-1 truncate font-display text-lg font-bold tracking-tight">{title}</h1>
         <Link to="/settings" className="flex items-center gap-1.5 text-right active:opacity-70 lg:hidden" title="Settings">
           <div>
             <div className={'text-xs leading-tight ' + (isAdmin ? 'text-amber-300' : 'text-slate-300')}>
@@ -36,7 +36,7 @@ export function AppHeader({ title, back, wide }: { title: string; back?: ReactNo
         </Link>
         <button
           onClick={signOut}
-          className="min-h-[40px] rounded-md bg-slate-700 px-3 text-xs font-medium active:bg-slate-600 lg:hidden"
+          className="min-h-[40px] rounded-md bg-slate-700 px-3 text-xs font-medium active:bg-primary-press lg:hidden"
         >
           Sign out
         </button>
@@ -77,7 +77,7 @@ export function Layout({
         <main
           ref={mainRef}
           className={
-            'relative flex-1 overflow-y-auto overscroll-y-contain bg-slate-100 lg:pb-[env(safe-area-inset-bottom)] ' +
+            'relative flex-1 overflow-y-auto overscroll-y-contain bg-page lg:pb-[env(safe-area-inset-bottom)] ' +
             (bottomNav ? 'pb-[calc(2.75rem+max(0.5rem,calc(env(safe-area-inset-bottom)-0.5rem)))]' : '')
           }
         >
@@ -108,10 +108,10 @@ export function Layout({
 // The pull-to-refresh spinner: a ring that fills as you pull, then spins.
 function RefreshSpinner({ spinning, progress }: { spinning: boolean; progress: number }) {
   return (
-    <div className="mb-2 rounded-full bg-white p-1.5 shadow-md ring-1 ring-slate-200">
+    <div className="mb-2 rounded-full bg-surface p-1.5 shadow-md ring-1 ring-slate-200">
       <svg
         viewBox="0 0 24 24"
-        className={'h-5 w-5 text-slate-700 ' + (spinning ? 'animate-spin' : '')}
+        className={'h-5 w-5 text-body ' + (spinning ? 'animate-spin' : '')}
         style={spinning ? undefined : { transform: `rotate(${progress * 270}deg)`, opacity: 0.4 + progress * 0.6 }}
         fill="none"
         stroke="currentColor"

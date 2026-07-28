@@ -14,7 +14,7 @@ import { promptDialog } from '../lib/dialog'
 const ROLE_STYLE: Record<Role, string> = {
   boss: 'bg-amber-100 text-amber-700',
   admin: 'bg-emerald-100 text-emerald-700',
-  staff: 'bg-slate-100 text-slate-600',
+  staff: 'bg-page text-muted',
   guest: 'bg-sky-100 text-sky-700',
   lucas: 'bg-violet-100 text-violet-700',
 }
@@ -80,7 +80,7 @@ export default function StaffAdmin() {
   if (!isAdmin) {
     return (
       <Layout title="Staff" back={<BackLink fallback="/settings" />}>
-        <p className="rounded-xl border border-dashed border-slate-300 py-12 text-center text-slate-400">
+        <p className="rounded-xl border border-dashed border-line-2 py-12 text-center text-faint">
           Admins only.
         </p>
       </Layout>
@@ -89,7 +89,7 @@ export default function StaffAdmin() {
 
   return (
     <Layout title="Staff & roles" back={<BackLink fallback="/settings" />} onRefresh={load}>
-      <p className="mb-3 px-1 text-xs text-slate-500">
+      <p className="mb-3 px-1 text-xs text-muted-2">
         Tap <b>Rename</b> to set a staff member's display name (used everywhere in the app). Admins can
         also delete records, archive units, and edit prices. Add new staff in your Supabase dashboard
         (Authentication → Users); they appear here automatically.
@@ -97,10 +97,10 @@ export default function StaffAdmin() {
       <div className="mb-3">
         <Link
           to="/projects"
-          className="flex items-center justify-between rounded-xl bg-white p-3 shadow-sm active:bg-slate-50"
+          className="flex items-center justify-between rounded-xl bg-surface p-3 shadow-sm active:bg-press"
         >
-          <span className="flex items-center gap-1.5 text-sm font-medium text-slate-700"><Icon name="folder" className="h-4 w-4 text-slate-500" /> Manage projects</span>
-          <span className="text-xs font-medium text-slate-400">Add / rename ›</span>
+          <span className="flex items-center gap-1.5 text-sm font-medium text-body"><Icon name="folder" className="h-4 w-4 text-muted-2" /> Manage projects</span>
+          <span className="text-xs font-medium text-faint">Add / rename ›</span>
         </Link>
       </div>
 
@@ -113,10 +113,10 @@ export default function StaffAdmin() {
           {people.map((p) => {
             const isMe = p.id === session?.user.id
             return (
-              <li key={p.id} className="flex items-center justify-between gap-2 rounded-xl bg-white p-3 shadow-sm">
+              <li key={p.id} className="flex items-center justify-between gap-2 rounded-xl bg-surface p-3 shadow-sm">
                 <div className="min-w-0">
-                  <p className="truncate font-medium text-slate-800">
-                    {p.full_name} {isMe && <span className="text-xs text-slate-400">(you)</span>}
+                  <p className="truncate font-medium text-ink-2">
+                    {p.full_name} {isMe && <span className="text-xs text-faint">(you)</span>}
                   </p>
                   <div className="mt-0.5 flex items-center gap-2">
                     <span className={'inline-block rounded px-1.5 py-0.5 text-[10px] font-bold ' + ROLE_STYLE[p.role]}>
@@ -125,18 +125,18 @@ export default function StaffAdmin() {
                     <button
                       onClick={() => rename(p)}
                       disabled={busyId === p.id}
-                      className="text-xs font-medium text-slate-500 underline disabled:opacity-50"
+                      className="text-xs font-medium text-muted-2 underline disabled:opacity-50"
                     >
                       Rename
                     </button>
                   </div>
                   <label className="mt-1.5 flex items-center gap-1.5">
-                    <span className="text-[10px] font-medium uppercase tracking-wide text-slate-400">PIC</span>
+                    <span className="text-[10px] font-medium uppercase tracking-wide text-faint">PIC</span>
                     <select
                       value={p.staff_pic ?? ''}
                       onChange={(e) => setPic(p, e.target.value)}
                       disabled={busyId === p.id}
-                      className="rounded border border-slate-300 bg-white px-1.5 py-1 text-xs text-slate-700 disabled:opacity-50"
+                      className="rounded border border-line-2 bg-surface px-1.5 py-1 text-xs text-body disabled:opacity-50"
                       title="Which units this person sees as 'mine'"
                     >
                       <option value="">— none —</option>
@@ -152,7 +152,7 @@ export default function StaffAdmin() {
                   value={p.role}
                   onChange={(e) => setRole(p, e.target.value as Role)}
                   disabled={busyId === p.id}
-                  className="shrink-0 rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-xs font-medium text-slate-700 disabled:opacity-50"
+                  className="shrink-0 rounded-lg border border-line-2 bg-surface px-2 py-1.5 text-xs font-medium text-body disabled:opacity-50"
                 >
                   <option value="guest">Guest (quote only)</option>
                   <option value="staff">Staff</option>

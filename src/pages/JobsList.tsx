@@ -218,7 +218,7 @@ export default function JobsList() {
           <Link
             to="/game"
             title="Game mode"
-            className="flex shrink-0 items-center rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm active:bg-slate-50"
+            className="flex shrink-0 items-center rounded-lg border border-line-2 bg-surface px-3 py-2 text-sm active:bg-press"
           >
             🎮
           </Link>
@@ -226,7 +226,7 @@ export default function JobsList() {
         <Link
           to="/quote"
           title="New quotation"
-          className="flex shrink-0 items-center gap-1.5 rounded-lg bg-slate-900 px-3 py-2 text-sm font-medium text-white active:bg-slate-700"
+          className="flex shrink-0 items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-sm font-medium text-white active:bg-primary-press"
         >
           <Icon name="receipt" className="h-4 w-4" /> Quote
         </Link>
@@ -244,7 +244,7 @@ export default function JobsList() {
         />
       )}
       {!isAdmin && !staffPic && (
-        <p className="mb-3 rounded-lg bg-slate-100 px-3 py-2 text-xs text-slate-500">
+        <p className="mb-3 rounded-lg bg-page px-3 py-2 text-xs text-muted-2">
           Showing all units. Ask an admin to set your PIC name so you can see just yours.
         </p>
       )}
@@ -254,7 +254,7 @@ export default function JobsList() {
           <select
             value={projectFilter}
             onChange={(e) => setProjectFilter(e.target.value)}
-            className={`w-full rounded-lg border bg-white px-2 py-2 text-sm outline-none focus:border-slate-900 ${projectFilter ? 'border-slate-900 font-medium' : 'border-slate-300 text-slate-700'}`}
+            className={`w-full rounded-lg border bg-surface px-2 py-2 text-sm outline-none focus:border-strong ${projectFilter ? 'border-primary font-medium' : 'border-line-2 text-body'}`}
           >
             <option value="">All projects</option>
             {projects.map((p) => (
@@ -270,7 +270,7 @@ export default function JobsList() {
         <select
           value={catFilter}
           onChange={(e) => setCatFilter(e.target.value)}
-          className={`flex-1 rounded-lg border bg-white px-2 py-2 text-sm outline-none focus:border-slate-900 ${catFilter ? 'border-slate-900 font-medium' : 'border-slate-300 text-slate-600'}`}
+          className={`flex-1 rounded-lg border bg-surface px-2 py-2 text-sm outline-none focus:border-strong ${catFilter ? 'border-primary font-medium' : 'border-line-2 text-muted'}`}
         >
           <option value="">All categories</option>
           {CATEGORIES.map((c) => (
@@ -282,7 +282,7 @@ export default function JobsList() {
         <select
           value={stageFilter}
           onChange={(e) => setStageFilter(e.target.value)}
-          className={`flex-1 rounded-lg border bg-white px-2 py-2 text-sm outline-none focus:border-slate-900 ${stageFilter ? 'border-slate-900 font-medium' : 'border-slate-300 text-slate-600'}`}
+          className={`flex-1 rounded-lg border bg-surface px-2 py-2 text-sm outline-none focus:border-strong ${stageFilter ? 'border-primary font-medium' : 'border-line-2 text-muted'}`}
         >
           <option value="">Any stage</option>
           {STAGES.map((s) => (
@@ -297,7 +297,7 @@ export default function JobsList() {
         <select
           value={sortBy}
           onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
-          className="w-full rounded-lg border border-slate-300 bg-white px-2 py-2 text-sm text-slate-700 outline-none focus:border-slate-900"
+          className="w-full rounded-lg border border-line-2 bg-surface px-2 py-2 text-sm text-body outline-none focus:border-strong"
         >
           <option value="updated">Sort: Recently updated</option>
           <option value="name">Sort: Unit code (A–Z)</option>
@@ -309,18 +309,18 @@ export default function JobsList() {
         <div className="flex items-center gap-3">
           <button
             onClick={() => setShowArchived((v) => !v)}
-            className="text-xs font-medium text-slate-500 underline"
+            className="text-xs font-medium text-muted-2 underline"
           >
             {showArchived ? '← Back to active units' : 'View archived units'}
           </button>
           {isAdmin && (
-            <Link to="/units/bulk" className="text-xs font-medium text-slate-500 underline">
+            <Link to="/units/bulk" className="text-xs font-medium text-muted-2 underline">
               Bulk edit ▦
             </Link>
           )}
           {/* Units normally come from saving a Sales Order; this covers the
               odd job that never had one. */}
-          <Link to="/units/new" className="text-xs font-medium text-slate-500 underline">
+          <Link to="/units/new" className="text-xs font-medium text-muted-2 underline">
             + New unit
           </Link>
         </div>
@@ -331,7 +331,7 @@ export default function JobsList() {
               setStageFilter('')
               setProjectFilter('')
             }}
-            className="text-xs font-medium text-slate-500"
+            className="text-xs font-medium text-muted-2"
           >
             Clear filters ✕
           </button>
@@ -358,9 +358,9 @@ export default function JobsList() {
                   aria-expanded={!isCollapsed}
                   className="flex min-h-[40px] flex-1 items-center gap-2 active:opacity-70"
                 >
-                  <span className={`text-xs text-slate-400 transition-transform ${isCollapsed ? '' : 'rotate-90'}`}>▶</span>
-                  <h2 className="text-sm font-semibold text-slate-700">{g.project}</h2>
-                  <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[11px] font-semibold text-slate-600">
+                  <span className={`text-xs text-faint transition-transform ${isCollapsed ? '' : 'rotate-90'}`}>▶</span>
+                  <h2 className="text-sm font-semibold text-body">{g.project}</h2>
+                  <span className="rounded-full bg-fill px-2 py-0.5 text-[11px] font-semibold text-muted">
                     {g.items.length}
                   </span>
                 </button>
@@ -369,7 +369,7 @@ export default function JobsList() {
                   title={pinned.has(g.project) ? 'Unpin project' : 'Pin project to top'}
                   aria-label={pinned.has(g.project) ? `Unpin ${g.project}` : `Pin ${g.project} to top`}
                   aria-pressed={pinned.has(g.project)}
-                  className={`shrink-0 p-2.5 ${pinned.has(g.project) ? 'text-amber-500' : 'text-slate-400 active:text-slate-600'}`}
+                  className={`shrink-0 p-2.5 ${pinned.has(g.project) ? 'text-amber-500' : 'text-faint active:text-muted'}`}
                 >
                   <Icon name="pin" className="h-[18px] w-[18px]" />
                 </button>
@@ -385,15 +385,15 @@ export default function JobsList() {
                     <li key={job.id}>
                       <Link
                         to={`/job/${job.id}`}
-                        className="block rounded-xl bg-white p-4 shadow-sm active:bg-slate-50"
+                        className="block rounded-xl bg-surface p-4 shadow-sm active:bg-press"
                       >
                         <div className="mb-2 flex items-start justify-between gap-2">
                           <div className="min-w-0">
-                            <p className="truncate font-semibold text-slate-900">
+                            <p className="truncate font-semibold text-ink">
                               {job.unit_code || job.address || job.customer_name}
                             </p>
                             {job.customer_name && (job.unit_code || job.address) && (
-                              <p className="truncate text-sm text-slate-500">
+                              <p className="truncate text-sm text-muted-2">
                                 {job.customer_name}
                               </p>
                             )}
@@ -429,10 +429,10 @@ export default function JobsList() {
                         {w.length > 0 ? (
                           <PercentBar percent={pct} label={`Overall · ${w.length} ${w.length === 1 ? 'category' : 'categories'}`} />
                         ) : (
-                          <p className="text-xs text-slate-400">No work categories yet.</p>
+                          <p className="text-xs text-faint">No work categories yet.</p>
                         )}
 
-                        <p className="mt-2 text-xs text-slate-400">
+                        <p className="mt-2 text-xs text-faint">
                           Updated {relativeTime(job.updated_at)}
                           {job.updated_by ? ` by ${job.updated_by}` : ''}
                         </p>

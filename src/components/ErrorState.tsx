@@ -6,7 +6,7 @@ export function ErrorState({ onRetry }: { onRetry: () => void }) {
       <p className="text-sm font-medium text-red-700">Couldn't load — check your connection.</p>
       <button
         onClick={onRetry}
-        className="mt-3 min-h-[44px] rounded-lg border border-red-300 bg-white px-4 text-sm font-semibold text-red-700 active:bg-red-50"
+        className="mt-3 min-h-[44px] rounded-lg border border-red-300 bg-surface px-4 text-sm font-semibold text-red-700 active:bg-red-50"
       >
         Retry
       </button>

@@ -14,7 +14,7 @@ export const APPT_TYPES: ApptType[] = [
   { key: 'installation', label: 'Installation',  icon: 'wrench',  accent: 'text-amber-700 bg-amber-50 border-amber-200' },
   { key: 'meeting',      label: 'Meeting',       icon: 'users',   accent: 'text-violet-700 bg-violet-50 border-violet-200' },
   { key: 'collection',   label: 'Collection',    icon: 'cash',    accent: 'text-emerald-700 bg-emerald-50 border-emerald-200' },
-  { key: 'other',        label: 'Other',         icon: 'pin',     accent: 'text-slate-700 bg-slate-50 border-slate-200' },
+  { key: 'other',        label: 'Other',         icon: 'pin',     accent: 'text-body bg-surface-2 border-line' },
 ]
 
 const typeByKey = new Map(APPT_TYPES.map((t) => [t.key, t]))
@@ -25,7 +25,7 @@ export function getApptType(key: string): ApptType {
       key,
       label: key,
       icon: 'pin',
-      accent: 'text-slate-700 bg-slate-50 border-slate-200',
+      accent: 'text-body bg-surface-2 border-line',
     }
   )
 }

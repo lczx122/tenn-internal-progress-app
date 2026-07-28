@@ -283,7 +283,7 @@ export default function CostingList() {
   if (!isBoss) {
     return (
       <Layout title="Money" bottomNav>
-        <p className="rounded-xl border border-dashed border-slate-300 py-12 text-center text-slate-400">Boss only.</p>
+        <p className="rounded-xl border border-dashed border-line-2 py-12 text-center text-faint">Boss only.</p>
       </Layout>
     )
   }
@@ -298,19 +298,19 @@ export default function CostingList() {
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search cash sale no. or customer…"
           />
-          <button onClick={syncFromSheet} disabled={syncing} title="Pull the latest from the Google Sheet" className="shrink-0 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 active:bg-slate-50 disabled:opacity-50">
+          <button onClick={syncFromSheet} disabled={syncing} title="Pull the latest from the Google Sheet" className="shrink-0 rounded-lg border border-line-2 bg-surface px-3 py-2 text-sm font-medium text-body active:bg-press disabled:opacity-50">
             {syncing ? 'Syncing…' : '⟳ Sync sheet'}
           </button>
-          <button onClick={() => navigate('/costing/new')} className="shrink-0 rounded-lg bg-slate-900 px-3 py-2 text-sm font-medium text-white active:bg-slate-700">
+          <button onClick={() => navigate('/costing/new')} className="shrink-0 rounded-lg bg-primary px-3 py-2 text-sm font-medium text-white active:bg-primary-press">
             + New
           </button>
         </div>
-        {syncMsg && <p className="px-1 text-xs text-slate-500">{syncMsg}</p>}
+        {syncMsg && <p className="px-1 text-xs text-muted-2">{syncMsg}</p>}
         <div className="flex gap-2">
           <select
             value={catFilter}
             onChange={(e) => setCatFilter(e.target.value)}
-            className={`flex-1 rounded-lg border bg-white px-2 py-2 text-sm outline-none focus:border-slate-900 ${catFilter ? 'border-slate-900 font-medium' : 'border-slate-300 text-slate-600'}`}
+            className={`flex-1 rounded-lg border bg-surface px-2 py-2 text-sm outline-none focus:border-strong ${catFilter ? 'border-primary font-medium' : 'border-line-2 text-muted'}`}
           >
             <option value="">All categories</option>
             {COSTING_CATEGORIES.map((c) => (
@@ -353,12 +353,12 @@ export default function CostingList() {
                       onClick={() => setSheetCat(k)}
                       className={
                         'flex items-center gap-2 rounded-lg border px-3 py-1.5 text-sm font-medium ' +
-                        (active ? 'border-slate-900 bg-slate-900 text-white' : 'border-slate-300 bg-white text-slate-600')
+                        (active ? 'border-primary bg-primary text-white' : 'border-line-2 bg-surface text-muted')
                       }
                     >
                       <span className={`h-2.5 w-2.5 rounded-full ${CATEGORY_ACCENT[k] ?? 'bg-slate-400'}`} />
                       {categoryLabel(k)}
-                      <span className={'rounded-full px-1.5 text-[11px] ' + (active ? 'bg-white/20' : 'bg-slate-200 text-slate-600')}>
+                      <span className={'rounded-full px-1.5 text-[11px] ' + (active ? 'bg-surface/20' : 'bg-fill text-muted')}>
                         {visible.filter((r) => (r.category || '') === k).length}
                       </span>
                     </button>
@@ -366,7 +366,7 @@ export default function CostingList() {
                 })}
                 <button
                   onClick={exportCsv}
-                  className="ml-auto inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-600 active:bg-slate-50"
+                  className="ml-auto inline-flex items-center gap-1.5 rounded-lg border border-line-2 bg-surface px-3 py-1.5 text-sm font-medium text-muted active:bg-press"
                 >
                   <Icon name="download" className="h-4 w-4" /> Export CSV
                 </button>
@@ -437,14 +437,14 @@ function EditableSheet({
   // without horizontal scrolling — headers wrap onto multiple lines like the
   // original sheet. Below lg the table keeps a min width and scrolls, with the
   // Unit column frozen.
-  const thBase = 'sticky top-0 z-10 border-b border-slate-200 bg-slate-50 px-1.5 py-2 align-bottom leading-tight'
+  const thBase = 'sticky top-0 z-10 border-b border-line bg-surface-2 px-1.5 py-2 align-bottom leading-tight'
   const thNum = thBase + ' text-right'
-  const editCls = 'w-full rounded bg-transparent px-1 py-0.5 text-right outline-none hover:bg-slate-100 focus:bg-amber-50'
+  const editCls = 'w-full rounded bg-transparent px-1 py-0.5 text-right outline-none hover:bg-press focus:bg-amber-50'
   const numTd = 'whitespace-nowrap px-1.5 py-2.5 text-right'
-  const unitTd = 'sticky left-0 z-[1] border-r border-slate-200 bg-white px-2 py-1'
+  const unitTd = 'sticky left-0 z-[1] border-r border-line bg-surface px-2 py-1'
 
   return (
-    <div className={`max-h-[75vh] overflow-auto rounded-xl border-l-4 bg-white shadow-sm ${CATEGORY_BORDER[catKey] ?? 'border-slate-400'}`}>
+    <div className={`max-h-[75vh] overflow-auto rounded-xl border-l-4 bg-surface shadow-sm ${CATEGORY_BORDER[catKey] ?? 'border-line-2'}`}>
       <table className="w-full min-w-[1100px] table-fixed text-[12px] lg:min-w-0">
         <colgroup>
           <col className="w-[170px]" />
@@ -461,7 +461,7 @@ function EditableSheet({
           <col className="w-9" />
         </colgroup>
         <thead>
-          <tr className="text-left text-[10px] uppercase tracking-wide text-slate-500">
+          <tr className="text-left text-[10px] uppercase tracking-wide text-muted-2">
             <th className={thBase + ' left-0 z-30 border-r'}>Unit / item</th>
             {cols.map((col) => (
               <th key={col} className={thNum}>{col}</th>
@@ -482,25 +482,25 @@ function EditableSheet({
             const prog = progressOf(r)
             const focus = { onFocus, onBlur: () => onBlurSave(r.id) }
             return (
-              <tr key={r.id} className={'border-b border-slate-100 ' + (ri % 2 ? 'bg-slate-50' : 'bg-white')}>
-                <td className={unitTd + (ri % 2 ? ' !bg-slate-50' : '')}>
+              <tr key={r.id} className={'border-b border-line-faint ' + (ri % 2 ? 'bg-surface-2' : 'bg-surface')}>
+                <td className={unitTd + (ri % 2 ? ' !bg-surface-2' : '')}>
                   <input className={editCls + ' text-left'} title={r.customer} value={r.customer} {...focus} onChange={(e) => onPatch(r.id, { customer: e.target.value })} />
                 </td>
                 {cols.map((col) => {
                   const v = costVal(r, col)
                   return (
                     <td key={col} className="px-1.5 py-1">
-                      <input type="number" inputMode="decimal" step="0.01" className={editCls + ' text-slate-600'} value={v === 0 ? '' : v} {...focus} onChange={(e) => onSetCost(r.id, col, e.target.value)} />
+                      <input type="number" inputMode="decimal" step="0.01" className={editCls + ' text-muted'} value={v === 0 ? '' : v} {...focus} onChange={(e) => onSetCost(r.id, col, e.target.value)} />
                     </td>
                   )
                 })}
-                <td className={numTd + ' text-slate-500'}>{nf(c.totalCost)}</td>
+                <td className={numTd + ' text-muted-2'}>{nf(c.totalCost)}</td>
                 <td className="px-1.5 py-1">
-                  <input type="number" inputMode="decimal" step="0.01" className={editCls + ' font-medium text-slate-800'} value={num(r.revenue) === 0 ? '' : (r.revenue as number) ?? ''} {...focus} onChange={(e) => onPatch(r.id, { revenue: e.target.value })} />
+                  <input type="number" inputMode="decimal" step="0.01" className={editCls + ' font-medium text-ink-2'} value={num(r.revenue) === 0 ? '' : (r.revenue as number) ?? ''} {...focus} onChange={(e) => onPatch(r.id, { revenue: e.target.value })} />
                 </td>
                 <td className={numTd + ' font-semibold ' + (c.grossProfit < 0 ? 'text-rose-600' : 'text-emerald-700')}>{nf(c.grossProfit)}</td>
                 <td className={numTd + ' font-medium ' + marginColor(c.margin)}>{c.margin.toFixed(1)}%</td>
-                <td className={numTd + ' text-slate-500'}>{nf(c.totalShared)}</td>
+                <td className={numTd + ' text-muted-2'}>{nf(c.totalShared)}</td>
                 <td className="px-1.5 py-1">
                   {prog ? (
                     // Linked to a unit — status is derived from its work cards.
@@ -511,7 +511,7 @@ function EditableSheet({
                       className="flex w-full flex-wrap items-center gap-1"
                     >
                       <span className={'rounded-full px-2 py-0.5 text-[11px] font-medium ' + statusStyle(prog.status)}>{prog.status}</span>
-                      <span className="inline-flex items-center gap-1 whitespace-nowrap text-[11px] text-slate-400"><Icon name="link" className="h-3 w-3" /> {prog.percent}%</span>
+                      <span className="inline-flex items-center gap-1 whitespace-nowrap text-[11px] text-faint"><Icon name="link" className="h-3 w-3" /> {prog.percent}%</span>
                     </button>
                   ) : (
                     <select
@@ -533,13 +533,13 @@ function EditableSheet({
                   <input className={editCls + ' text-left font-mono text-[11px]'} value={r.cash_sale_no} {...focus} onChange={(e) => onPatch(r.id, { cash_sale_no: e.target.value })} />
                 </td>
                 <td className="px-1 py-1 text-right">
-                  <button onClick={() => onOpen(r.id)} className="rounded px-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700" title="Open full form (cost breakdown, commissions, sharing)">⋯</button>
+                  <button onClick={() => onOpen(r.id)} className="rounded px-2 text-faint hover:bg-press hover:text-body" title="Open full form (cost breakdown, commissions, sharing)">⋯</button>
                 </td>
               </tr>
             )
           })}
-          <tr className="border-t-2 border-slate-200 bg-slate-100 text-xs font-bold text-slate-700">
-            <td className="sticky left-0 z-[1] border-r border-slate-200 bg-slate-100 px-2 py-2">Subtotal</td>
+          <tr className="border-t-2 border-line bg-page text-xs font-bold text-body">
+            <td className="sticky left-0 z-[1] border-r border-line bg-page px-2 py-2">Subtotal</td>
             {colSums.map((s, i) => (
               <td key={i} className="whitespace-nowrap px-1.5 py-2 text-right">{nf(s)}</td>
             ))}
@@ -565,17 +565,17 @@ function Cards({ rows, progressOf, onOpen }: { rows: Costing[]; progressOf: (r: 
         const prog = progressOf(r)
         const status = prog?.status ?? r.status
         return (
-          <li key={r.id} onClick={() => onOpen(r.id)} className="cursor-pointer rounded-xl bg-white p-4 shadow-sm active:bg-slate-50">
+          <li key={r.id} onClick={() => onOpen(r.id)} className="cursor-pointer rounded-xl bg-surface p-4 shadow-sm active:bg-press">
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
-                  <span className="font-mono text-sm font-semibold text-slate-900">{r.cash_sale_no || '(no CS no.)'}</span>
-                  <span className="flex items-center gap-1 rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-600">
+                  <span className="font-mono text-sm font-semibold text-ink">{r.cash_sale_no || '(no CS no.)'}</span>
+                  <span className="flex items-center gap-1 rounded bg-page px-1.5 py-0.5 text-[10px] font-medium text-muted">
                     <span className={`h-1.5 w-1.5 rounded-full ${CATEGORY_ACCENT[r.category] ?? 'bg-slate-400'}`} />
                     {categoryLabel(r.category)}
                   </span>
                 </div>
-                <p className="mt-0.5 truncate font-medium text-slate-800">{r.customer || '—'}</p>
+                <p className="mt-0.5 truncate font-medium text-ink-2">{r.customer || '—'}</p>
               </div>
               <div className="shrink-0 text-right">
                 <div className={'font-semibold ' + (c.grossProfit < 0 ? 'text-rose-600' : 'text-emerald-600')}>{money(c.grossProfit)}</div>
@@ -583,7 +583,7 @@ function Cards({ rows, progressOf, onOpen }: { rows: Costing[]; progressOf: (r: 
               </div>
             </div>
             <div className="mt-1.5 flex items-center justify-between gap-2">
-              <p className="text-xs text-slate-400">Sale {money(num(r.revenue))} · cost {money(c.totalCost)}</p>
+              <p className="text-xs text-faint">Sale {money(num(r.revenue))} · cost {money(c.totalCost)}</p>
               {status && (
                 <span className={`flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ${statusStyle(status)}`}>
                   {prog && <span title="Synced from linked unit"><Icon name="link" className="h-3 w-3" /></span>}

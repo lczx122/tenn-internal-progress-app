@@ -107,11 +107,11 @@ export function NotificationSettings() {
   }
 
   return (
-    <div className="mb-3 rounded-xl bg-white p-4 shadow-sm">
+    <div className="mb-3 rounded-xl bg-surface p-4 shadow-sm">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="flex items-center gap-1.5 font-semibold text-slate-800"><Icon name="bell" className="h-4 w-4 text-slate-500" /> Reminder notifications</p>
-          <p className="mt-0.5 text-xs text-slate-500">
+          <p className="flex items-center gap-1.5 font-semibold text-ink-2"><Icon name="bell" className="h-4 w-4 text-muted-2" /> Reminder notifications</p>
+          <p className="mt-0.5 text-xs text-muted-2">
             Get a notification before appointments assigned to you.
           </p>
         </div>
@@ -126,7 +126,7 @@ export function NotificationSettings() {
         >
           <span
             className={
-              'absolute top-0.5 h-6 w-6 rounded-full bg-white shadow transition-all ' +
+              'absolute top-0.5 h-6 w-6 rounded-full bg-surface shadow transition-all ' +
               (enabled ? 'left-[22px]' : 'left-0.5')
             }
           />
@@ -139,12 +139,12 @@ export function NotificationSettings() {
           from there to enable notifications.
         </p>
       ) : !supported ? (
-        <p className="mt-3 rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-500">
+        <p className="mt-3 rounded-lg bg-surface-2 px-3 py-2 text-xs text-muted-2">
           This browser doesn’t support notifications.
         </p>
       ) : (
         <>
-          <p className="mb-1.5 mt-4 text-xs font-medium text-slate-600">Remind me before an event</p>
+          <p className="mb-1.5 mt-4 text-xs font-medium text-muted">Remind me before an event</p>
           <div className="flex flex-wrap gap-2">
             {PRESETS.map((p) => (
               <button
@@ -154,8 +154,8 @@ export function NotificationSettings() {
                 className={
                   'rounded-lg border px-3 py-1.5 text-sm font-medium disabled:opacity-50 ' +
                   (lead === p.m
-                    ? 'border-slate-900 bg-slate-900 text-white'
-                    : 'border-slate-300 bg-white text-slate-600 active:bg-slate-50')
+                    ? 'border-primary bg-primary text-white'
+                    : 'border-line-2 bg-surface text-muted active:bg-press')
                 }
               >
                 {p.label}
@@ -163,19 +163,19 @@ export function NotificationSettings() {
             ))}
           </div>
           <div className="mt-2 flex items-center gap-2">
-            <span className="text-xs text-slate-500">Custom:</span>
+            <span className="text-xs text-muted-2">Custom:</span>
             <input
               type="number"
               min="1"
               value={customAmt}
               onChange={(e) => setCustomAmt(e.target.value)}
               placeholder="e.g. 45"
-              className="w-20 rounded-lg border border-slate-300 px-2 py-1.5 text-sm outline-none focus:border-slate-900"
+              className="w-20 rounded-lg border border-line-2 px-2 py-1.5 text-sm outline-none focus:border-strong"
             />
             <select
               value={customUnit}
               onChange={(e) => setCustomUnit(e.target.value as 'min' | 'hour' | 'day')}
-              className="rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm text-slate-700"
+              className="rounded-lg border border-line-2 bg-surface px-2 py-1.5 text-sm text-body"
             >
               <option value="min">minutes</option>
               <option value="hour">hours</option>
@@ -184,13 +184,13 @@ export function NotificationSettings() {
             <button
               onClick={applyCustom}
               disabled={busy || !customAmt}
-              className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 active:bg-slate-50 disabled:opacity-50"
+              className="rounded-lg border border-line-2 bg-surface px-3 py-1.5 text-sm font-medium text-body active:bg-press disabled:opacity-50"
             >
               Set
             </button>
           </div>
           {!PRESETS.some((p) => p.m === lead) && (
-            <p className="mt-1.5 text-xs text-slate-500">Currently: {leadLabel(lead)} before.</p>
+            <p className="mt-1.5 text-xs text-muted-2">Currently: {leadLabel(lead)} before.</p>
           )}
         </>
       )}
@@ -199,13 +199,13 @@ export function NotificationSettings() {
         <button
           onClick={test}
           disabled={busy}
-          className="mt-3 w-full rounded-lg border border-slate-300 bg-white py-2 text-sm font-medium text-slate-700 active:bg-slate-50 disabled:opacity-50"
+          className="mt-3 w-full rounded-lg border border-line-2 bg-surface py-2 text-sm font-medium text-body active:bg-press disabled:opacity-50"
         >
           Send test notification
         </button>
       )}
 
-      {msg && <p className="mt-3 text-xs text-slate-500">{msg}</p>}
+      {msg && <p className="mt-3 text-xs text-muted-2">{msg}</p>}
     </div>
   )
 }

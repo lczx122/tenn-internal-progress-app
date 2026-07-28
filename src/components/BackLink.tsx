@@ -26,7 +26,7 @@ export function BackLink({ fallback = '/' }: { fallback?: string }) {
     <button
       onClick={goBack}
       aria-label="Back"
-      className="-ml-2 min-h-[44px] min-w-[44px] rounded-lg px-2 text-xl leading-none text-slate-300 active:bg-white/10 active:text-white"
+      className="-ml-2 min-h-[44px] min-w-[44px] rounded-lg px-2 text-xl leading-none text-slate-300 active:bg-surface/10 active:text-white"
     >
       ←
     </button>

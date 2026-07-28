@@ -159,18 +159,18 @@ export function ClaimsSection({
     }
   }
 
-  const inp = 'w-full rounded-lg border border-slate-300 px-3 py-2 text-base outline-none focus:border-slate-900'
+  const inp = 'w-full rounded-lg border border-line-2 px-3 py-2 text-base outline-none focus:border-strong'
 
   return (
-    <section className="mt-4 rounded-xl bg-white p-4 shadow-sm">
-      <h2 className="mb-3 flex items-center gap-1.5 text-sm font-semibold text-slate-700"><Icon name="cash" className="h-4 w-4 text-emerald-600" /> Customer collection</h2>
+    <section className="mt-4 rounded-xl bg-surface p-4 shadow-sm">
+      <h2 className="mb-3 flex items-center gap-1.5 text-sm font-semibold text-body"><Icon name="cash" className="h-4 w-4 text-emerald-600" /> Customer collection</h2>
 
       {/* Order total + progress */}
       <div className="mb-3">
-        <label className="mb-1 block text-xs font-medium text-slate-500">Total order amount</label>
+        <label className="mb-1 block text-xs font-medium text-muted-2">Total order amount</label>
         <div className="flex gap-2">
           <div className="relative flex-1">
-            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-400">RM</span>
+            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-faint">RM</span>
             <input
               type="number" inputMode="decimal"
               min="0"
@@ -184,7 +184,7 @@ export function ClaimsSection({
           <button
             onClick={saveOrderTotal}
             disabled={busy || Number(orderTotal || 0) === Number(job.order_total)}
-            className="shrink-0 rounded-lg bg-slate-900 px-4 text-sm font-medium text-white active:bg-slate-700 disabled:opacity-40"
+            className="shrink-0 rounded-lg bg-primary px-4 text-sm font-medium text-white active:bg-primary-press disabled:opacity-40"
           >
             Save
           </button>
@@ -192,29 +192,29 @@ export function ClaimsSection({
       </div>
 
       <div className="mb-3 grid grid-cols-3 gap-2 text-center text-sm">
-        <div className="rounded-lg bg-slate-50 p-2">
-          <div className="text-[11px] text-slate-400">Order</div>
-          <div className="font-semibold text-slate-800">{money(total)}</div>
+        <div className="rounded-lg bg-surface-2 p-2">
+          <div className="text-[11px] text-faint">Order</div>
+          <div className="font-semibold tabular-nums text-ink-2">{money(total)}</div>
         </div>
         <div className="rounded-lg bg-emerald-50 p-2">
           <div className="text-[11px] text-emerald-700/70">Collected</div>
-          <div className="font-semibold text-emerald-700">{money(collected)}</div>
+          <div className="font-semibold tabular-nums text-emerald-700">{money(collected)}</div>
         </div>
         <div className="rounded-lg bg-amber-50 p-2">
           <div className="text-[11px] text-amber-700/70">Balance</div>
-          <div className="font-semibold text-amber-700">{money(balance)}</div>
+          <div className="font-semibold tabular-nums text-amber-700">{money(balance)}</div>
         </div>
       </div>
-      <div className="mb-4 h-2.5 w-full overflow-hidden rounded-full bg-slate-100">
+      <div className="mb-4 h-2.5 w-full overflow-hidden rounded-full bg-page">
         <div className="h-full rounded-full bg-emerald-500 transition-all" style={{ width: `${pct}%` }} />
       </div>
 
       {/* Per-trade breakdown */}
       {tradeRows.length > 0 && (
-        <div className="mb-4 overflow-hidden rounded-lg border border-slate-200">
+        <div className="mb-4 overflow-hidden rounded-lg border border-line">
           <table className="w-full table-fixed text-xs">
             <thead>
-              <tr className="border-b border-slate-200 bg-slate-50 text-slate-500">
+              <tr className="border-b border-line bg-surface-2 text-muted-2">
                 <th className="px-2 py-1.5 text-left font-semibold">By trade</th>
                 <th className="px-2 py-1.5 text-right font-semibold">Order</th>
                 <th className="px-2 py-1.5 text-right font-semibold">Collected</th>
@@ -223,11 +223,11 @@ export function ClaimsSection({
             </thead>
             <tbody>
               {tradeRows.map((r) => (
-                <tr key={r.cat} className="border-b border-slate-100 last:border-0">
-                  <td className="truncate px-2 py-1.5 font-medium text-slate-700">{r.cat}</td>
-                  <td className="px-2 py-1.5 text-right tabular-nums text-slate-600">{r.order ? money(r.order) : '—'}</td>
+                <tr key={r.cat} className="border-b border-line-faint last:border-0">
+                  <td className="truncate px-2 py-1.5 font-medium text-body">{r.cat}</td>
+                  <td className="px-2 py-1.5 text-right tabular-nums text-muted">{r.order ? money(r.order) : '—'}</td>
                   <td className="px-2 py-1.5 text-right tabular-nums font-medium text-emerald-700">{money(r.collected)}</td>
-                  <td className={'px-2 py-1.5 text-right tabular-nums ' + (r.balance > 0 ? 'font-medium text-amber-700' : 'text-slate-400')}>
+                  <td className={'px-2 py-1.5 text-right tabular-nums ' + (r.balance > 0 ? 'font-medium text-amber-700' : 'text-faint')}>
                     {r.cat === UNALLOCATED ? '—' : money(r.balance)}
                   </td>
                 </tr>
@@ -242,24 +242,24 @@ export function ClaimsSection({
         <div className="mb-4">
           <button
             onClick={() => setShowByTrade((s) => !s)}
-            className="text-xs font-medium text-slate-500 active:text-slate-700"
+            className="text-xs font-medium text-muted-2 active:text-body"
           >
             {showByTrade ? '▾' : '▸'} Set order amount by trade
           </button>
           {showByTrade && (
-            <div className="mt-2 space-y-2 rounded-lg border border-slate-200 p-3">
+            <div className="mt-2 space-y-2 rounded-lg border border-line p-3">
               {tradeCats.map((c) => (
                 <div key={c} className="flex items-center gap-2">
-                  <span className="min-w-0 flex-1 truncate text-sm text-slate-600">{c}</span>
+                  <span className="min-w-0 flex-1 truncate text-sm text-muted">{c}</span>
                   <div className="relative w-36 shrink-0">
-                    <span className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-slate-400">RM</span>
+                    <span className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-faint">RM</span>
                     <input
                       type="number" inputMode="decimal"
                       min="0"
                       step="0.01"
                       value={obc[c] ?? ''}
                       onChange={(e) => setObc({ ...obc, [c]: e.target.value })}
-                      className="w-full rounded-lg border border-slate-300 py-1.5 pl-8 pr-2 text-sm outline-none focus:border-slate-900"
+                      className="w-full rounded-lg border border-line-2 py-1.5 pl-8 pr-2 text-sm outline-none focus:border-strong"
                       placeholder="0.00"
                     />
                   </div>
@@ -268,7 +268,7 @@ export function ClaimsSection({
               <button
                 onClick={saveOrderByTrade}
                 disabled={busy}
-                className="w-full rounded-lg bg-slate-900 py-2 text-sm font-medium text-white active:bg-slate-700 disabled:opacity-50"
+                className="w-full rounded-lg bg-primary py-2 text-sm font-medium text-white active:bg-primary-press disabled:opacity-50"
               >
                 Save order by trade (sets the total)
               </button>
@@ -281,14 +281,14 @@ export function ClaimsSection({
       {claims.length > 0 && (
         <ul className="mb-4 space-y-2">
           {claims.map((c) => (
-            <li key={c.id} className="flex items-center justify-between gap-2 rounded-lg bg-slate-50 px-3 py-2">
+            <li key={c.id} className="flex items-center justify-between gap-2 rounded-lg bg-surface-2 px-3 py-2">
               <div className="min-w-0">
-                <p className="text-sm font-medium text-slate-800">
+                <p className="text-sm font-medium text-ink-2">
                   {c.category}
-                  {c.percent != null && <span className="text-slate-400"> · {c.percent}%</span>}
-                  {c.work_category && <span className="text-slate-400"> · {c.work_category}</span>}
+                  {c.percent != null && <span className="text-faint"> · {c.percent}%</span>}
+                  {c.work_category && <span className="text-faint"> · {c.work_category}</span>}
                 </p>
-                <p className="text-xs text-slate-400">
+                <p className="text-xs text-faint">
                   {c.collected_on ? formatDate(c.collected_on) : formatDate(c.created_at)}
                   {c.created_by_name ? ` · ${c.created_by_name}` : ''}
                   {c.note ? ` · ${c.note}` : ''}
@@ -300,7 +300,7 @@ export function ClaimsSection({
                   <button
                     onClick={() => removeClaim(c)}
                     aria-label={`Remove ${money(c.amount)} collection`}
-                    className="-m-1 p-2.5 text-sm text-slate-400 active:text-red-500"
+                    className="-m-1 p-2.5 text-sm text-faint active:text-red-500"
                   >
                     ✕
                   </button>
@@ -312,8 +312,8 @@ export function ClaimsSection({
       )}
 
       {/* Add a claim */}
-      <div className="rounded-lg border border-slate-200 p-3">
-        <label className="mb-1 block text-xs font-medium text-slate-500">Record a collection</label>
+      <div className="rounded-lg border border-line p-3">
+        <label className="mb-1 block text-xs font-medium text-muted-2">Record a collection</label>
         <select value={mode} onChange={(e) => { setMode(e.target.value as ClaimMode); setValue('') }} className={`${inp} mb-2`}>
           {CLAIM_MODES.map((m) => (
             <option key={m} value={m}>
@@ -335,7 +335,7 @@ export function ClaimsSection({
 
         {needsValue && (
           <div className="relative mb-2">
-            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-400">
+            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-faint">
               {mode === 'Custom %' ? '%' : 'RM'}
             </span>
             <input
@@ -351,12 +351,12 @@ export function ClaimsSection({
         )}
 
         {(isPercentMode(mode) || mode === 'Booking Fee / Deposit') && (
-          <p className="mb-2 text-sm text-slate-500">
+          <p className="mb-2 text-sm text-muted-2">
             {isPercentMode(mode) ? (
               <>
                 {mode === 'Custom %' ? `${parseFloat(value) || 0}%` : mode.replace(' Collected', '')} of {money(pctBase)}
-                {tradeOrder > 0 && <span className="text-slate-400"> ({workCat})</span>} ={' '}
-                <span className="font-semibold text-slate-800">{money(preview.amount)}</span>
+                {tradeOrder > 0 && <span className="text-faint"> ({workCat})</span>} ={' '}
+                <span className="font-semibold text-ink-2">{money(preview.amount)}</span>
               </>
             ) : (
               'Enter the booking fee / deposit amount.'

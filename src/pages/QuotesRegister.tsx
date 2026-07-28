@@ -129,7 +129,7 @@ export default function QuotesRegister() {
         />
         <button
           onClick={() => navigate('/quote')}
-          className="shrink-0 rounded-lg bg-slate-900 px-3 py-2 text-sm font-medium text-white active:bg-slate-700"
+          className="shrink-0 rounded-lg bg-primary px-3 py-2 text-sm font-medium text-white active:bg-primary-press"
         >
           + New
         </button>
@@ -149,17 +149,17 @@ export default function QuotesRegister() {
         </EmptyState>
       ) : (
         <>
-          <p className="mb-2 px-1 text-xs text-slate-400">
+          <p className="mb-2 px-1 text-xs text-faint">
             {visible.length} {visible.length === 1 ? 'document' : 'documents'} · {money(total)} total
           </p>
           <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {visible.map((r) => {
               const isSO = r.doc_type === 'SO'
               return (
-                <li key={r.id} className="rounded-xl bg-white p-4 shadow-sm">
+                <li key={r.id} className="rounded-xl bg-surface p-4 shadow-sm">
                   <button
                     onClick={() => navigate(`/quote?view=${r.id}`)}
-                    className="-m-1 block w-full rounded-lg p-1 text-left active:bg-slate-50"
+                    className="-m-1 block w-full rounded-lg p-1 text-left active:bg-press"
                   >
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
@@ -172,38 +172,38 @@ export default function QuotesRegister() {
                         >
                           {isSO ? 'SO' : 'QT'}
                         </span>
-                        <span className="font-mono text-sm font-semibold text-slate-900">{r.number}</span>
+                        <span className="font-mono text-sm font-semibold text-ink">{r.number}</span>
                       </div>
-                      <p className="mt-1 truncate font-medium text-slate-800">{r.unit || r.customer_name || '—'}</p>
+                      <p className="mt-1 truncate font-medium text-ink-2">{r.unit || r.customer_name || '—'}</p>
                       {r.unit && r.customer_name && (
-                        <p className="truncate text-xs text-slate-500">{r.customer_name}</p>
+                        <p className="truncate text-xs text-muted-2">{r.customer_name}</p>
                       )}
                     </div>
-                    <span className="shrink-0 font-semibold text-slate-900">{money(Number(r.total))}</span>
+                    <span className="shrink-0 font-semibold text-ink">{money(Number(r.total))}</span>
                   </div>
 
                   {isSO && r.source_id && numberById.has(r.source_id) && (
-                    <p className="mt-1.5 text-xs text-slate-400">From quote {numberById.get(r.source_id)}</p>
+                    <p className="mt-1.5 text-xs text-faint">From quote {numberById.get(r.source_id)}</p>
                   )}
-                  {r.categories && <p className="mt-1.5 truncate text-xs text-slate-500">{r.categories}</p>}
+                  {r.categories && <p className="mt-1.5 truncate text-xs text-muted-2">{r.categories}</p>}
                   </button>
 
                   <div className="mt-2 flex items-center justify-between gap-2">
-                    <p className="text-xs text-slate-400">
+                    <p className="text-xs text-faint">
                       {r.prepared_by ? `By ${r.prepared_by} · ` : ''}
                       {relativeTime(r.created_at)}
                     </p>
                     <div className="flex shrink-0 items-center gap-2">
                       <button
                         onClick={() => navigate(`/quote?view=${r.id}`)}
-                        className="min-h-[36px] rounded-lg border border-slate-300 px-3 text-xs font-medium text-slate-700 active:bg-slate-50"
+                        className="min-h-[36px] rounded-lg border border-line-2 px-3 text-xs font-medium text-body active:bg-press"
                       >
                         View
                       </button>
                       {(isAdmin || (!!userId && r.created_by === userId)) && (
                         <button
                           onClick={() => navigate(`/quote?edit=${r.id}`)}
-                          className="min-h-[36px] rounded-lg border border-slate-400 px-3 text-xs font-medium text-slate-800 active:bg-slate-50"
+                          className="min-h-[36px] rounded-lg border border-line-2 px-3 text-xs font-medium text-ink-2 active:bg-press"
                         >
                           Edit
                         </button>

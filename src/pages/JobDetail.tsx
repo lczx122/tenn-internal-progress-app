@@ -239,7 +239,7 @@ export default function JobDetail() {
         {loadFailed ? (
           <ErrorState onRetry={loadAll} />
         ) : (
-          <p className="py-10 text-center text-slate-400">Unit not found.</p>
+          <p className="py-10 text-center text-faint">Unit not found.</p>
         )}
       </Layout>
     )
@@ -252,7 +252,7 @@ export default function JobDetail() {
       {/* Sticky wayfinder: the page stacks 6+ sections into a long scroll, so
           give thumbs a one-tap jump to each. scroll-mt on the targets keeps
           headings clear of this bar. */}
-      <nav className="sticky top-0 z-20 -mx-4 mb-3 flex gap-1.5 overflow-x-auto bg-slate-100 px-4 py-2 [scrollbar-width:none] lg:-mx-8 lg:px-8">
+      <nav className="sticky top-0 z-20 -mx-4 mb-3 flex gap-1.5 overflow-x-auto bg-page px-4 py-2 [scrollbar-width:none] lg:-mx-8 lg:px-8">
         {(
           [
             ['sec-money', 'Money'],
@@ -265,7 +265,7 @@ export default function JobDetail() {
           <button
             key={id}
             onClick={() => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
-            className="shrink-0 rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 active:bg-slate-50"
+            className="shrink-0 rounded-full border border-line-2 bg-surface px-3 py-1.5 text-xs font-medium text-muted active:bg-press"
           >
             {label}
           </button>
@@ -273,12 +273,12 @@ export default function JobDetail() {
       </nav>
       <div className="xl:columns-2 xl:gap-6 xl:[&>div]:break-inside-avoid xl:[&>section]:mb-4 xl:[&>section]:mt-0 xl:[&>section]:break-inside-avoid">
       {/* Summary card */}
-      <section className="rounded-xl bg-white p-4 shadow-sm">
+      <section className="rounded-xl bg-surface p-4 shadow-sm">
         <div className="mb-2 flex items-start justify-between gap-2">
           {job.project ? (
             <Link
               to={`/units?project=${encodeURIComponent(job.project)}`}
-              className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600 active:bg-slate-200"
+              className="inline-flex items-center gap-1 rounded-full bg-page px-2.5 py-1 text-xs font-medium text-muted active:bg-press-2"
             >
               <Icon name="folder" className="h-3.5 w-3.5" /> {job.project}
             </Link>
@@ -287,27 +287,27 @@ export default function JobDetail() {
           )}
           <Link
             to={`/job/${job.id}/edit`}
-            className="shrink-0 rounded-lg border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-600 active:bg-slate-100"
+            className="shrink-0 rounded-lg border border-line-2 px-2.5 py-1 text-xs font-medium text-muted active:bg-press"
           >
             ✎ Edit details
           </Link>
         </div>
 
-        <p className="flex items-center gap-1.5 text-base font-semibold text-slate-900">
-          <Icon name="user" className="h-4 w-4 shrink-0 text-slate-400" /> {job.customer_name}
+        <p className="flex items-center gap-1.5 text-base font-semibold text-ink">
+          <Icon name="user" className="h-4 w-4 shrink-0 text-faint" /> {job.customer_name}
         </p>
         {(job.unit_code || job.address) && (
-          <p className="mt-1 flex items-center gap-1.5 text-slate-700">
-            <Icon name="home" className="h-4 w-4 shrink-0 text-slate-400" /> {job.unit_code || job.address}
+          <p className="mt-1 flex items-center gap-1.5 text-body">
+            <Icon name="home" className="h-4 w-4 shrink-0 text-faint" /> {job.unit_code || job.address}
           </p>
         )}
         {job.phone && (
-          <p className="mt-1 flex items-center gap-1.5 text-slate-700">
-            <Icon name="phone" className="h-4 w-4 shrink-0 text-slate-400" />
+          <p className="mt-1 flex items-center gap-1.5 text-body">
+            <Icon name="phone" className="h-4 w-4 shrink-0 text-faint" />
             <a href={`tel:${job.phone}`} className="underline">{job.phone}</a>
           </p>
         )}
-        <p className="mt-1 flex items-center gap-1.5 text-sm text-slate-500">
+        <p className="mt-1 flex items-center gap-1.5 text-sm text-muted-2">
           <Icon name="user" className="h-3.5 w-3.5 shrink-0" />
           {job.is_owner ? 'Owner' : `Not owner${job.owner_relationship ? ` · ${job.owner_relationship}` : ''}`}
         </p>
@@ -315,7 +315,7 @@ export default function JobDetail() {
         {job.house_types && job.house_types.length > 0 && (
           <div className="mt-2 flex flex-wrap gap-1.5">
             {job.house_types.map((t) => (
-              <span key={t} className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
+              <span key={t} className="rounded-full bg-page px-2 py-0.5 text-xs font-medium text-muted">
                 {t}
               </span>
             ))}
@@ -323,9 +323,9 @@ export default function JobDetail() {
         )}
 
         <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
-          <div className="rounded-lg bg-slate-50 p-2">
-            <div className="text-slate-400">PIC</div>
-            <div className="font-medium text-slate-700">
+          <div className="rounded-lg bg-surface-2 p-2">
+            <div className="text-faint">PIC</div>
+            <div className="font-medium text-body">
               {job.pics?.length ? job.pics.join(', ') : job.pic || '—'}
             </div>
           </div>
@@ -333,20 +333,20 @@ export default function JobDetail() {
             <div className="flex items-center gap-1 text-amber-700/70"><Icon name="key" className="h-3.5 w-3.5" /> Keys</div>
             <div className="font-medium text-amber-800">{job.key_holder || 'Office'}</div>
           </div>
-          <div className="rounded-lg bg-slate-50 p-2">
-            <div className="text-slate-400">Start</div>
-            <div className="font-medium text-slate-700">{formatDate(job.start_date)}</div>
+          <div className="rounded-lg bg-surface-2 p-2">
+            <div className="text-faint">Start</div>
+            <div className="font-medium text-body">{formatDate(job.start_date)}</div>
           </div>
-          <div className="rounded-lg bg-slate-50 p-2">
-            <div className="text-slate-400">Target</div>
-            <div className="font-medium text-slate-700">{formatDate(job.target_date)}</div>
+          <div className="rounded-lg bg-surface-2 p-2">
+            <div className="text-faint">Target</div>
+            <div className="font-medium text-body">{formatDate(job.target_date)}</div>
           </div>
         </div>
 
         {soCount != null && !job.is_archived && (soCount === 0 || (soCount >= 2 && isAdmin)) && (
           <Link
             to={`/quote?unit=${job.id}&type=SO`}
-            className="mt-3 flex items-center justify-center gap-1.5 rounded-lg border border-slate-300 py-2.5 text-sm font-medium text-slate-700 active:bg-slate-100"
+            className="mt-3 flex items-center justify-center gap-1.5 rounded-lg border border-line-2 py-2.5 text-sm font-medium text-body active:bg-press"
           >
             <Icon name="receipt" className="h-4 w-4" />
             {soCount === 0 ? 'Convert to Sales Order' : `Consolidate ${soCount} Sales Orders into one`}
@@ -368,18 +368,18 @@ export default function JobDetail() {
       </div>
 
       {/* Appointments */}
-      <section id="sec-schedule" className="mt-4 scroll-mt-14 rounded-xl bg-white p-4 shadow-sm">
+      <section id="sec-schedule" className="mt-4 scroll-mt-14 rounded-xl bg-surface p-4 shadow-sm">
         <div className="mb-2 flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-slate-700">Appointments</h2>
+          <h2 className="text-sm font-semibold text-body">Appointments</h2>
           <Link
             to={`/schedule/new?job_id=${job.id}`}
-            className="rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-medium text-white active:bg-slate-700"
+            className="rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-white active:bg-primary-press"
           >
             + Schedule
           </Link>
         </div>
         {appts.filter((a) => a.status !== 'cancelled').length === 0 ? (
-          <p className="text-sm text-slate-400">No appointments yet.</p>
+          <p className="text-sm text-faint">No appointments yet.</p>
         ) : (
           <ul className="space-y-2">
             {appts
@@ -388,13 +388,13 @@ export default function JobDetail() {
                 <li key={a.id}>
                   <Link
                     to={`/appointment/${a.id}`}
-                    className="flex items-center justify-between gap-2 rounded-lg bg-slate-50 px-3 py-2 active:bg-slate-100"
+                    className="flex items-center justify-between gap-2 rounded-lg bg-surface-2 px-3 py-2 active:bg-press"
                   >
                     <span className="min-w-0">
-                      <span className="flex items-center gap-1.5 text-sm font-medium text-slate-800">
-                        <Icon name={getApptType(a.type).icon} className="h-4 w-4 shrink-0 text-slate-400" /> {getApptType(a.type).label}
+                      <span className="flex items-center gap-1.5 text-sm font-medium text-ink-2">
+                        <Icon name={getApptType(a.type).icon} className="h-4 w-4 shrink-0 text-faint" /> {getApptType(a.type).label}
                       </span>
-                      <span className="block text-xs text-slate-500">
+                      <span className="block text-xs text-muted-2">
                         {new Date(a.starts_at).toLocaleString(undefined, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
                         {a.who ? ` · ${a.who}` : ''}
                       </span>
@@ -410,11 +410,11 @@ export default function JobDetail() {
       {/* Work categories */}
       <section id="sec-works" className="mt-4 scroll-mt-14">
         <div className="mb-2 flex items-center justify-between px-1">
-          <h2 className="text-sm font-semibold text-slate-700">Job categories</h2>
+          <h2 className="text-sm font-semibold text-body">Job categories</h2>
           {!adding && usedCategories.size < CATEGORIES.length && (
             <button
               onClick={() => setAdding(true)}
-              className="rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-medium text-white active:bg-slate-700"
+              className="rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-white active:bg-primary-press"
             >
               + Add category
             </button>
@@ -431,7 +431,7 @@ export default function JobDetail() {
         )}
 
         {works.length === 0 && !adding ? (
-          <div className="rounded-xl border border-dashed border-slate-300 py-8 text-center text-sm text-slate-400">
+          <div className="rounded-xl border border-dashed border-line-2 py-8 text-center text-sm text-faint">
             No job categories yet. Tap “+ Add category”.
           </div>
         ) : (
@@ -459,37 +459,37 @@ export default function JobDetail() {
       )}
 
       {/* Add note */}
-      <section className="mt-4 rounded-xl bg-white p-4 shadow-sm">
-        <h2 className="mb-2 text-sm font-semibold text-slate-700">Add an update / note</h2>
+      <section className="mt-4 rounded-xl bg-surface p-4 shadow-sm">
+        <h2 className="mb-2 text-sm font-semibold text-body">Add an update / note</h2>
         <textarea
           value={note}
           onChange={(e) => setNote(e.target.value)}
           rows={3}
           placeholder="What happened on site today?"
-          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-base outline-none focus:border-slate-900"
+          className="w-full rounded-lg border border-line-2 px-3 py-2 text-base outline-none focus:border-strong"
         />
         <button
           onClick={addNote}
           disabled={busy || !note.trim()}
-          className="mt-2 w-full rounded-lg bg-slate-900 py-2.5 font-medium text-white active:bg-slate-700 disabled:opacity-50"
+          className="mt-2 w-full rounded-lg bg-primary py-2.5 font-medium text-white active:bg-primary-press disabled:opacity-50"
         >
           Post update
         </button>
       </section>
 
       {/* Timeline */}
-      <section id="sec-activity" className="mt-4 scroll-mt-14 rounded-xl bg-white p-4 shadow-sm">
-        <h2 className="mb-3 text-sm font-semibold text-slate-700">Activity timeline</h2>
+      <section id="sec-activity" className="mt-4 scroll-mt-14 rounded-xl bg-surface p-4 shadow-sm">
+        <h2 className="mb-3 text-sm font-semibold text-body">Activity timeline</h2>
         {events.length === 0 ? (
-          <p className="text-sm text-slate-400">No activity yet.</p>
+          <p className="text-sm text-faint">No activity yet.</p>
         ) : (
           <ul className="space-y-3">
             {(showAllEvents ? events : events.slice(0, 5)).map((ev) => (
               <li key={ev.id} className="flex gap-3">
-                <div className="mt-0.5 text-slate-400"><Icon name={eventIconName(ev.type)} className="h-4 w-4" /></div>
+                <div className="mt-0.5 text-faint"><Icon name={eventIconName(ev.type)} className="h-4 w-4" /></div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm text-slate-800 whitespace-pre-wrap break-words">{ev.body}</p>
-                  <p className="mt-0.5 text-xs text-slate-400">
+                  <p className="text-sm text-ink-2 whitespace-pre-wrap break-words">{ev.body}</p>
+                  <p className="mt-0.5 text-xs text-faint">
                     {ev.author_name || 'Someone'} · {formatDateTime(ev.created_at)}
                   </p>
                 </div>
@@ -500,7 +500,7 @@ export default function JobDetail() {
         {events.length > 5 && (
           <button
             onClick={() => setShowAllEvents((v) => !v)}
-            className="mt-3 w-full rounded-lg border border-slate-200 py-2 text-xs font-medium text-slate-500 active:bg-slate-50"
+            className="mt-3 w-full rounded-lg border border-line py-2 text-xs font-medium text-muted-2 active:bg-press"
           >
             {showAllEvents ? 'Show less' : `Show all ${events.length} entries`}
           </button>
@@ -512,7 +512,7 @@ export default function JobDetail() {
           <button
             onClick={toggleArchive}
             disabled={busy}
-            className="w-full rounded-lg border border-slate-300 py-2.5 text-sm font-medium text-slate-500 active:bg-slate-100 disabled:opacity-50"
+            className="w-full rounded-lg border border-line-2 py-2.5 text-sm font-medium text-muted-2 active:bg-press disabled:opacity-50"
           >
             {job.is_archived ? 'Unarchive unit' : 'Archive unit (mark complete)'}
           </button>
@@ -557,16 +557,16 @@ function WorkCard({
   }, [work.remarks])
 
   return (
-    <div className="rounded-xl bg-white p-4 shadow-sm">
+    <div className="rounded-xl bg-surface p-4 shadow-sm">
       <div className="mb-2 flex items-start justify-between gap-2">
         <div className="min-w-0">
           <span className={`inline-block rounded-full border px-2 py-0.5 text-xs font-semibold ${cat.accent}`}>
             {cat.label}
           </span>
-          {work.title && <p className="mt-1 text-sm text-slate-600">{work.title}</p>}
+          {work.title && <p className="mt-1 text-sm text-muted">{work.title}</p>}
         </div>
         {canDelete && (
-          <button onClick={onDelete} className="-m-1 shrink-0 p-2 text-xs text-slate-500 active:text-red-500">
+          <button onClick={onDelete} className="-m-1 shrink-0 p-2 text-xs text-muted-2 active:text-red-500">
             Remove
           </button>
         )}
@@ -585,7 +585,7 @@ function WorkCard({
               aria-pressed={active}
               className={
                 'min-h-[36px] rounded-full px-3 text-xs font-medium transition disabled:opacity-50 ' +
-                (active ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-700 active:bg-slate-200')
+                (active ? 'bg-primary text-white' : 'bg-page text-body active:bg-press-2')
               }
             >
               {s.label}
@@ -603,7 +603,7 @@ function WorkCard({
               onChange={(e) => setRemarks(e.target.value)}
               rows={2}
               placeholder="Remarks / next action…"
-              className="w-full rounded-lg border border-slate-300 px-2 py-1.5 text-sm outline-none focus:border-slate-900"
+              className="w-full rounded-lg border border-line-2 px-2 py-1.5 text-sm outline-none focus:border-strong"
             />
             <div className="mt-1 flex gap-2">
               <button
@@ -612,7 +612,7 @@ function WorkCard({
                   setEditing(false)
                 }}
                 disabled={busy}
-                className="rounded-md bg-slate-900 px-3 py-1 text-xs font-medium text-white disabled:opacity-50"
+                className="rounded-md bg-primary px-3 py-1 text-xs font-medium text-white disabled:opacity-50"
               >
                 Save
               </button>
@@ -621,7 +621,7 @@ function WorkCard({
                   setRemarks(work.remarks)
                   setEditing(false)
                 }}
-                className="rounded-md px-3 py-1 text-xs font-medium text-slate-500"
+                className="rounded-md px-3 py-1 text-xs font-medium text-muted-2"
               >
                 Cancel
               </button>
@@ -630,10 +630,10 @@ function WorkCard({
         ) : (
           <button
             onClick={() => setEditing(true)}
-            className="flex w-full items-start gap-1 text-left text-sm text-slate-500 active:text-slate-700"
+            className="flex w-full items-start gap-1 text-left text-sm text-muted-2 active:text-body"
           >
-            <span className="mt-0.5 text-slate-400"><Icon name="note" className="h-4 w-4" /></span>
-            <span className="flex-1">{work.remarks || <span className="italic text-slate-400">Add remarks…</span>}</span>
+            <span className="mt-0.5 text-faint"><Icon name="note" className="h-4 w-4" /></span>
+            <span className="flex-1">{work.remarks || <span className="italic text-faint">Add remarks…</span>}</span>
           </button>
         )}
       </div>
@@ -659,12 +659,12 @@ function AddWorkForm({
   const [stage, setStage] = useState(STAGES[0].key)
 
   return (
-    <div className="mb-3 rounded-xl bg-white p-4 shadow-sm">
-      <label className="mb-1 block text-xs font-medium text-slate-500">Category</label>
+    <div className="mb-3 rounded-xl bg-surface p-4 shadow-sm">
+      <label className="mb-1 block text-xs font-medium text-muted-2">Category</label>
       <select
         value={category}
         onChange={(e) => setCategory(e.target.value)}
-        className="mb-3 w-full rounded-lg border border-slate-300 px-3 py-2 text-base outline-none focus:border-slate-900"
+        className="mb-3 w-full rounded-lg border border-line-2 px-3 py-2 text-base outline-none focus:border-strong"
       >
         {available.map((c) => (
           <option key={c.key} value={c.key}>
@@ -673,19 +673,19 @@ function AddWorkForm({
         ))}
       </select>
 
-      <label className="mb-1 block text-xs font-medium text-slate-500">Item / description (optional)</label>
+      <label className="mb-1 block text-xs font-medium text-muted-2">Item / description (optional)</label>
       <input
         value={title}
         onChange={(e) => setTitle(e.target.value)}
         placeholder="e.g. 2 Room Premium, Premium Smart Lock…"
-        className="mb-3 w-full rounded-lg border border-slate-300 px-3 py-2 text-base outline-none focus:border-slate-900"
+        className="mb-3 w-full rounded-lg border border-line-2 px-3 py-2 text-base outline-none focus:border-strong"
       />
 
-      <label className="mb-1 block text-xs font-medium text-slate-500">Starting stage</label>
+      <label className="mb-1 block text-xs font-medium text-muted-2">Starting stage</label>
       <select
         value={stage}
         onChange={(e) => setStage(e.target.value)}
-        className="mb-3 w-full rounded-lg border border-slate-300 px-3 py-2 text-base outline-none focus:border-slate-900"
+        className="mb-3 w-full rounded-lg border border-line-2 px-3 py-2 text-base outline-none focus:border-strong"
       >
         {STAGES.map((s) => (
           <option key={s.key} value={s.key}>
@@ -698,11 +698,11 @@ function AddWorkForm({
         <button
           onClick={() => category && onAdd(category, title.trim(), stage)}
           disabled={busy || !category}
-          className="flex-1 rounded-lg bg-slate-900 py-2.5 font-medium text-white active:bg-slate-700 disabled:opacity-50"
+          className="flex-1 rounded-lg bg-primary py-2.5 font-medium text-white active:bg-primary-press disabled:opacity-50"
         >
           Add
         </button>
-        <button onClick={onCancel} className="rounded-lg px-4 py-2.5 text-sm font-medium text-slate-500">
+        <button onClick={onCancel} className="rounded-lg px-4 py-2.5 text-sm font-medium text-muted-2">
           Cancel
         </button>
       </div>

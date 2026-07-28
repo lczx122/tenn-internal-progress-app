@@ -136,15 +136,15 @@ export default function Schedule() {
           title="Reminder notifications"
           aria-label="Reminder notifications"
           className={
-            'shrink-0 rounded-lg border px-3 py-2 text-sm active:bg-slate-50 ' +
-            (showNotif ? 'border-slate-900 bg-slate-900 text-white' : 'border-slate-300 bg-white text-slate-600')
+            'shrink-0 rounded-lg border px-3 py-2 text-sm active:bg-press ' +
+            (showNotif ? 'border-primary bg-primary text-white' : 'border-line-2 bg-surface text-muted')
           }
         >
           <Icon name="bell" className="h-5 w-5" />
         </button>
         <button
           onClick={() => navigate('/schedule/new')}
-          className="shrink-0 rounded-lg bg-slate-900 px-3 py-2 text-sm font-medium text-white active:bg-slate-700"
+          className="shrink-0 rounded-lg bg-primary px-3 py-2 text-sm font-medium text-white active:bg-primary-press"
         >
           + New
         </button>
@@ -175,7 +175,7 @@ export default function Schedule() {
         <select
           value={typeFilter}
           onChange={(e) => setTypeFilter(e.target.value)}
-          className={`rounded-lg border bg-white px-2 py-2 text-sm outline-none focus:border-slate-900 ${typeFilter ? 'border-slate-900 font-medium' : 'border-slate-300 text-slate-600'}`}
+          className={`rounded-lg border bg-surface px-2 py-2 text-sm outline-none focus:border-strong ${typeFilter ? 'border-primary font-medium' : 'border-line-2 text-muted'}`}
         >
           <option value="">All types</option>
           {APPT_TYPES.map((t) => (
@@ -249,13 +249,13 @@ function Agenda({
   return (
     <>
       <div className="mb-2 flex justify-end">
-        <button onClick={onTogglePast} className="text-xs font-medium text-slate-500 underline">
+        <button onClick={onTogglePast} className="text-xs font-medium text-muted-2 underline">
           {showPast ? 'Hide past' : 'Show past & done'}
         </button>
       </div>
       {pinned.length > 0 && (
         <div className="mb-5">
-          <h2 className="mb-2 flex items-center gap-1.5 px-1 text-sm font-semibold text-slate-700">
+          <h2 className="mb-2 flex items-center gap-1.5 px-1 text-sm font-semibold text-body">
             <Icon name="pin" className="h-4 w-4 text-amber-500" /> Pinned
           </h2>
           <ul className="space-y-2">
@@ -279,7 +279,7 @@ function Agenda({
         <div className="space-y-5 lg:columns-2 lg:gap-5 lg:space-y-0 2xl:columns-3 lg:[&>div]:mb-5 lg:[&>div]:break-inside-avoid">
           {groups.map((g) => (
             <div key={g.key}>
-              <h2 className="mb-2 px-1 text-sm font-semibold text-slate-700">{dayLabel(g.date)}</h2>
+              <h2 className="mb-2 px-1 text-sm font-semibold text-body">{dayLabel(g.date)}</h2>
               <ul className="space-y-2">
                 {g.items.map((a) => (
                   <ApptRow
@@ -342,24 +342,24 @@ function CalendarView({
         <button
           onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1))}
           aria-label="Previous month"
-          className="min-h-[44px] rounded-lg px-4 text-lg text-slate-500 active:bg-slate-100"
+          className="min-h-[44px] rounded-lg px-4 text-lg text-muted-2 active:bg-press"
         >
           ‹
         </button>
-        <span className="font-semibold text-slate-800">
+        <span className="font-semibold text-ink-2">
           {month.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}
         </span>
         <button
           onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1))}
           aria-label="Next month"
-          className="min-h-[44px] rounded-lg px-4 text-lg text-slate-500 active:bg-slate-100"
+          className="min-h-[44px] rounded-lg px-4 text-lg text-muted-2 active:bg-press"
         >
           ›
         </button>
       </div>
 
-      <div className="rounded-xl bg-white p-2 shadow-sm">
-        <div className="grid grid-cols-7 text-center text-[11px] font-medium text-slate-400">
+      <div className="rounded-xl bg-surface p-2 shadow-sm">
+        <div className="grid grid-cols-7 text-center text-[11px] font-medium text-faint">
           {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, i) => (
             <div key={i} className="py-1">{d}</div>
           ))}
@@ -376,15 +376,15 @@ function CalendarView({
                 onClick={() => setSelectedDay(startOfDay(d))}
                 className={
                   'flex aspect-square flex-col items-center justify-center rounded-lg text-sm ' +
-                  (isSel ? 'bg-slate-900 text-white' : isToday ? 'bg-slate-100' : '') +
-                  (inMonth ? ' text-slate-800' : ' text-slate-300')
+                  (isSel ? 'bg-primary text-white' : isToday ? 'bg-page' : '') +
+                  (inMonth ? ' text-ink-2' : ' text-slate-300')
                 }
               >
                 <span className={isSel ? 'font-semibold' : ''}>{d.getDate()}</span>
                 {count > 0 && (
                   <span
                     className={
-                      'mt-0.5 h-1.5 w-1.5 rounded-full ' + (isSel ? 'bg-white' : 'bg-amber-500')
+                      'mt-0.5 h-1.5 w-1.5 rounded-full ' + (isSel ? 'bg-surface' : 'bg-amber-500')
                     }
                   />
                 )}
@@ -397,9 +397,9 @@ function CalendarView({
       </div>
 
       <div className="lg:min-w-0">
-      <h2 className="mb-2 mt-4 px-1 text-sm font-semibold text-slate-700 lg:mt-0">{dayLabel(selectedDay)}</h2>
+      <h2 className="mb-2 mt-4 px-1 text-sm font-semibold text-body lg:mt-0">{dayLabel(selectedDay)}</h2>
       {dayItems.length === 0 ? (
-        <p className="rounded-xl border border-dashed border-slate-300 py-8 text-center text-sm text-slate-400">
+        <p className="rounded-xl border border-dashed border-line-2 py-8 text-center text-sm text-faint">
           Nothing scheduled.
         </p>
       ) : (
@@ -447,7 +447,7 @@ export function ApptRow({
           title={pinned ? 'Unpin' : 'Pin to top'}
           className={
             'absolute right-1 top-1 z-10 rounded-md p-2.5 ' +
-            (pinned ? 'text-amber-500' : 'text-slate-400 active:text-slate-600')
+            (pinned ? 'text-amber-500' : 'text-faint active:text-muted')
           }
         >
           <Icon name="pin" className="h-4 w-4" />
@@ -455,7 +455,7 @@ export function ApptRow({
       )}
       <Link
         to={`/appointment/${a.id}`}
-        className={'block rounded-xl bg-white p-3 shadow-sm active:bg-slate-50 ' + (muted ? 'opacity-60' : '')}
+        className={'block rounded-xl bg-surface p-3 shadow-sm active:bg-press ' + (muted ? 'opacity-60' : '')}
       >
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
@@ -464,17 +464,17 @@ export function ApptRow({
                 <Icon name={t.icon} className="h-3.5 w-3.5" /> {t.label}
               </span>
               {a.is_private && (
-                <span className="inline-flex items-center gap-1 rounded-full border border-slate-300 bg-slate-50 px-2 py-0.5 text-[11px] font-medium text-slate-600">
+                <span className="inline-flex items-center gap-1 rounded-full border border-line-2 bg-surface-2 px-2 py-0.5 text-[11px] font-medium text-muted">
                   <Icon name="lock" className="h-3 w-3" /> Private
                 </span>
               )}
-              <span className="text-sm font-medium text-slate-700">{timeLabel(a.starts_at)}</span>
+              <span className="text-sm font-medium text-body">{timeLabel(a.starts_at)}</span>
             </div>
-            <p className={'mt-1 truncate font-semibold text-slate-900 ' + (a.status === 'done' ? 'line-through' : '')}>
+            <p className={'mt-1 truncate font-semibold text-ink ' + (a.status === 'done' ? 'line-through' : '')}>
               {a.title || a.customer_name || t.label}
             </p>
             {(a.customer_name || a.location) && (
-              <p className="truncate text-xs text-slate-500">
+              <p className="truncate text-xs text-muted-2">
                 {[a.customer_name, a.location].filter(Boolean).join(' · ')}
               </p>
             )}
@@ -487,10 +487,10 @@ export function ApptRow({
               <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-medium text-emerald-700">Done</span>
             )}
             {a.status === 'cancelled' && (
-              <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[11px] font-medium text-slate-600">Cancelled</span>
+              <span className="rounded-full bg-fill px-2 py-0.5 text-[11px] font-medium text-muted">Cancelled</span>
             )}
             {a.who && (
-              <span className="line-clamp-2 break-words text-right text-xs text-slate-400">{a.who}</span>
+              <span className="line-clamp-2 break-words text-right text-xs text-faint">{a.who}</span>
             )}
           </div>
         </div>

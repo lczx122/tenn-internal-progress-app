@@ -85,8 +85,8 @@ export function RecordCollectionSheet({
     }
   }
 
-  const inp = 'w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-base outline-none focus:border-slate-900'
-  const lbl = 'mb-1 block text-xs font-medium text-slate-500'
+  const inp = 'w-full rounded-lg border border-line-2 bg-surface px-3 py-2.5 text-base outline-none focus:border-strong'
+  const lbl = 'mb-1 block text-xs font-medium text-muted-2'
 
   return (
     <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/40 sm:items-center sm:p-6" onClick={onClose}>
@@ -94,14 +94,14 @@ export function RecordCollectionSheet({
         role="dialog"
         aria-modal="true"
         onClick={(e) => e.stopPropagation()}
-        className="max-h-[88vh] w-full max-w-lg overflow-y-auto rounded-t-2xl bg-white p-4 shadow-xl sm:rounded-2xl"
+        className="max-h-[88vh] w-full max-w-lg overflow-y-auto rounded-t-2xl bg-surface p-4 shadow-xl sm:rounded-2xl"
       >
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-base font-semibold text-slate-900">Record collection</h2>
+          <h2 className="text-base font-semibold text-ink">Record collection</h2>
           <button
             onClick={onClose}
             aria-label="Close"
-            className="min-h-[40px] min-w-[40px] rounded-lg text-slate-400 active:bg-slate-100"
+            className="min-h-[40px] min-w-[40px] rounded-lg text-faint active:bg-press"
           >
             ✕
           </button>
@@ -116,43 +116,43 @@ export function RecordCollectionSheet({
               placeholder="Search unit or customer…"
               className={inp}
             />
-            <ul className="mt-2 divide-y divide-slate-100">
+            <ul className="mt-2 divide-y divide-line-faint">
               {matches.map((j) => (
                 <li key={j.id}>
                   <button
                     onClick={() => setJob(j)}
-                    className="flex w-full items-center justify-between gap-2 px-1 py-2.5 text-left active:bg-slate-50"
+                    className="flex w-full items-center justify-between gap-2 px-1 py-2.5 text-left active:bg-press"
                   >
                     <span className="min-w-0">
-                      <span className="block truncate font-medium text-slate-800">
+                      <span className="block truncate font-medium text-ink-2">
                         {j.unit_code || j.customer_name}
                       </span>
-                      <span className="block truncate text-xs text-slate-500">
+                      <span className="block truncate text-xs text-muted-2">
                         {j.unit_code ? j.customer_name : j.project}
                       </span>
                     </span>
-                    <span className="shrink-0 text-xs text-slate-400">{money(Number(j.order_total || 0))}</span>
+                    <span className="shrink-0 text-xs text-faint">{money(Number(j.order_total || 0))}</span>
                   </button>
                 </li>
               ))}
               {matches.length === 0 && (
-                <li className="py-8 text-center text-sm text-slate-400">No active unit matches “{q}”.</li>
+                <li className="py-8 text-center text-sm text-faint">No active unit matches “{q}”.</li>
               )}
             </ul>
           </>
         ) : (
           <>
             {/* Step 2 — the collection */}
-            <div className="mb-3 flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2">
+            <div className="mb-3 flex items-center justify-between rounded-lg bg-surface-2 px-3 py-2">
               <span className="min-w-0">
-                <span className="block truncate text-sm font-semibold text-slate-800">
+                <span className="block truncate text-sm font-semibold text-ink-2">
                   {job.unit_code || job.customer_name}
                 </span>
-                <span className="block truncate text-xs text-slate-500">
+                <span className="block truncate text-xs text-muted-2">
                   {job.customer_name} · order {money(total)}
                 </span>
               </span>
-              <button onClick={() => setJob(null)} className="shrink-0 text-xs font-medium text-slate-500 underline">
+              <button onClick={() => setJob(null)} className="shrink-0 text-xs font-medium text-muted-2 underline">
                 Change
               </button>
             </div>

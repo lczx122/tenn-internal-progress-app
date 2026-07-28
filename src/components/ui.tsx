@@ -18,7 +18,7 @@ export function SearchInput(props: InputHTMLAttributes<HTMLInputElement>) {
       data-fed-skip
       {...rest}
       className={
-        'min-w-0 rounded-lg border border-slate-300 bg-white px-3 py-2 text-base outline-none focus:border-slate-900 ' +
+        'min-w-0 rounded-lg border border-line-2 bg-surface px-3 py-2 text-base outline-none focus:border-strong ' +
         (className ?? 'flex-1')
       }
     />
@@ -47,8 +47,8 @@ export function Segmented<T extends string>({
           className={
             'min-h-[40px] flex-1 rounded-lg border px-2 text-sm font-medium ' +
             (value === o.key
-              ? 'border-slate-900 bg-slate-900 text-white'
-              : 'border-slate-300 bg-white text-slate-600 active:bg-slate-50')
+              ? 'border-primary bg-primary text-white'
+              : 'border-line-2 bg-surface text-muted active:bg-press')
           }
         >
           {o.label}
@@ -63,7 +63,7 @@ export function EmptyState({ children, className }: { children: React.ReactNode;
   return (
     <div
       className={
-        'rounded-xl border border-dashed border-slate-300 py-12 text-center text-sm text-slate-400 ' +
+        'rounded-xl border border-dashed border-line-2 py-12 text-center text-sm text-faint ' +
         (className ?? '')
       }
     >
@@ -75,7 +75,7 @@ export function EmptyState({ children, className }: { children: React.ReactNode;
 // Page loading placeholder. `skeleton` renders pulsing card outlines instead of
 // bare text — used on pages without a warm cache (JobDetail, Reports, admin).
 export function LoadingState({ skeleton = false }: { skeleton?: boolean }) {
-  if (!skeleton) return <p className="py-10 text-center text-slate-400">Loading…</p>
+  if (!skeleton) return <p className="py-10 text-center text-faint">Loading…</p>
   return (
     <div className="animate-pulse space-y-3 py-2" aria-label="Loading">
       <div className="h-28 rounded-xl bg-slate-200/60" />
