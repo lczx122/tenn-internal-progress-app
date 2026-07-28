@@ -74,14 +74,14 @@ export function AnnouncementBanner() {
           {ann?.by && <p className="mt-0.5 text-[11px] text-amber-700/80">— {ann.by}</p>}
         </div>
         {isBoss && (
-          <button onClick={clearForEveryone} className="shrink-0 text-[11px] font-medium text-amber-700 underline">
+          <button onClick={clearForEveryone} className="min-h-[40px] shrink-0 px-2 text-xs font-medium text-amber-700 underline">
             Clear
           </button>
         )}
         <button
           onClick={dismiss}
           aria-label="Dismiss announcement"
-          className="shrink-0 rounded px-1 text-amber-700 active:bg-amber-100"
+          className="min-h-[40px] min-w-[40px] shrink-0 rounded text-amber-700 active:bg-amber-100"
         >
           ✕
         </button>

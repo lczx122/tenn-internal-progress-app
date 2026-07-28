@@ -355,7 +355,8 @@ export default function JobsList() {
               <div className="mb-2 flex items-center gap-2 px-1">
                 <button
                   onClick={() => toggleCollapse(g.project)}
-                  className="flex flex-1 items-center gap-2 active:opacity-70"
+                  aria-expanded={!isCollapsed}
+                  className="flex min-h-[40px] flex-1 items-center gap-2 active:opacity-70"
                 >
                   <span className={`text-xs text-slate-400 transition-transform ${isCollapsed ? '' : 'rotate-90'}`}>▶</span>
                   <h2 className="text-sm font-semibold text-slate-700">{g.project}</h2>
@@ -366,7 +367,9 @@ export default function JobsList() {
                 <button
                   onClick={() => togglePin(g.project)}
                   title={pinned.has(g.project) ? 'Unpin project' : 'Pin project to top'}
-                  className={`shrink-0 ${pinned.has(g.project) ? 'text-amber-500' : 'text-slate-300 active:text-slate-500'}`}
+                  aria-label={pinned.has(g.project) ? `Unpin ${g.project}` : `Pin ${g.project} to top`}
+                  aria-pressed={pinned.has(g.project)}
+                  className={`shrink-0 p-2.5 ${pinned.has(g.project) ? 'text-amber-500' : 'text-slate-400 active:text-slate-600'}`}
                 >
                   <Icon name="pin" className="h-[18px] w-[18px]" />
                 </button>

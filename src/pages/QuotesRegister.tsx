@@ -157,6 +157,10 @@ export default function QuotesRegister() {
               const isSO = r.doc_type === 'SO'
               return (
                 <li key={r.id} className="rounded-xl bg-white p-4 shadow-sm">
+                  <button
+                    onClick={() => navigate(`/quote?view=${r.id}`)}
+                    className="-m-1 block w-full rounded-lg p-1 text-left active:bg-slate-50"
+                  >
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
@@ -182,6 +186,7 @@ export default function QuotesRegister() {
                     <p className="mt-1.5 text-xs text-slate-400">From quote {numberById.get(r.source_id)}</p>
                   )}
                   {r.categories && <p className="mt-1.5 truncate text-xs text-slate-500">{r.categories}</p>}
+                  </button>
 
                   <div className="mt-2 flex items-center justify-between gap-2">
                     <p className="text-xs text-slate-400">
@@ -191,14 +196,14 @@ export default function QuotesRegister() {
                     <div className="flex shrink-0 items-center gap-2">
                       <button
                         onClick={() => navigate(`/quote?view=${r.id}`)}
-                        className="rounded-lg border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-700 active:bg-slate-50"
+                        className="min-h-[36px] rounded-lg border border-slate-300 px-3 text-xs font-medium text-slate-700 active:bg-slate-50"
                       >
                         View
                       </button>
                       {(isAdmin || (!!userId && r.created_by === userId)) && (
                         <button
                           onClick={() => navigate(`/quote?edit=${r.id}`)}
-                          className="rounded-lg border border-slate-400 px-2.5 py-1 text-xs font-medium text-slate-800 active:bg-slate-50"
+                          className="min-h-[36px] rounded-lg border border-slate-400 px-3 text-xs font-medium text-slate-800 active:bg-slate-50"
                         >
                           Edit
                         </button>
@@ -206,7 +211,7 @@ export default function QuotesRegister() {
                       {!isSO && (
                         <button
                           onClick={() => navigate(`/quote?from=${r.id}&type=SO`)}
-                          className="rounded-lg border border-emerald-600 px-2.5 py-1 text-xs font-medium text-emerald-700 active:bg-emerald-50"
+                          className="min-h-[36px] rounded-lg border border-emerald-600 px-3 text-xs font-medium text-emerald-700 active:bg-emerald-50"
                         >
                           → Convert to SO
                         </button>
@@ -214,7 +219,7 @@ export default function QuotesRegister() {
                       {isAdmin && (
                         <button
                           onClick={() => remove(r)}
-                          className="rounded-lg border border-red-200 px-2.5 py-1 text-xs font-medium text-red-600 active:bg-red-50"
+                          className="min-h-[36px] rounded-lg border border-red-200 px-3 text-xs font-medium text-red-600 active:bg-red-50"
                         >
                           Delete
                         </button>

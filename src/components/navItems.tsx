@@ -38,6 +38,8 @@ export function isTabActive(pathname: string, t: NavTab): boolean {
 
 export function TabIcon({ name, className = 'h-[22px] w-[22px]' }: { name: string; className?: string }) {
   const p = {
+    'aria-hidden': true,
+    focusable: 'false' as const,
     viewBox: '0 0 24 24',
     fill: 'none',
     stroke: 'currentColor',

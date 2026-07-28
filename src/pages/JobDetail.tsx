@@ -38,6 +38,7 @@ export default function JobDetail() {
   const [note, setNote] = useState('')
   const [busy, setBusy] = useState(false)
   const [adding, setAdding] = useState(false)
+  const [showAllEvents, setShowAllEvents] = useState(false)
 
   const loadAll = useCallback(async () => {
     if (!id) return
@@ -248,6 +249,28 @@ export default function JobDetail() {
 
   return (
     <Layout title={job.unit_code || job.address || job.customer_name} back={<BackLink fallback="/units" />} onRefresh={loadAll}>
+      {/* Sticky wayfinder: the page stacks 6+ sections into a long scroll, so
+          give thumbs a one-tap jump to each. scroll-mt on the targets keeps
+          headings clear of this bar. */}
+      <nav className="sticky top-0 z-20 -mx-4 mb-3 flex gap-1.5 overflow-x-auto bg-slate-100 px-4 py-2 [scrollbar-width:none] lg:-mx-8 lg:px-8">
+        {(
+          [
+            ['sec-money', 'Money'],
+            ['sec-works', 'Works'],
+            ['sec-schedule', 'Schedule'],
+            ...(isBoss ? [['sec-suppliers', 'Suppliers'] as [string, string]] : []),
+            ['sec-activity', 'Activity'],
+          ] as [string, string][]
+        ).map(([id, label]) => (
+          <button
+            key={id}
+            onClick={() => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+            className="shrink-0 rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 active:bg-slate-50"
+          >
+            {label}
+          </button>
+        ))}
+      </nav>
       <div className="xl:columns-2 xl:gap-6 xl:[&>div]:break-inside-avoid xl:[&>section]:mb-4 xl:[&>section]:mt-0 xl:[&>section]:break-inside-avoid">
       {/* Summary card */}
       <section className="rounded-xl bg-white p-4 shadow-sm">
@@ -332,6 +355,7 @@ export default function JobDetail() {
       </section>
 
       {/* Customer claims */}
+      <div id="sec-money" className="scroll-mt-14 xl:break-inside-avoid">
       <ClaimsSection
         job={job}
         claims={claims}
@@ -341,9 +365,10 @@ export default function JobDetail() {
         isAdmin={isAdmin}
         onChange={loadAll}
       />
+      </div>
 
       {/* Appointments */}
-      <section className="mt-4 rounded-xl bg-white p-4 shadow-sm">
+      <section id="sec-schedule" className="mt-4 scroll-mt-14 rounded-xl bg-white p-4 shadow-sm">
         <div className="mb-2 flex items-center justify-between">
           <h2 className="text-sm font-semibold text-slate-700">Appointments</h2>
           <Link
@@ -383,7 +408,7 @@ export default function JobDetail() {
       </section>
 
       {/* Work categories */}
-      <section className="mt-4">
+      <section id="sec-works" className="mt-4 scroll-mt-14">
         <div className="mb-2 flex items-center justify-between px-1">
           <h2 className="text-sm font-semibold text-slate-700">Job categories</h2>
           {!adding && usedCategories.size < CATEGORIES.length && (
@@ -428,7 +453,9 @@ export default function JobDetail() {
 
       {/* Supplier progress — boss only */}
       {isBoss && job && (
-        <SupplierSection job={job} suppliers={suppliers} session={session} onChange={loadAll} />
+        <div id="sec-suppliers" className="scroll-mt-14 xl:break-inside-avoid">
+          <SupplierSection job={job} suppliers={suppliers} session={session} onChange={loadAll} />
+        </div>
       )}
 
       {/* Add note */}
@@ -451,13 +478,13 @@ export default function JobDetail() {
       </section>
 
       {/* Timeline */}
-      <section className="mt-4 rounded-xl bg-white p-4 shadow-sm">
+      <section id="sec-activity" className="mt-4 scroll-mt-14 rounded-xl bg-white p-4 shadow-sm">
         <h2 className="mb-3 text-sm font-semibold text-slate-700">Activity timeline</h2>
         {events.length === 0 ? (
           <p className="text-sm text-slate-400">No activity yet.</p>
         ) : (
           <ul className="space-y-3">
-            {events.map((ev) => (
+            {(showAllEvents ? events : events.slice(0, 5)).map((ev) => (
               <li key={ev.id} className="flex gap-3">
                 <div className="mt-0.5 text-slate-400"><Icon name={eventIconName(ev.type)} className="h-4 w-4" /></div>
                 <div className="min-w-0 flex-1">
@@ -469,6 +496,14 @@ export default function JobDetail() {
               </li>
             ))}
           </ul>
+        )}
+        {events.length > 5 && (
+          <button
+            onClick={() => setShowAllEvents((v) => !v)}
+            className="mt-3 w-full rounded-lg border border-slate-200 py-2 text-xs font-medium text-slate-500 active:bg-slate-50"
+          >
+            {showAllEvents ? 'Show less' : `Show all ${events.length} entries`}
+          </button>
         )}
       </section>
 
@@ -531,7 +566,7 @@ function WorkCard({
           {work.title && <p className="mt-1 text-sm text-slate-600">{work.title}</p>}
         </div>
         {canDelete && (
-          <button onClick={onDelete} className="shrink-0 text-xs text-slate-300 active:text-red-500">
+          <button onClick={onDelete} className="-m-1 shrink-0 p-2 text-xs text-slate-500 active:text-red-500">
             Remove
           </button>
         )}
@@ -547,8 +582,9 @@ function WorkCard({
               key={s.key}
               disabled={busy}
               onClick={() => onChangeStage(s.key)}
+              aria-pressed={active}
               className={
-                'rounded-full px-2.5 py-1 text-xs font-medium transition disabled:opacity-50 ' +
+                'min-h-[36px] rounded-full px-3 text-xs font-medium transition disabled:opacity-50 ' +
                 (active ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-700 active:bg-slate-200')
               }
             >

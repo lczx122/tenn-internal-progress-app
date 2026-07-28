@@ -36,7 +36,7 @@ export function AppHeader({ title, back, wide }: { title: string; back?: ReactNo
         </Link>
         <button
           onClick={signOut}
-          className="rounded-md bg-slate-700 px-2 py-1 text-xs font-medium active:bg-slate-600 lg:hidden"
+          className="min-h-[40px] rounded-md bg-slate-700 px-3 text-xs font-medium active:bg-slate-600 lg:hidden"
         >
           Sign out
         </button>

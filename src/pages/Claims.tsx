@@ -308,17 +308,22 @@ export default function Claims() {
                         <div className="flex items-start gap-1.5">
                           <button
                             onClick={() => toggleExpand(r.job.id)}
-                            className="mt-0.5 shrink-0 text-slate-400 active:text-slate-700"
+                            className="-m-1.5 shrink-0 p-2.5 text-slate-400 active:text-slate-700"
                             title={isOpen ? 'Hide trades' : 'Show trades'}
+                            aria-expanded={isOpen}
+                            aria-label={isOpen ? 'Hide trades' : 'Show trades'}
                           >
                             <span className={'inline-block transition-transform ' + (isOpen ? 'rotate-90' : '')}>▸</span>
                           </button>
-                          <div className="min-w-0 cursor-pointer" onClick={() => navigate(`/job/${r.job.id}`)}>
-                            <div className="truncate font-medium text-slate-800">
+                          <button
+                            className="min-w-0 text-left"
+                            onClick={() => navigate(`/job/${r.job.id}`)}
+                          >
+                            <span className="block truncate font-medium text-slate-800">
                               {r.job.customer_name || r.job.unit_code || '—'}
-                            </div>
-                            {r.job.unit_code && <div className="truncate text-[11px] text-slate-400">{r.job.unit_code}</div>}
-                          </div>
+                            </span>
+                            {r.job.unit_code && <span className="block truncate text-[11px] text-slate-400">{r.job.unit_code}</span>}
+                          </button>
                         </div>
                       </td>
                       <td className={num + ' text-slate-700'}>{r.order ? money0(r.order) : '—'}</td>

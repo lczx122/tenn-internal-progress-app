@@ -341,7 +341,8 @@ function CalendarView({
       <div className="mb-2 flex items-center justify-between">
         <button
           onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1))}
-          className="rounded-lg px-3 py-1.5 text-lg text-slate-500 active:bg-slate-100"
+          aria-label="Previous month"
+          className="min-h-[44px] rounded-lg px-4 text-lg text-slate-500 active:bg-slate-100"
         >
           ‹
         </button>
@@ -350,7 +351,8 @@ function CalendarView({
         </span>
         <button
           onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1))}
-          className="rounded-lg px-3 py-1.5 text-lg text-slate-500 active:bg-slate-100"
+          aria-label="Next month"
+          className="min-h-[44px] rounded-lg px-4 text-lg text-slate-500 active:bg-slate-100"
         >
           ›
         </button>
@@ -433,7 +435,24 @@ export function ApptRow({
   const t = getApptType(a.type)
   const muted = a.status !== 'scheduled'
   return (
-    <li>
+    // The pin is a SIBLING of the link (absolutely positioned), not a nested
+    // button-in-anchor — that's invalid HTML and confuses assistive tech.
+    <li className="relative">
+      {onTogglePin && (
+        <button
+          type="button"
+          onClick={() => onTogglePin(a.id)}
+          aria-label={pinned ? 'Unpin' : 'Pin to top'}
+          aria-pressed={pinned}
+          title={pinned ? 'Unpin' : 'Pin to top'}
+          className={
+            'absolute right-1 top-1 z-10 rounded-md p-2.5 ' +
+            (pinned ? 'text-amber-500' : 'text-slate-400 active:text-slate-600')
+          }
+        >
+          <Icon name="pin" className="h-4 w-4" />
+        </button>
+      )}
       <Link
         to={`/appointment/${a.id}`}
         className={'block rounded-xl bg-white p-3 shadow-sm active:bg-slate-50 ' + (muted ? 'opacity-60' : '')}
@@ -460,22 +479,7 @@ export function ApptRow({
               </p>
             )}
           </div>
-          <div className="flex shrink-0 flex-col items-end gap-1 max-w-[45%]">
-            {onTogglePin && (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.preventDefault()
-                  e.stopPropagation()
-                  onTogglePin(a.id)
-                }}
-                aria-label={pinned ? 'Unpin' : 'Pin to top'}
-                title={pinned ? 'Unpin' : 'Pin to top'}
-                className={'-mr-1 -mt-1 rounded-md p-1 ' + (pinned ? 'text-amber-500' : 'text-slate-300 active:text-slate-500')}
-              >
-                <Icon name="pin" className="h-4 w-4" />
-              </button>
-            )}
+          <div className={'flex shrink-0 flex-col items-end gap-1 max-w-[45%]' + (onTogglePin ? ' pr-8' : '')}>
             {overdue && (
               <span className="rounded-full bg-rose-100 px-2 py-0.5 text-[11px] font-medium text-rose-700">Overdue</span>
             )}

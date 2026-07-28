@@ -301,7 +301,11 @@ export function ClaimsSection({
               <div className="flex shrink-0 items-center gap-2">
                 <span className="font-semibold text-emerald-700">{money(c.amount)}</span>
                 {isAdmin && (
-                  <button onClick={() => removeClaim(c)} className="text-xs text-slate-300 active:text-red-500">
+                  <button
+                    onClick={() => removeClaim(c)}
+                    aria-label={`Remove ${money(c.amount)} collection`}
+                    className="-m-1 p-2.5 text-sm text-slate-400 active:text-red-500"
+                  >
                     ✕
                   </button>
                 )}

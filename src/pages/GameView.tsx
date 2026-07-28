@@ -606,7 +606,7 @@ export default function GameView() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search the realm…"
-            className={`min-w-0 flex-1 border-[3px] border-[#3b2a18] bg-[#fff8e6] px-3 py-1.5 text-sm ${INK} outline-none placeholder:text-[#b3a17c] focus:bg-white`}
+            className={`gv-input min-w-0 flex-1 border-[3px] border-[#3b2a18] bg-[#fff8e6] px-3 py-1.5 text-sm ${INK} outline-none placeholder:text-[#b3a17c] focus:bg-white`}
           />
           <button
             onClick={() => setShowVault(!showVault)}

@@ -61,7 +61,11 @@ export function PaymentButton() {
           >
             <div className="mb-3 flex items-center justify-between">
               <h2 className="text-base font-semibold text-slate-800">Collect payment</h2>
-              <button onClick={() => setOpen(false)} className="px-1 text-slate-400 active:text-slate-600">
+              <button
+                onClick={() => setOpen(false)}
+                aria-label="Close"
+                className="min-h-[40px] min-w-[40px] rounded-lg text-slate-400 active:text-slate-600"
+              >
                 ✕
               </button>
             </div>

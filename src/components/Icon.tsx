@@ -4,6 +4,8 @@
 // Used app-wide to replace decorative emoji. Unknown names render nothing.
 export function Icon({ name, className = 'inline-block h-[18px] w-[18px] align-[-3px]' }: { name: string; className?: string }) {
   const p = {
+    'aria-hidden': true,
+    focusable: 'false' as const,
     viewBox: '0 0 24 24',
     fill: 'none',
     stroke: 'currentColor',
