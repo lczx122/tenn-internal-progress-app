@@ -12,6 +12,7 @@ import { useAutoRefresh } from '../lib/useAutoRefresh'
 import { cacheGet, cacheSet } from '../lib/pageCache'
 import { progressStart, progressDone } from '../lib/progress'
 import { usePersistedState, oneOf } from '../lib/usePersistedState'
+import { MagicScheduleSheet } from '../components/MagicScheduleSheet'
 import { toastErr } from '../lib/toast'
 import { ErrorState } from '../components/ErrorState'
 import {
@@ -43,6 +44,7 @@ export default function Schedule() {
     validate: oneOf('mine', 'all'),
   })
   const [showNotif, setShowNotif] = useState(false)
+  const [magic, setMagic] = useState(false)
   const [pins, setPins] = useState<Set<string>>(() => new Set())
   const { session } = useAuth()
   const myId = session?.user.id
@@ -143,12 +145,22 @@ export default function Schedule() {
           <Icon name="bell" className="h-5 w-5" />
         </button>
         <button
+          onClick={() => setMagic(true)}
+          title="Schedule from text"
+          aria-label="Schedule from text"
+          className="shrink-0 rounded-lg border border-line-2 bg-surface px-3 py-2 text-sm active:bg-press"
+        >
+          ✨
+        </button>
+        <button
           onClick={() => navigate('/schedule/new')}
           className="shrink-0 rounded-lg bg-primary px-3 py-2 text-sm font-medium text-white active:bg-primary-press"
         >
           + New
         </button>
       </div>
+
+      {magic && <MagicScheduleSheet onClose={() => setMagic(false)} onSaved={load} />}
 
       {showNotif && <NotificationSettings />}
 
