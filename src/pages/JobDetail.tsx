@@ -18,6 +18,7 @@ import { SupplierSection } from '../components/SupplierSection'
 import { formatDate, formatDateTime } from '../lib/format'
 import { useAutoRefresh } from '../lib/useAutoRefresh'
 import { runDb, toastOk } from '../lib/toast'
+import { notifyUnitUpdate } from '../lib/push'
 import { confirmDialog } from '../lib/dialog'
 import { ErrorState } from '../components/ErrorState'
 
@@ -187,6 +188,8 @@ export default function JobDetail() {
     if (ok) {
       await touchJob()
       setNote('') // keep the text on failure so nothing typed is lost
+      // Best-effort push to the rest of the team ("🏠 D-07-03 · Winnie — …").
+      notifyUnitUpdate(id!, trimmed)
     }
     setBusy(false)
   }
