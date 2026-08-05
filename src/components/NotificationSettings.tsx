@@ -8,7 +8,6 @@ import {
   disablePush,
   setLead,
   sendTest,
-  setUnitUpdates,
 } from '../lib/push'
 import { Icon } from './Icon'
 
@@ -33,7 +32,6 @@ function leadLabel(m: number): string {
 // event to be reminded. Used on the Schedule page.
 export function NotificationSettings() {
   const [enabled, setEnabled] = useState(false)
-  const [unitUpdates, setUnitUpdatesState] = useState(true)
   const [lead, setLeadState] = useState(30)
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState('')
@@ -62,7 +60,6 @@ export function NotificationSettings() {
   useEffect(() => {
     getPrefs().then((p) => {
       setEnabled(p.enabled)
-      setUnitUpdatesState(p.unit_updates)
       setLeadState(p.lead_minutes)
     })
   }, [])
@@ -196,39 +193,6 @@ export function NotificationSettings() {
             <p className="mt-1.5 text-xs text-muted-2">Currently: {leadLabel(lead)} before.</p>
           )}
         </>
-      )}
-
-      {supported && (
-        <div className="mt-4 flex items-start justify-between gap-3 border-t border-line-faint pt-3">
-          <div>
-            <p className="text-sm font-medium text-ink-2">Unit updates</p>
-            <p className="mt-0.5 text-xs text-muted-2">Notify me when someone posts an update on a unit.</p>
-          </div>
-          <button
-            onClick={async () => {
-              const next = !unitUpdates
-              setUnitUpdatesState(next)
-              try {
-                await setUnitUpdates(next)
-              } catch {
-                setUnitUpdatesState(!next)
-              }
-            }}
-            disabled={busy}
-            aria-pressed={unitUpdates}
-            className={
-              'relative h-7 w-12 shrink-0 rounded-full transition disabled:opacity-50 ' +
-              (unitUpdates ? 'bg-emerald-500' : 'bg-slate-300')
-            }
-          >
-            <span
-              className={
-                'absolute top-0.5 h-6 w-6 rounded-full bg-surface shadow transition-all ' +
-                (unitUpdates ? 'left-[22px]' : 'left-0.5')
-              }
-            />
-          </button>
-        </div>
       )}
 
       {canTest && supported && (

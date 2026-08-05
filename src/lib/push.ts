@@ -3,7 +3,6 @@ import { supabase } from './supabase'
 export interface NotifyPrefs {
   enabled: boolean
   lead_minutes: number
-  unit_updates: boolean
 }
 
 // Whether this browser/device can do web push at all.
@@ -56,25 +55,8 @@ async function uid(): Promise<string | undefined> {
 }
 
 export async function getPrefs(): Promise<NotifyPrefs> {
-  const { data } = await supabase
-    .from('notification_prefs')
-    .select('enabled, lead_minutes, unit_updates')
-    .maybeSingle()
-  return {
-    enabled: !!data?.enabled,
-    lead_minutes: data?.lead_minutes ?? 30,
-    // default ON — anyone subscribed to push hears about unit updates unless
-    // they switch it off (column added in supabase/unit_update_notifications.sql)
-    unit_updates: (data as { unit_updates?: boolean } | null)?.unit_updates !== false,
-  }
-}
-
-// Opt in/out of "someone posted an update on a unit" pushes.
-export async function setUnitUpdates(on: boolean): Promise<void> {
-  const me = await uid()
-  await supabase
-    .from('notification_prefs')
-    .upsert({ user_id: me, unit_updates: on }, { onConflict: 'user_id' })
+  const { data } = await supabase.from('notification_prefs').select('enabled, lead_minutes').maybeSingle()
+  return { enabled: !!data?.enabled, lead_minutes: data?.lead_minutes ?? 30 }
 }
 
 // Fire-and-forget: tell everyone else a unit got an update. The update itself

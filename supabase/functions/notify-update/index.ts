@@ -56,14 +56,13 @@ Deno.serve(async (req) => {
   const unitLabel = job.unit_code || job.customer_name || 'a unit'
   const authorName = author?.full_name || 'Someone'
 
-  // Everyone with a push subscription, minus the author, minus anyone who
-  // switched unit updates off in their notification prefs.
-  const [{ data: subs }, { data: prefs }] = await Promise.all([
-    supabase.from('push_subscriptions').select('endpoint,p256dh,auth,user_id').neq('user_id', user.id),
-    supabase.from('notification_prefs').select('user_id, unit_updates'),
-  ])
-  const optedOut = new Set((prefs ?? []).filter((p) => p.unit_updates === false).map((p) => p.user_id))
-  const targets = (subs ?? []).filter((s) => !optedOut.has(s.user_id))
+  // Everyone with a push subscription except the author — this is an internal
+  // team app, so unit updates are mandatory (no per-user opt-out).
+  const { data: subs } = await supabase
+    .from('push_subscriptions')
+    .select('endpoint,p256dh,auth,user_id')
+    .neq('user_id', user.id)
+  const targets = subs ?? []
 
   const payload = JSON.stringify({
     title: `🏠 ${unitLabel} · ${authorName}`,
