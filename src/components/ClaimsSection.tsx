@@ -81,12 +81,49 @@ export function ClaimsSection({
   async function saveOrderTotal() {
     const v = Number(orderTotal) || 0
     if (v === Number(job.order_total)) return
+    // Keep the per-trade breakdown consistent with the new total — otherwise
+    // the By-trade table keeps showing the old order amounts. A single trade
+    // simply becomes the new total; several trades scale proportionally (with
+    // the rounding remainder folded into the largest so the sum is exact).
+    const obcOld = job.order_by_category ?? {}
+    const keys = Object.keys(obcOld)
+    const patch: { order_total: number; updated_by: string; order_by_category?: Record<string, number> } = {
+      order_total: v,
+      updated_by: displayName,
+    }
+    if (keys.length > 0) {
+      const oldSum = keys.reduce((s, k) => s + Number(obcOld[k] || 0), 0)
+      const next: Record<string, number> = {}
+      if (oldSum > 0) {
+        let acc = 0
+        let largest = keys[0]
+        for (const k of keys) {
+          if (Number(obcOld[k] || 0) > Number(obcOld[largest] || 0)) largest = k
+          const scaled = Math.round((Number(obcOld[k] || 0) / oldSum) * v * 100) / 100
+          next[k] = scaled
+          acc += scaled
+        }
+        next[largest] = Math.round((next[largest] + (v - acc)) * 100) / 100
+      } else {
+        next[keys[0]] = v
+      }
+      patch.order_by_category = next
+    }
     setBusy(true)
-    const ok = await runDb(
-      supabase.from('jobs').update({ order_total: v, updated_by: displayName }).eq('id', job.id),
-      { ok: 'Order total saved', fail: 'Order total not saved' },
-    )
-    if (ok) await onChange()
+    const ok = await runDb(supabase.from('jobs').update(patch).eq('id', job.id), {
+      ok: keys.length > 1 ? 'Order total saved — per-trade amounts scaled to match' : 'Order total saved',
+      fail: 'Order total not saved',
+    })
+    if (ok) {
+      // Refresh the collapsible by-trade editor's local draft too (it's
+      // initialised once on mount and wouldn't pick up the new values).
+      if (patch.order_by_category) {
+        const o: Record<string, string> = {}
+        for (const [k, val] of Object.entries(patch.order_by_category)) o[k] = val ? String(val) : ''
+        setObc(o)
+      }
+      await onChange()
+    }
     setBusy(false)
   }
 
