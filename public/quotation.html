@@ -566,6 +566,7 @@
       <button class="act b-save" id="saveBtnModal" onclick="saveQuote()"><span class="bico" data-ico="save"></span> <span class="blabel">Save Quotation</span></button>
       <button class="act b-primary" id="convertBtnModal" style="display:none" onclick="convertToSO()"><span class="bico" data-ico="receipt"></span> Convert to Sales Order</button>
       <button class="act b-primary" id="shareBtn" onclick="printOrShare(this)"><span class="bico" data-ico="printer"></span> <span class="blabel">Print / PDF</span></button>
+      <button class="act b-ghost" id="downloadBtn" onclick="downloadPdf(this)"><span class="bico" data-ico="download"></span> <span class="blabel">Download</span></button>
       <button class="act b-ghost" onclick="closePreview()">Close</button>
     </div>
     <div class="doc print-area-on"><div class="doc-pad" id="docBody"></div></div>
@@ -2497,6 +2498,7 @@ function qIco(name){
     save:'<path d="M5 3.5h11l3 3V20.5H5Z"/><path d="M8 3.5v5h7v-5"/><rect x="8" y="13" width="8" height="5.5"/>',
     printer:'<path d="M7 9V3.5h10V9"/><rect x="3.5" y="9" width="17" height="7" rx="1.5"/><rect x="7" y="14" width="10" height="6"/><path d="M17 12h.01"/>',
     share:'<circle cx="6" cy="12" r="2.4"/><circle cx="17.5" cy="6" r="2.4"/><circle cx="17.5" cy="18" r="2.4"/><path d="M8.1 10.9 15.4 7.1M8.1 13.1l7.3 3.8"/>',
+    download:'<path d="M12 3.5v11"/><path d="m7.5 10.5 4.5 4 4.5-4"/><path d="M4.5 17.5v3h15v-3"/>',
     search:'<circle cx="11" cy="11" r="6.5"/><path d="M16 16l4 4"/>',
     eye:'<path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z"/><circle cx="12" cy="12" r="2.7"/>',
     eyeOff:'<path d="M4 4l16 16"/><path d="M9.5 5.9A9.9 9.9 0 0 1 12 5.5c6 0 9.5 6.5 9.5 6.5a16 16 0 0 1-3 3.6M6 7.4A16 16 0 0 0 2.5 12S6 18.5 12 18.5a9.6 9.6 0 0 0 3.3-.6"/><path d="M9.7 9.9a2.7 2.7 0 0 0 3.8 3.8"/>',
@@ -3691,6 +3693,23 @@ function downloadBlob(blob,name){
   const a=document.createElement('a'); a.href=url; a.download=name; document.body.appendChild(a); a.click();
   setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); },1500);
 }
+/* Explicit "save the PDF as a file" — unlike Share this always downloads
+   (desktop → Downloads folder; mobile → the browser's download/Files flow). */
+async function downloadPdf(btn){
+  const lblEl=btn.querySelector('.blabel')||btn;
+  const label=lblEl.textContent;
+  btn.disabled=true; lblEl.textContent='Building…';
+  try{
+    let file=_shareFile;
+    if(!file){
+      await ensurePdfLibs();
+      file=new File([await buildPdfBlob()], shareName(), {type:'application/pdf'});
+    }
+    downloadBlob(file, file.name);
+  }catch(e){
+    alert('Could not build the PDF: '+((e&&e.message)||e));
+  }finally{ btn.disabled=false; lblEl.textContent=label; }
+}
 async function printOrShare(btn){
   if(!shouldShare()){ window.print(); return; }   // desktop → normal print dialog
   const lblEl=btn.querySelector('.blabel')||btn;  // keep the icon span intact
@@ -3811,7 +3830,15 @@ async function newQuote(){
     renderCatalog();               // re-paint with the live prices
     loadProjectList();             // fill the Project suggestions (best-effort)
     // Deep-links from the register: view / edit / convert a saved document.
-    if(viewId) await loadDocument(viewId, null, 'view');
+    if(viewId){
+      await loadDocument(viewId, null, 'view');
+      // ?view=…&download=1 (the register's PDF button): the view modal is now
+      // open with the document rendered — build the PDF and save it right away.
+      if(params.get('download')==='1'){
+        const b=document.getElementById('downloadBtn');
+        if(b) downloadPdf(b);
+      }
+    }
     else if(editId) await loadDocument(editId, null, 'edit');
     else if(fromId) await loadDocument(fromId, asType, 'convert');
     else if(unitId) await loadFromUnit(unitId);

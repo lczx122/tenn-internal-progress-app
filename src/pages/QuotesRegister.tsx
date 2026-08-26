@@ -193,12 +193,19 @@ export default function QuotesRegister() {
                       {r.prepared_by ? `By ${r.prepared_by} · ` : ''}
                       {relativeTime(r.created_at)}
                     </p>
-                    <div className="flex shrink-0 items-center gap-2">
+                    <div className="flex min-w-0 flex-wrap items-center justify-end gap-2">
                       <button
                         onClick={() => navigate(`/quote?view=${r.id}`)}
                         className="min-h-[36px] rounded-lg border border-line-2 px-3 text-xs font-medium text-body active:bg-press"
                       >
                         View
+                      </button>
+                      <button
+                        onClick={() => navigate(`/quote?view=${r.id}&download=1`)}
+                        title={`Download ${r.number} as PDF`}
+                        className="min-h-[36px] rounded-lg border border-line-2 px-3 text-xs font-medium text-body active:bg-press"
+                      >
+                        PDF ↓
                       </button>
                       {(isAdmin || (!!userId && r.created_by === userId)) && (
                         <button
