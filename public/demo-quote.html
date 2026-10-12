@@ -1,0 +1,429 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tenn Fasteners — Quotation (Demo)</title>
+<meta name="robots" content="noindex">
+<!--
+  DEMO quotation generator — a simplified, standalone version of
+  /quotation.html for showing business partners.
+
+  • No database, no login, no saving — nothing here touches the real app.
+  • No calculators: every product is a flat price × quantity.
+  • Every price is the catalogue's base price marked up by MARKUP (1.5 = +50%),
+    rounded to the nearest ringgit, so real pricing is never shown.
+  • Same printed document layout as the real tool (Print / Save as PDF).
+-->
+<style>
+  @font-face{font-family:'Archivo';src:url('/fonts/archivo.woff2') format('woff2');font-weight:600 800;font-display:swap}
+  :root{--navy:#152453;--navy-deep:#0d1733;--accent:#c8102e;--ink:#1a1c22;--muted:#6b7280;--line:#e2e6f0;--bg:#f0f3fb;--card:#fff}
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;font-size:15px;-webkit-font-smoothing:antialiased}
+  button,input,select{font:inherit}
+  .disp{font-family:'Archivo',system-ui,sans-serif;font-weight:800}
+
+  /* top bar */
+  .topbar{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:12px;padding:11px 16px;background:linear-gradient(135deg,var(--navy-deep),var(--navy));color:#fff;box-shadow:0 2px 10px rgba(21,36,83,.22)}
+  .logo{width:34px;height:34px;border-radius:8px;background:#0d1733;display:grid;place-items:center;font-family:'Archivo';font-weight:800;font-size:15px;flex:none;box-shadow:inset 0 0 0 2px rgba(255,255,255,.12)}
+  .logo b{background:linear-gradient(#fff,#cdd6f5);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .titles h1{margin:0;font-size:15px;font-weight:800;letter-spacing:.2px;line-height:1.15;font-family:'Archivo'}
+  .titles p{margin:0;font-size:11px;opacity:.72}
+  .chip{margin-left:auto;font-size:10px;font-weight:800;letter-spacing:1px;padding:4px 8px;border-radius:999px;background:var(--accent);color:#fff}
+
+  .wrap{max-width:720px;margin:0 auto;padding:14px 14px 110px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:12px;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+  .card h2{margin:0 0 10px;font-size:12px;letter-spacing:.8px;text-transform:uppercase;color:var(--navy);font-family:'Archivo';font-weight:800}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .grid .full{grid-column:1/3}
+  label{display:block;font-size:11px;color:var(--muted);margin-bottom:3px;font-weight:600}
+  input,select{width:100%;border:1.5px solid var(--line);border-radius:9px;padding:9px 10px;font-size:16px;background:#fff;outline:none}
+  input:focus,select:focus{border-color:var(--navy)}
+
+  /* catalogue */
+  .cat{background:var(--card);border:1px solid var(--line);border-radius:12px;margin-bottom:10px;overflow:hidden}
+  .cat-hd{display:flex;align-items:center;gap:10px;padding:12px 14px;cursor:pointer;user-select:none;background:#f7f8fc}
+  .cat-hd:active{background:#eef1f8}
+  .cat-hd .nm{font-weight:700;flex:1}
+  .cat-hd .cnt{min-width:22px;height:22px;border-radius:999px;background:var(--navy);color:#fff;font-size:11px;font-weight:800;display:grid;place-items:center;padding:0 6px}
+  .cat-hd .cnt.zero{background:#cfd5e4}
+  .cat-hd .chev{color:var(--muted);transition:transform .15s}
+  .cat.open .chev{transform:rotate(90deg)}
+  .cat-body{display:none;border-top:1px solid var(--line)}
+  .cat.open .cat-body{display:block}
+  .cat-note{font-size:11.5px;color:var(--muted);padding:10px 14px 0}
+  .item{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid #f0f2f8}
+  .item:last-child{border-bottom:none}
+  .item .info{flex:1;min-width:0}
+  .item .lb{font-weight:600;font-size:14px}
+  .item .sb{font-size:11.5px;color:var(--muted);margin-top:1px}
+  .item .pr{font-size:13px;font-weight:700;color:var(--navy);white-space:nowrap;text-align:right}
+  .item .pr small{display:block;font-weight:500;color:var(--muted);font-size:10.5px}
+  .qty{display:flex;align-items:center;border:1.5px solid var(--line);border-radius:999px;overflow:hidden;flex:none}
+  .qty button{width:34px;height:34px;border:0;background:#fff;font-size:18px;color:var(--navy);cursor:pointer}
+  .qty button:active{background:#eef1f8}
+  .qty span{min-width:26px;text-align:center;font-weight:700;font-size:14px}
+  .item.on{background:#fbfcff}
+  .item.on .lb{color:var(--navy)}
+
+  /* summary bar */
+  .sumbar{position:fixed;left:0;right:0;bottom:0;z-index:20;background:#fff;border-top:1px solid var(--line);box-shadow:0 -6px 20px rgba(21,36,83,.08);padding:10px 14px calc(10px + env(safe-area-inset-bottom))}
+  .sumbar .in{max-width:720px;margin:0 auto;display:flex;align-items:center;gap:12px}
+  .sumbar .tot{flex:1}
+  .sumbar .tot small{display:block;font-size:11px;color:var(--muted)}
+  .sumbar .tot b{font-family:'Archivo';font-size:20px;color:var(--navy)}
+  .act{border:0;border-radius:10px;padding:12px 16px;font-weight:700;font-size:14px;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+  .b-primary{background:var(--navy);color:#fff}
+  .b-primary:disabled{opacity:.45;cursor:not-allowed}
+  .b-ghost{background:#fff;border:1.5px solid var(--line);color:var(--ink)}
+  .b-accent{background:var(--accent);color:#fff}
+  .lines{margin-top:8px;font-size:12.5px}
+  .lines .row{display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px dashed #eceef5}
+  .lines .row .q{color:var(--muted);margin-right:6px}
+  .lines .empty{color:var(--muted);text-align:center;padding:10px 0}
+  .totals{margin-top:8px;border-top:2px solid var(--navy);padding-top:8px}
+  .totals .row{display:flex;justify-content:space-between;padding:3px 0;font-size:13px}
+  .totals .row.big{font-family:'Archivo';font-weight:800;font-size:17px;color:var(--navy)}
+  .dep{display:flex;align-items:center;gap:8px;margin-top:8px}
+  .dep label{margin:0;white-space:nowrap}
+  .dep input{max-width:160px}
+
+  /* document preview */
+  .modal{position:fixed;inset:0;z-index:40;background:rgba(10,14,30,.6);display:none;overflow:auto;padding:14px}
+  .modal.show{display:block}
+  .modal-inner{max-width:820px;margin:0 auto}
+  .modal-bar{position:sticky;top:0;z-index:2;display:flex;gap:8px;flex-wrap:wrap;background:rgba(10,14,30,.6);padding:0 0 10px}
+  .doc{background:#fff;border-radius:8px;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+  .doc-pad{padding:34px 38px;color:#1a1c22;font-size:12.5px}
+  .doc-head{display:flex;justify-content:space-between;gap:16px;border-bottom:3px solid var(--navy);padding-bottom:14px;margin-bottom:18px}
+  .doc-head .co{font-family:'Archivo';font-weight:800;font-size:20px;color:var(--navy);letter-spacing:.3px}
+  .doc-head .co small{display:block;font-family:system-ui,sans-serif;font-weight:400;font-size:11px;color:#555;letter-spacing:0;margin-top:4px;line-height:1.5}
+  .doc-head .qbox{text-align:right;flex:none}
+  .doc-head .qbox .qt{font-family:'Archivo';font-weight:800;font-size:15px;color:var(--accent);letter-spacing:1px}
+  .doc-head .qbox .qmeta{font-size:11.5px;color:#555;margin-top:6px;line-height:1.7}
+  .cust-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px 28px;background:#f7f8fc;border:1px solid var(--line);border-radius:8px;padding:12px 16px;margin-bottom:18px;font-size:12px}
+  .cust-grid div b{display:inline-block;min-width:78px;color:#555;font-weight:600}
+  table.doc-tbl{width:100%;border-collapse:collapse;margin-bottom:6px}
+  table.doc-tbl th{background:var(--navy);color:#fff;font-family:'Archivo';font-size:10.5px;text-transform:uppercase;letter-spacing:.6px;padding:8px 10px;text-align:left}
+  table.doc-tbl th.r,table.doc-tbl td.r{text-align:right}
+  table.doc-tbl th.c,table.doc-tbl td.c{text-align:center}
+  table.doc-tbl td{padding:7px 10px;border-bottom:1px solid #eceef5;font-size:12px}
+  table.doc-tbl .cat-row td{background:#eef1f8;font-family:'Archivo';font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--navy)}
+  .doc-totals{margin-left:auto;width:300px;max-width:100%;margin-top:10px}
+  .doc-totals .tl{display:flex;justify-content:space-between;padding:5px 4px;font-size:12.5px;border-bottom:1px solid #eee}
+  .doc-totals .tl.big{border-bottom:none;border-top:2px solid var(--navy);margin-top:4px;font-family:'Archivo';font-weight:800;font-size:16px;color:var(--navy)}
+  .doc-tc{margin-top:22px;font-size:10.5px;color:#555;line-height:1.6}
+  .doc-tc h4{font-family:'Archivo';font-size:11px;color:var(--navy);text-transform:uppercase;letter-spacing:.6px;margin:0 0 5px}
+  .sign{display:flex;justify-content:space-between;margin-top:34px;gap:48px}
+  .sigcol{flex:1;display:flex;flex-direction:column}
+  .sigcol .sl{font-size:11px;color:#555;font-weight:600}
+  .sigcol .sigline{margin-top:64px;border-top:1px solid #333}
+  .sigcol .snm{margin-top:7px;font-size:11px;color:#555}
+  @media(max-width:560px){
+    .doc-pad{padding:22px 16px}
+    .doc-head{flex-direction:column}
+    .doc-head .qbox{text-align:left}
+    .cust-grid{grid-template-columns:1fr}
+    .cust-grid div[style]{grid-column:auto!important}
+    .sign{gap:20px}
+  }
+  @media print{
+    @page{margin:14mm}
+    body{background:#fff}
+    .topbar,.wrap,.sumbar,.modal-bar{display:none!important}
+    .modal{position:static!important;display:block!important;background:#fff;padding:0;overflow:visible}
+    .modal-inner{max-width:none}
+    .doc{box-shadow:none;border-radius:0}
+    .doc-pad{padding:0}
+    .sigcol .sigline{margin-top:118px!important}
+  }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="logo"><b>T</b></div>
+  <div class="titles">
+    <h1>Tenn Fasteners</h1>
+    <p>Quotation Generator</p>
+  </div>
+  <span class="chip">DEMO</span>
+</header>
+
+<main class="wrap">
+  <section class="card">
+    <h2>Customer</h2>
+    <div class="grid">
+      <div class="full"><label>Name</label><input id="c_name" placeholder="Customer name"></div>
+      <div><label>Unit</label><input id="c_unit" placeholder="e.g. C-08-10"></div>
+      <div><label>Project</label><input id="c_project" placeholder="e.g. Ambience Pulau Gadong"></div>
+      <div><label>H/Phone</label><input id="c_phone" type="tel" placeholder="01x-xxx xxxx"></div>
+      <div><label>Date</label><input id="c_date" type="date"></div>
+      <div class="full"><label>Prepared by</label><input id="c_pic" placeholder="Your name"></div>
+    </div>
+  </section>
+
+  <div id="catalog"></div>
+
+  <section class="card">
+    <h2>Summary</h2>
+    <div class="lines" id="sumLines"><div class="empty">No items selected yet.</div></div>
+    <div class="dep"><label>Less deposit (RM)</label><input id="t_dep" type="number" inputmode="decimal" min="0" placeholder="0"></div>
+    <div class="totals">
+      <div class="row"><span>Total Package</span><span id="t_sub">RM 0.00</span></div>
+      <div class="row big"><span>Total Balance</span><span id="t_bal">RM 0.00</span></div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:12px">
+      <button class="act b-ghost" onclick="resetAll()">Start new</button>
+    </div>
+  </section>
+</main>
+
+<div class="sumbar">
+  <div class="in">
+    <div class="tot"><small id="bar_count">0 items</small><b id="bar_total">RM 0.00</b></div>
+    <button class="act b-primary" id="previewBtn" onclick="openPreview()" disabled>Preview quotation</button>
+  </div>
+</div>
+
+<div class="modal" id="modal">
+  <div class="modal-inner">
+    <div class="modal-bar">
+      <button class="act b-accent" onclick="window.print()">🖨 Print / Save PDF</button>
+      <button class="act b-ghost" onclick="closePreview()">Close</button>
+    </div>
+    <div class="doc"><div class="doc-pad" id="docBody"></div></div>
+  </div>
+</div>
+
+<script>
+/* ---------- pricing ----------
+   Base prices are the catalogue's built-in list prices. MARKUP is applied to
+   every item at render time, so changing this one number re-prices the demo. */
+const MARKUP = 1.5;
+const price = (base) => Math.round(base * MARKUP);
+const fmt = (n) => (+n || 0).toLocaleString('en-MY', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+/* ---------- catalogue (flat items only — no measurement calculators) ---------- */
+const CATALOG = [
+  { name: 'Mindhome — Cabinets', note: 'Built-in cabinetry. Packages are all-in; individual cabinets are priced per unit at standard size.', items: [
+    { label: 'PG Cabinet Package — 2 Room Standard', sub: 'Kitchen + 2 wardrobes + TV cabinet', unit: 'package', base: 24999 },
+    { label: 'PG Cabinet Package — 2 Room Premium', sub: 'Premium finishes', unit: 'package', base: 29999 },
+    { label: 'PG Cabinet Package — 3 Room Standard', sub: 'Kitchen + 3 wardrobes + TV cabinet', unit: 'package', base: 30999 },
+    { label: 'PG Cabinet Package — 3 Room Premium', sub: 'Premium finishes', unit: 'package', base: 35999 },
+    { label: 'TV Cabinet', sub: 'Standard 8ft', unit: 'unit', base: 1000 },
+    { label: 'TV Cabinet with Backdrop', sub: 'Standard 8ft', unit: 'unit', base: 1600 },
+    { label: 'Wardrobe', sub: 'Up to 2000 × 3000 × 600 mm', unit: 'unit', base: 1800 },
+    { label: 'Tatami Wardrobe', sub: 'Up to 2000 × 3000 × 600 mm', unit: 'unit', base: 2500 },
+    { label: 'Wardrobe with Table', sub: 'Up to 2000 × 3000 × 600 mm', unit: 'unit', base: 2200 },
+    { label: 'Wardrobe with Open Shelving', sub: 'Up to 2000 × 3000 × 600 mm', unit: 'unit', base: 2000 },
+    { label: 'Dining Cabinet', sub: 'Standard 4ft', unit: 'unit', base: 1200 },
+  ]},
+  { name: 'Aluminium Cabinet', note: 'Priced per foot run — enter the length as the quantity.', items: [
+    { label: 'Bottom Cabinet c/w Quartz Stone & Sink', sub: 'Depth 22" · Height 34"', unit: 'ft', base: 750 },
+    { label: 'Top Cabinet (2.5ft / 30")', sub: 'Depth 13" · Height 30"', unit: 'ft', base: 400 },
+    { label: 'Top Cabinet (3ft / 36")', sub: 'Depth 13" · Height 36"', unit: 'ft', base: 500 },
+    { label: 'Top Shoes Cabinet', sub: 'Depth 13" · Height 36"', unit: 'ft', base: 520 },
+    { label: 'Bottom Shoes Cabinet', sub: 'Depth 13" · Height 36"', unit: 'ft', base: 520 },
+  ]},
+  { name: 'Iron Work', note: 'PG Iron Work Package — powder-coated, standard sizes.', items: [
+    { label: 'Balcony — 2 Leaf Sliding Door', sub: '95" × 88½"', unit: 'pc', base: 1400 },
+    { label: 'Main Door Grill', sub: '34½" × 79¼"', unit: 'pc', base: 850 },
+    { label: 'Yard Grill — Ground Floor', sub: '80" × 107"H', unit: 'pc', base: 1200 },
+    { label: 'Yard Grill — 1st Floor', sub: '80" × 100"H', unit: 'pc', base: 1200 },
+    { label: 'Yard Grill — 2nd Floor', sub: '80" × 159"H', unit: 'pc', base: 1850 },
+    { label: 'Yard Grill — 3rd Floor & Above', sub: '80" × 77"H', unit: 'pc', base: 850 },
+    { label: 'Window Grill — Master Room', sub: "6' × 4'", unit: 'pc', base: 500 },
+    { label: 'Window Grill — Bedroom', sub: "4' × 4'", unit: 'pc', base: 330 },
+    { label: 'Invisible Grill — Half Balcony', sub: '117" × 89"H', unit: 'pc', base: 1450 },
+    { label: 'Invisible Grill — Full Balcony', sub: '117" × 136"H', unit: 'pc', base: 2350 },
+  ]},
+  { name: 'Painting', note: 'Package includes paints, accessories, work, 1 sealer + 2 finishing coats.', items: [
+    { label: 'Single Storey Terrace — Interior', sub: 'Built-up < 1,800 sqft', unit: 'package', base: 4000 },
+    { label: 'Double Storey Terrace — Interior', sub: 'Built-up < 2,000 sqft', unit: 'package', base: 5000 },
+    { label: 'Double Storey Corner Lot — Interior', sub: 'Built-up < 2,800 sqft', unit: 'package', base: 6000 },
+    { label: 'Semi-D Double Storey — Interior', sub: 'Built-up < 3,500 sqft', unit: 'package', base: 6500 },
+    { label: 'Ground Floor Shop Lot — Interior', sub: 'Built-up < 1,700 sqft', unit: 'package', base: 4000 },
+    { label: 'Double Storey Shop Lot — Interior', sub: 'Built-up < 3,500 sqft', unit: 'package', base: 5500 },
+  ]},
+  { name: 'Waterproofing', note: 'No-hacking, anti-slip Smart Epoxy Tile Flake set (interior).', items: [
+    { label: 'Epoxy Tile Flake — Toilet', sub: 'Build-up < 40 sqft · 18 colours', unit: 'toilet', base: 1250 },
+  ]},
+  { name: 'Smart Home', note: 'Aqara ecosystem.', items: [
+    { label: 'Aqara Smart Home Package', sub: 'Switches ×5 · Hub M2 · Presence sensor · Door Lock A100', unit: 'package', base: 4032 },
+    { label: 'Aqara Smart Wall Switch H1 — Single', sub: 'No neutral · White / Grey', unit: 'pc', base: 229 },
+    { label: 'Aqara Smart Wall Switch H1 — Double', sub: 'No neutral · White / Grey', unit: 'pc', base: 269 },
+    { label: 'Aqara Smart Wall Switch H1 — Triple', sub: 'No neutral · White / Grey', unit: 'pc', base: 409 },
+    { label: 'Aqara Presence Multi-Sensor FP300', sub: 'White', unit: 'pc', base: 439 },
+    { label: 'Aqara Hub M2', sub: 'Black', unit: 'pc', base: 409 },
+  ]},
+  { name: 'Smart Lock', note: '', items: [
+    { label: 'Aqara Smart Lock U200', sub: 'Black / Silver / White', unit: 'pc', base: 1399 },
+    { label: 'Aqara Smart Door Lock A100', sub: 'Black', unit: 'pc', base: 1599 },
+    { label: 'Aqara Door Lock D100 (Zigbee)', sub: 'Black', unit: 'pc', base: 2899 },
+    { label: 'Aqara Facial Recognition Door Lock D200i', sub: 'Gold', unit: 'pc', base: 3599 },
+  ]},
+  { name: 'Electrical Work (EE)', note: 'Wiring and casing included.', items: [
+    { label: 'New DB Box', sub: '', unit: 'pc', base: 700 },
+    { label: 'Standard Plug Point', sub: 'Includes wiring & casing', unit: 'pc', base: 200 },
+    { label: 'Air-Cond & Water Heater Plug', sub: 'Includes wiring & casing', unit: 'pc', base: 450 },
+  ]},
+];
+
+const TERMS = [
+  '50% deposit to be paid upon confirmation of work.',
+  'This quotation is valid for 30 days from the date of issue.',
+  'First design fee is included and complimentary; subsequent design changes may be charged a design modification fee of RM 100.',
+  'No modifications can be made after confirmation of work.',
+  'If the order is cancelled, 20% of the total amount will be retained as a service fee.',
+  'Balance Payment must be paid within 7 days of work completion. Late payment may incur 10% interest per month late.',
+];
+
+/* ---------- state ---------- */
+const qty = {}; // "cat:idx" -> quantity
+const key = (c, i) => `${c}:${i}`;
+const docNo = (() => {
+  const d = new Date();
+  return `QT-${String(d.getFullYear()).slice(2)}${String(d.getMonth() + 1).padStart(2, '0')}-${String(1 + Math.floor(Math.random() * 40)).padStart(3, '0')}`;
+})();
+
+function lines() {
+  const out = [];
+  CATALOG.forEach((c, ci) => c.items.forEach((it, ii) => {
+    const q = qty[key(ci, ii)] || 0;
+    if (q > 0) out.push({ cat: c.name, label: it.label, sub: it.sub, unit: it.unit, qty: q, price: price(it.base), amount: q * price(it.base) });
+  }));
+  return out;
+}
+
+/* ---------- catalogue render ---------- */
+function renderCatalog() {
+  document.getElementById('catalog').innerHTML = CATALOG.map((c, ci) => `
+    <section class="cat" id="cat-${ci}">
+      <div class="cat-hd" onclick="toggleCat(${ci})">
+        <span class="nm">${c.name}</span>
+        <span class="cnt zero" id="cnt-${ci}">0</span>
+        <span class="chev">▶</span>
+      </div>
+      <div class="cat-body">
+        ${c.note ? `<div class="cat-note">${c.note}</div>` : ''}
+        ${c.items.map((it, ii) => `
+          <div class="item" id="item-${ci}-${ii}">
+            <div class="info">
+              <div class="lb">${it.label}</div>
+              ${it.sub ? `<div class="sb">${it.sub}</div>` : ''}
+            </div>
+            <div class="pr">RM ${fmt(price(it.base))}<small>per ${it.unit}</small></div>
+            <div class="qty">
+              <button onclick="bump(${ci},${ii},-1)" aria-label="Less">−</button>
+              <span id="q-${ci}-${ii}">0</span>
+              <button onclick="bump(${ci},${ii},1)" aria-label="More">+</button>
+            </div>
+          </div>`).join('')}
+      </div>
+    </section>`).join('');
+}
+function toggleCat(ci) { document.getElementById('cat-' + ci).classList.toggle('open'); }
+function bump(ci, ii, d) {
+  const k = key(ci, ii);
+  qty[k] = Math.max(0, (qty[k] || 0) + d);
+  document.getElementById(`q-${ci}-${ii}`).textContent = qty[k];
+  document.getElementById(`item-${ci}-${ii}`).classList.toggle('on', qty[k] > 0);
+  recalc();
+}
+
+/* ---------- totals ---------- */
+function recalc() {
+  const ls = lines();
+  CATALOG.forEach((c, ci) => {
+    const n = ls.filter((l) => l.cat === c.name).reduce((s, l) => s + l.qty, 0);
+    const el = document.getElementById('cnt-' + ci);
+    el.textContent = n; el.classList.toggle('zero', n === 0);
+  });
+  const sub = ls.reduce((s, l) => s + l.amount, 0);
+  const dep = parseFloat(document.getElementById('t_dep').value) || 0;
+  document.getElementById('sumLines').innerHTML = ls.length
+    ? ls.map((l) => `<div class="row"><span><span class="q">${l.qty}×</span>${l.label}</span><span>RM ${fmt(l.amount)}</span></div>`).join('')
+    : '<div class="empty">No items selected yet.</div>';
+  document.getElementById('t_sub').textContent = 'RM ' + fmt(sub);
+  document.getElementById('t_bal').textContent = 'RM ' + fmt(sub - dep);
+  document.getElementById('bar_total').textContent = 'RM ' + fmt(sub);
+  const n = ls.reduce((s, l) => s + l.qty, 0);
+  document.getElementById('bar_count').textContent = `${n} item${n === 1 ? '' : 's'}`;
+  document.getElementById('previewBtn').disabled = ls.length === 0;
+}
+document.getElementById('t_dep').addEventListener('input', recalc);
+
+function resetAll() {
+  for (const k in qty) delete qty[k];
+  ['c_name', 'c_unit', 'c_project', 'c_phone', 'c_pic', 't_dep'].forEach((id) => (document.getElementById(id).value = ''));
+  document.getElementById('c_date').value = new Date().toISOString().slice(0, 10);
+  renderCatalog(); recalc();
+}
+
+/* ---------- document ---------- */
+function buildDoc() {
+  const g = (id) => document.getElementById(id).value.trim();
+  const ls = lines();
+  const sub = ls.reduce((s, l) => s + l.amount, 0);
+  const dep = parseFloat(g('t_dep')) || 0;
+  const dateStr = g('c_date') ? new Date(g('c_date')).toLocaleDateString('en-GB') : new Date().toLocaleDateString('en-GB');
+  let rows = '';
+  CATALOG.forEach((c) => {
+    const cl = ls.filter((l) => l.cat === c.name);
+    if (!cl.length) return;
+    rows += `<tr class="cat-row"><td colspan="4">${c.name}</td></tr>`;
+    cl.forEach((l) => {
+      rows += `<tr><td>${l.label}${l.sub ? ` <span style="color:#888">(${l.sub})</span>` : ''}</td><td class="r">${fmt(l.price)}</td><td class="c">${l.qty}</td><td class="r">${fmt(l.amount)}</td></tr>`;
+    });
+  });
+  return `
+    <div class="doc-head">
+      <div class="co">TENN FASTENERS (MELAKA) SDN. BHD.
+        <small>200001016684 (519291-M)<br>11, 11-A, Jalan PM 1, Taman Perindustrian Merdeka, Batu Berendam, 75350 Melaka.<br>Tel: 06-317 9645 / 317 2645 / 317 7563 · Email: tw_tenns@yahoo.com.my · tennfasteners.com</small>
+      </div>
+      <div class="qbox">
+        <div class="qt">QUOTATION</div>
+        <div class="qmeta"><b>No:</b> ${docNo}<br><b>Date:</b> ${dateStr}<br><b>PIC:</b> ${g('c_pic') || '—'}</div>
+      </div>
+    </div>
+    <div class="cust-grid">
+      <div><b>Name:</b> ${g('c_name') || '—'}</div>
+      <div><b>Unit:</b> ${g('c_unit') || '—'}</div>
+      <div><b>Project:</b> ${g('c_project') || '—'}</div>
+      <div><b>H/Phone:</b> ${g('c_phone') || '—'}</div>
+    </div>
+    <table class="doc-tbl">
+      <thead><tr><th>Description</th><th class="r">Unit Price</th><th class="c">Qty</th><th class="r">Amount (RM)</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+    <div class="doc-totals">
+      <div class="tl"><span>Total Package</span><span>RM ${fmt(sub)}</span></div>
+      ${dep ? `<div class="tl"><span>Less Deposit</span><span>− RM ${fmt(dep)}</span></div>` : ''}
+      <div class="tl big"><span>Total Balance</span><span>RM ${fmt(sub - dep)}</span></div>
+    </div>
+    <div class="doc-tc"><h4>Terms &amp; Conditions</h4>${TERMS.map((t, i) => `${i + 1}) ${t}`).join('<br>')}</div>
+    <div class="sign">
+      <div class="sigcol"><span class="sl">Prepared By &amp; Authorized Signature</span><span class="sigline"></span><span class="snm">Name: ${g('c_pic') || ''}</span></div>
+      <div class="sigcol"><span class="sl">Confirmed By &amp; Authorized Signature</span><span class="sigline"></span><span class="snm">Name: ${g('c_name') || ''}</span></div>
+    </div>`;
+}
+function openPreview() {
+  if (!lines().length) return;
+  document.getElementById('docBody').innerHTML = buildDoc();
+  document.getElementById('modal').classList.add('show');
+  document.body.style.overflow = 'hidden';
+}
+function closePreview() {
+  document.getElementById('modal').classList.remove('show');
+  document.body.style.overflow = '';
+}
+
+/* ---------- init ---------- */
+document.getElementById('c_date').value = new Date().toISOString().slice(0, 10);
+renderCatalog();
+recalc();
+document.getElementById('cat-0').classList.add('open');
+</script>
+</body>
+</html>
