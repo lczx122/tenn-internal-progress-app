@@ -117,7 +117,9 @@ Any static host works. The easiest free option is **Vercel**:
    (same names and values as your `.env`):
    - `VITE_SUPABASE_URL`
    - `VITE_SUPABASE_ANON_KEY`
-4. **Deploy**. You'll get a URL like `https://reno-tracker.vercel.app`.
+4. **Deploy**. You'll get a URL like `https://reno-tracker.vercel.app`
+   (this project's live app is `https://tenn-internal-progress-app.vercel.app`;
+   the partner demo quote page is served from it at `/demo-quote.html`).
 
 (Netlify and Cloudflare Pages work identically — a `_redirects` and
 `vercel.json` are included so deep links like `/job/123` load correctly.)
